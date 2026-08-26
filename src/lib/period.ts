@@ -34,3 +34,16 @@ export function rangeForPreset(key: PeriodPreset['key']): { from: string; to: st
   const to = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0)
   return { from: toDateString(from), to: toDateString(to) }
 }
+
+/** inclusive day count between two YYYY-MM-DD strings */
+export function daysBetweenInclusive(from: string, to: string): number {
+  const a = new Date(`${from}T00:00:00`)
+  const b = new Date(`${to}T00:00:00`)
+  return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1)
+}
+
+/** number of days in the calendar month that `dateStr` (YYYY-MM-DD) falls in */
+export function daysInCalendarMonth(dateStr: string): number {
+  const d = new Date(`${dateStr}T00:00:00`)
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+}

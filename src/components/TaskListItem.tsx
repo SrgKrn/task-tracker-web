@@ -30,9 +30,21 @@ export function TaskListItem({
   useTicker(isTracking)
   const overdue = isOverdue(task, status)
   const progress = task.planned_hours > 0 ? Math.min(1, task.fact_hours / task.planned_hours) : 0
+  const isOverrun = task.planned_hours > 0 && task.fact_hours > task.planned_hours
+  const isDoneOnPlan = !!status?.is_final && task.planned_hours > 0 && !isOverrun
+
+  const borderClass = isOverrun
+    ? 'border-l-2 border-l-red-500'
+    : isDoneOnPlan
+      ? 'border-l-2 border-l-emerald-600'
+      : ''
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-2.5">
+    <div
+      className={`flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-2.5 ${borderClass} ${
+        status?.is_final ? 'opacity-60' : ''
+      }`}
+    >
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         <p className="truncate text-slate-100">{task.name}</p>
 
@@ -83,14 +95,14 @@ export function TaskListItem({
 
         <div className="mt-1.5 h-1 w-full max-w-40 overflow-hidden rounded-full bg-slate-700">
           <div
-            className="h-full rounded-full bg-sky-600"
-            style={{ width: `${progress * 100}%`, opacity: progress >= 1 ? 1 : 0.6 }}
+            className={`h-full rounded-full ${isOverrun ? 'bg-red-500' : 'bg-sky-600'}`}
+            style={{ width: `${Math.max(progress, isOverrun ? 1 : 0) * 100}%`, opacity: progress >= 1 ? 1 : 0.6 }}
           />
         </div>
       </Link>
 
       <div className="flex shrink-0 flex-col items-end gap-1.5 text-sm">
-        <p className="text-slate-300">
+        <p className={isOverrun ? 'font-medium text-red-400' : 'text-slate-300'}>
           {formatHours(task.fact_hours)} / {formatHours(task.planned_hours)} ч
         </p>
         {isTracking && activeTimer ? (

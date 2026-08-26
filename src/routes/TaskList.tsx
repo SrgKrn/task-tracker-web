@@ -12,6 +12,15 @@ import type { Task } from '../lib/types'
 
 type GroupBy = 'section' | 'project' | 'none'
 
+/** toggles `id` in `set` (null means "everyone selected"); collapses back to null once everything is checked again */
+function toggleMember(set: Set<string> | null, id: string, allIds: string[]): Set<string> | null {
+  const current = set ?? new Set(allIds)
+  const next = new Set(current)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  return next.size === allIds.length ? null : next
+}
+
 export function TaskList() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: sections = [] } = useSections()
@@ -23,25 +32,49 @@ export function TaskList() {
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
 
-  const [groupBy, setGroupBy] = useState<GroupBy>('section')
+  const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const [search, setSearch] = useState('')
   const [periodFrom, setPeriodFrom] = useState('')
   const [periodTo, setPeriodTo] = useState('')
-  const [showPeriod, setShowPeriod] = useState(false)
-  const [hideCompleted, setHideCompleted] = useState(true)
-  const [sortByDue, setSortByDue] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [hideCompleted, setHideCompleted] = useState(false)
+  const [sortByDue, setSortByDue] = useState(true)
+  const [selectedSectionIds, setSelectedSectionIds] = useState<Set<string> | null>(null)
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string> | null>(null)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
   const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
 
+  const filtersActive =
+    !!periodFrom || !!periodTo || selectedSectionIds !== null || selectedProjectIds !== null || hideCompleted
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return tasks
-      .filter((t) => !q || t.name.toLowerCase().includes(q))
+      .filter(
+        (t) =>
+          !q ||
+          t.name.toLowerCase().includes(q) ||
+          projectById.get(t.project_id)?.name.toLowerCase().includes(q) ||
+          sectionById.get(t.section_id)?.name.toLowerCase().includes(q),
+      )
       .filter((t) => overlapsPeriod(t, periodFrom, periodTo))
       .filter((t) => !hideCompleted || !(t.status_id && statusById.get(t.status_id)?.is_final))
-  }, [tasks, search, periodFrom, periodTo, hideCompleted, statusById])
+      .filter((t) => selectedSectionIds === null || selectedSectionIds.has(t.section_id))
+      .filter((t) => selectedProjectIds === null || selectedProjectIds.has(t.project_id))
+  }, [
+    tasks,
+    search,
+    periodFrom,
+    periodTo,
+    hideCompleted,
+    statusById,
+    projectById,
+    sectionById,
+    selectedSectionIds,
+    selectedProjectIds,
+  ])
 
   const sorted = useMemo(() => {
     if (!sortByDue) return filtered
@@ -55,7 +88,7 @@ export function TaskList() {
 
   const groups = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ id: 'all', name: 'Все задачи', tasks: sorted }]
+      return sorted.length > 0 ? [{ id: 'all', name: 'Все задачи', tasks: sorted }] : []
     }
     const buckets = groupBy === 'section' ? sections : projects
     const key = groupBy === 'section' ? 'section_id' : 'project_id'
@@ -84,58 +117,132 @@ export function TaskList() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Поиск по названию"
+          placeholder="Поиск по задаче, проекту, разделу"
           className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
         />
         <button
-          onClick={() => setShowPeriod((v) => !v)}
-          className={`rounded-lg border px-3 text-sm ${
-            periodFrom || periodTo ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-400'
+          onClick={() => setShowFilters((v) => !v)}
+          className={`relative rounded-lg border px-3 text-sm ${
+            filtersActive ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-400'
           }`}
         >
-          Период
-        </button>
-        <button
-          onClick={() => setSortByDue((v) => !v)}
-          title="Сортировать по сроку"
-          className={`rounded-lg border px-3 text-sm ${
-            sortByDue ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-400'
-          }`}
-        >
-          ⇅ Срок
+          Фильтры
+          {filtersActive && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-sky-600" />}
         </button>
       </div>
 
-      {showPeriod && (
-        <div className="mb-3 space-y-2 rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-          <p className="text-xs text-slate-500">
-            Показывает задачи, чей срок «с–до» пересекается с этим периодом (не время трекинга).
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={periodFrom}
-              onChange={(e) => setPeriodFrom(e.target.value)}
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
-            />
-            <input
-              type="date"
-              value={periodTo}
-              onChange={(e) => setPeriodTo(e.target.value)}
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
-            />
-            {(periodFrom || periodTo) && (
-              <button
-                onClick={() => {
-                  setPeriodFrom('')
-                  setPeriodTo('')
-                }}
-                className="shrink-0 text-sm text-slate-400"
-              >
-                Сброс
-              </button>
-            )}
+      {showFilters && (
+        <div className="mb-3 space-y-4 rounded-lg border border-slate-700 bg-slate-800/60 p-3">
+          <div>
+            <p className="mb-1.5 text-xs text-slate-500">
+              Период — по сроку «с–до» задачи, а не по времени трекинга
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={periodFrom}
+                onChange={(e) => setPeriodFrom(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+              />
+              <input
+                type="date"
+                value={periodTo}
+                onChange={(e) => setPeriodTo(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+              />
+              {(periodFrom || periodTo) && (
+                <button
+                  onClick={() => {
+                    setPeriodFrom('')
+                    setPeriodTo('')
+                  }}
+                  className="shrink-0 text-sm text-slate-400"
+                >
+                  Сброс
+                </button>
+              )}
+            </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={sortByDue}
+              onChange={(e) => setSortByDue(e.target.checked)}
+              className="accent-sky-600"
+            />
+            Сортировать по сроку
+          </label>
+
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={hideCompleted}
+              onChange={(e) => setHideCompleted(e.target.checked)}
+              className="accent-sky-600"
+            />
+            Скрыть завершённые
+          </label>
+
+          {sections.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs text-slate-500">Разделы</p>
+              <div className="flex flex-wrap gap-1.5">
+                {sections.map((s) => {
+                  const active = selectedSectionIds === null || selectedSectionIds.has(s.id)
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() =>
+                        setSelectedSectionIds(
+                          toggleMember(
+                            selectedSectionIds,
+                            s.id,
+                            sections.map((x) => x.id),
+                          ),
+                        )
+                      }
+                      className={`rounded-full border px-2.5 py-1 text-xs ${
+                        active ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-500'
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {projects.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs text-slate-500">Проекты</p>
+              <div className="flex flex-wrap gap-1.5">
+                {projects.map((p) => {
+                  const active = selectedProjectIds === null || selectedProjectIds.has(p.id)
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() =>
+                        setSelectedProjectIds(
+                          toggleMember(
+                            selectedProjectIds,
+                            p.id,
+                            projects.map((x) => x.id),
+                          ),
+                        )
+                      }
+                      className={`rounded-full border px-2.5 py-1 text-xs ${
+                        active ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-500'
+                      }`}
+                    >
+                      {p.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -158,16 +265,6 @@ export function TaskList() {
           </button>
         ))}
       </div>
-
-      <label className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-        <input
-          type="checkbox"
-          checked={hideCompleted}
-          onChange={(e) => setHideCompleted(e.target.checked)}
-          className="accent-sky-600"
-        />
-        Скрыть завершённые
-      </label>
 
       {isLoading ? (
         <p className="text-slate-500">Загрузка…</p>

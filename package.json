@@ -12,6 +12,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.102.5",
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"

@@ -66,3 +66,10 @@ export interface Comment {
   body: string
   created_at: string
 }
+
+export interface UserSettings {
+  user_id: string
+  planned_hours_per_day: number | null
+  planned_hours_per_month: number | null
+  updated_at: string
+}

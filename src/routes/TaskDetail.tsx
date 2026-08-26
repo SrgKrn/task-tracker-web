@@ -15,7 +15,7 @@ import { formatHours } from '../lib/time'
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { showError } = useToast()
+  const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
 
   const { data: task } = useTask(id)
@@ -71,7 +71,7 @@ export function TaskDetail() {
       </div>
 
       <div className="mb-5">
-        <label className="mb-1 block text-sm text-slate-400">Факт, часы (можно исправить вручную)</label>
+        <label className="mb-1 block text-sm text-slate-400">Факт, часы</label>
         <input
           type="number"
           step="0.25"
@@ -88,7 +88,18 @@ export function TaskDetail() {
         sections={sections}
         statuses={statuses}
         submitLabel="Сохранить"
-        onSubmit={(fields) => updateTask.mutate({ id: task.id, fields }, { onError })}
+        onSubmit={(fields) =>
+          updateTask.mutate(
+            { id: task.id, fields },
+            {
+              onError,
+              onSuccess: () => {
+                showSuccess('Сохранено')
+                navigate('/')
+              },
+            },
+          )
+        }
       />
 
       <TaskTimeline taskId={task.id} />

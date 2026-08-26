@@ -157,22 +157,22 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
       </div>
 
       <div className="flex gap-3">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label className="mb-1 block text-sm text-slate-400">Срок с</label>
           <input
             type="date"
             value={values.start_date ?? ''}
             onChange={(e) => set('start_date', e.target.value || null)}
-            className={fieldClass}
+            className={`${fieldClass} min-w-0`}
           />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label className="mb-1 block text-sm text-slate-400">Срок до</label>
           <input
             type="date"
             value={values.end_date ?? ''}
             onChange={(e) => set('end_date', e.target.value || null)}
-            className={fieldClass}
+            className={`${fieldClass} min-w-0`}
           />
         </div>
       </div>
