@@ -12,11 +12,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'Tracker',
-        short_name: 'Tracker',
+        name: 'Хронограф',
+        short_name: 'Хронограф',
         description: 'Task and time tracker',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#121212',
+        background_color: '#121212',
         display: 'standalone',
         start_url: '/',
         icons: [

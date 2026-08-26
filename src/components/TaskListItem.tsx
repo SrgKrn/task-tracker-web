@@ -26,7 +26,7 @@ export function TaskListItem({ task, status, isTracking }: TaskListItemProps) {
         <p className="text-slate-300">
           {formatHours(task.fact_hours)} / {formatHours(task.planned_hours)} ч
         </p>
-        {isTracking && <p className="text-xs font-medium text-emerald-400">● идёт трекинг</p>}
+        {isTracking && <p className="text-xs font-medium text-sky-600">● идёт трекинг</p>}
       </div>
     </Link>
   )

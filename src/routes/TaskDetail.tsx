@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
 import { TimerButton } from '../components/TimerButton'
+import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
@@ -12,6 +14,8 @@ import { formatHours } from '../lib/time'
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { showError } = useToast()
+  const onError = (error: unknown) => showError(describeError(error))
 
   const { data: task } = useTask(id)
   const { data: projects = [] } = useProjects()
@@ -26,6 +30,7 @@ export function TaskDetail() {
   const adjustFactHours = useAdjustFactHours()
 
   const [factInput, setFactInput] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   if (!task) return null
 
@@ -43,7 +48,7 @@ export function TaskDetail() {
     if (factInput === null) return
     const parsed = Number(factInput)
     if (!Number.isNaN(parsed) && task && parsed !== task.fact_hours) {
-      adjustFactHours.mutate({ taskId: task.id, currentFactHours: task.fact_hours, newFactHours: parsed })
+      adjustFactHours.mutate({ taskId: task.id, currentFactHours: task.fact_hours, newFactHours: parsed }, { onError })
     }
     setFactInput(null)
   }
@@ -58,8 +63,8 @@ export function TaskDetail() {
         <TimerButton
           taskId={task.id}
           activeTimer={activeTimer}
-          onStart={() => startTimer.mutate(task.id)}
-          onStop={() => stopTimer.mutate()}
+          onStart={() => startTimer.mutate(task.id, { onError })}
+          onStop={() => stopTimer.mutate(undefined, { onError })}
         />
       </div>
 
@@ -81,19 +86,26 @@ export function TaskDetail() {
         sections={sections}
         statuses={statuses}
         submitLabel="Сохранить"
-        onSubmit={(fields) => updateTask.mutate({ id: task.id, fields })}
+        onSubmit={(fields) => updateTask.mutate({ id: task.id, fields }, { onError })}
       />
 
       <button
-        onClick={() => {
-          if (confirm('Удалить задачу вместе с историей трекинга?')) {
-            deleteTask.mutate(task.id, { onSuccess: () => navigate('/') })
-          }
-        }}
+        onClick={() => setConfirmingDelete(true)}
         className="mt-6 w-full rounded-lg border border-red-800 px-4 py-2.5 font-medium text-red-400 active:bg-red-950"
       >
         Удалить задачу
       </button>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Удалить задачу?"
+        description="Вместе с ней удалится вся история трекинга по ней."
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={() => {
+          setConfirmingDelete(false)
+          deleteTask.mutate(task.id, { onSuccess: () => navigate('/'), onError })
+        }}
+      />
     </div>
   )
 }

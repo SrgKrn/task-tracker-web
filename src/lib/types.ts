@@ -21,6 +21,7 @@ export interface Status {
   user_id: string
   label: string
   sort_order: number
+  is_final: boolean
   created_at: string
   updated_at: string
 }
@@ -56,4 +57,12 @@ export interface ActiveTimer {
   user_id: string
   task_id: string
   started_at: string
+}
+
+export interface Comment {
+  id: string
+  user_id: string
+  task_id: string
+  body: string
+  created_at: string
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ConfirmDialog } from './ConfirmDialog'
 
 interface Item {
   id: string
@@ -29,6 +30,7 @@ export function PicklistAdmin<T extends Item>({
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [deletingItem, setDeletingItem] = useState<T | null>(null)
 
   function handleCreate() {
     const name = newName.trim()
@@ -72,7 +74,7 @@ export function PicklistAdmin<T extends Item>({
         />
         <button
           onClick={handleCreate}
-          className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-white active:bg-sky-700"
+          className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-slate-900 active:bg-sky-700"
         >
           Добавить
         </button>
@@ -122,7 +124,7 @@ export function PicklistAdmin<T extends Item>({
             )}
 
             <button
-              onClick={() => onDelete(item.id)}
+              onClick={() => setDeletingItem(item)}
               className="text-red-400 active:text-red-500"
               aria-label="Удалить"
             >
@@ -132,6 +134,16 @@ export function PicklistAdmin<T extends Item>({
         ))}
         {items.length === 0 && <li className="text-slate-500">Пока пусто.</li>}
       </ul>
+
+      <ConfirmDialog
+        open={deletingItem !== null}
+        title={`Удалить «${deletingItem ? labelOf(deletingItem) : ''}»?`}
+        onCancel={() => setDeletingItem(null)}
+        onConfirm={() => {
+          if (deletingItem) onDelete(deletingItem.id)
+          setDeletingItem(null)
+        }}
+      />
     </div>
   )
 }

@@ -138,7 +138,7 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-sky-600 px-4 py-2.5 font-medium text-white active:bg-sky-700"
+        className="w-full rounded-lg bg-sky-600 px-4 py-2.5 font-medium text-slate-900 active:bg-sky-700"
       >
         {submitLabel}
       </button>

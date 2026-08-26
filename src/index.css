@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+/*
+ * "Хронограф": neutral graphite shell, brass as the one accent in the whole app.
+ * Brass reads as lit metal against black — deliberately dark-only, no light variant.
+ * Remapping the slate/sky/red/emerald scales (rather than editing every component's
+ * classes) means every existing bg-slate-800 / text-sky-600 / etc. picks this up for free.
+ */
+@theme {
+  --color-slate-100: #ededed;
+  --color-slate-300: #cfcfcf;
+  --color-slate-400: #9a9a9a;
+  --color-slate-500: #8f8f8f;
+  --color-slate-700: #2c2c2c;
+  --color-slate-800: #1a1a1a;
+  --color-slate-900: #121212;
+
+  /* brass — the single accent, used for primary actions, active tab, and the timer/tracking state */
+  --color-sky-500: #f0b968;
+  --color-sky-600: #e8a33d;
+  --color-sky-700: #c98a2e;
+
+  /* danger — errors and destructive actions only, never decorative */
+  --color-red-400: #d97256;
+  --color-red-500: #c1583f;
+  --color-red-800: #5a2a1c;
+  --color-red-950: #2a140d;
+
+  /* success — brief confirmations only (e.g. "saved"), kept separate from brass so it never
+     reads as "still tracking" */
+  --color-emerald-400: #7fb894;
+  --color-emerald-600: #5f9e6f;
+  --color-emerald-700: #4d8259;
+}
+
 :root {
   color-scheme: dark;
 }
@@ -11,8 +44,8 @@ body,
 }
 
 body {
-  background-color: #0f172a;
-  color: #e2e8f0;
+  background-color: #121212;
+  color: #ededed;
   -webkit-tap-highlight-color: transparent;
 }
 

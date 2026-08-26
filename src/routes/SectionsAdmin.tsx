@@ -1,4 +1,5 @@
 import { PicklistAdmin } from '../components/PicklistAdmin'
+import { describeError, useToast } from '../lib/Toast'
 import {
   useCreateSection,
   useDeleteSection,
@@ -13,6 +14,8 @@ export function SectionsAdmin() {
   const updateSection = useUpdateSection()
   const deleteSection = useDeleteSection()
   const reorderSections = useReorderSections()
+  const { showError } = useToast()
+  const onError = (error: unknown) => showError(describeError(error))
 
   return (
     <PicklistAdmin
@@ -20,10 +23,10 @@ export function SectionsAdmin() {
       placeholder="Название раздела"
       items={sections}
       labelOf={(s) => s.name}
-      onCreate={(name) => createSection.mutate(name)}
-      onUpdate={(id, name) => updateSection.mutate({ id, name })}
-      onDelete={(id) => deleteSection.mutate(id)}
-      onReorder={(items) => reorderSections.mutate(items)}
+      onCreate={(name) => createSection.mutate(name, { onError })}
+      onUpdate={(id, name) => updateSection.mutate({ id, name }, { onError })}
+      onDelete={(id) => deleteSection.mutate(id, { onError })}
+      onReorder={(items) => reorderSections.mutate(items, { onError })}
     />
   )
 }

@@ -16,7 +16,7 @@ export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButto
     return (
       <button
         onClick={onStop}
-        className="flex w-full items-center justify-center gap-3 rounded-lg bg-red-600 px-4 py-3 font-medium text-white active:bg-red-700"
+        className="flex w-full items-center justify-center gap-3 rounded-lg bg-sky-600 px-4 py-3 font-medium text-slate-900 active:bg-sky-700"
       >
         <span className="tabular-nums">{formatElapsed(activeTimer.started_at)}</span>
         <span>Остановить</span>
@@ -27,7 +27,7 @@ export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButto
   return (
     <button
       onClick={onStart}
-      className="w-full rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white active:bg-emerald-700"
+      className="w-full rounded-lg border border-sky-600 px-4 py-3 font-medium text-sky-600 active:bg-sky-600/10"
     >
       ▶ Начать выполнение
     </button>

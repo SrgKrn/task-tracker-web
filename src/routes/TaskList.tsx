@@ -49,7 +49,7 @@ export function TaskList() {
         <h1 className="text-xl font-semibold text-slate-100">Задачи</h1>
         <Link
           to="/tasks/new"
-          className="rounded-full bg-sky-600 px-4 py-1.5 text-sm font-medium text-white active:bg-sky-700"
+          className="rounded-full bg-sky-600 px-4 py-1.5 text-sm font-medium text-slate-900 active:bg-sky-700"
         >
           + Задача
         </Link>
@@ -74,7 +74,7 @@ export function TaskList() {
             key={value}
             onClick={() => setGroupBy(value)}
             className={`flex-1 rounded-md py-1.5 ${
-              groupBy === value ? 'bg-sky-600 text-white' : 'text-slate-400'
+              groupBy === value ? 'bg-sky-600 text-slate-900' : 'text-slate-400'
             }`}
           >
             {label}

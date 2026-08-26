@@ -1,4 +1,5 @@
 import { PicklistAdmin } from '../components/PicklistAdmin'
+import { describeError, useToast } from '../lib/Toast'
 import {
   useCreateProject,
   useDeleteProject,
@@ -13,6 +14,8 @@ export function ProjectsAdmin() {
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const reorderProjects = useReorderProjects()
+  const { showError } = useToast()
+  const onError = (error: unknown) => showError(describeError(error))
 
   return (
     <PicklistAdmin
@@ -20,10 +23,10 @@ export function ProjectsAdmin() {
       placeholder="Название проекта"
       items={projects}
       labelOf={(p) => p.name}
-      onCreate={(name) => createProject.mutate(name)}
-      onUpdate={(id, name) => updateProject.mutate({ id, name })}
-      onDelete={(id) => deleteProject.mutate(id)}
-      onReorder={(items) => reorderProjects.mutate(items)}
+      onCreate={(name) => createProject.mutate(name, { onError })}
+      onUpdate={(id, name) => updateProject.mutate({ id, name }, { onError })}
+      onDelete={(id) => deleteProject.mutate(id, { onError })}
+      onReorder={(items) => reorderProjects.mutate(items, { onError })}
     />
   )
 }

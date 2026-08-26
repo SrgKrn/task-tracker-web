@@ -62,7 +62,7 @@ export function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-sky-600 px-4 py-2 font-medium text-white disabled:opacity-50 active:bg-sky-700"
+          className="w-full rounded-lg bg-sky-600 px-4 py-2 font-medium text-slate-900 disabled:opacity-50 active:bg-sky-700"
         >
           {mode === 'signin' ? 'Войти' : 'Создать аккаунт'}
         </button>

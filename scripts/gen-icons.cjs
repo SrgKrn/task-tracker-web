@@ -1,4 +1,7 @@
-// One-off placeholder PWA icon generator: solid-color square PNGs, no deps beyond zlib.
+// PWA icon generator: brass chronograph-dial mark on graphite, full-bleed square
+// (iOS applies its own corner rounding/mask, so no rounding is baked in here).
+// Rendered by supersampled distance-field hit-testing + box-downsample antialiasing,
+// so no canvas/browser/native deps are needed — just zlib for PNG compression.
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -28,7 +31,7 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crcBuf])
 }
 
-function makePng(size, [r, g, b]) {
+function encodePng(size, rgbBuffer) {
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
@@ -44,23 +47,74 @@ function makePng(size, [r, g, b]) {
   for (let y = 0; y < size; y++) {
     const rowStart = y * rowLen
     raw[rowStart] = 0 // filter: none
-    for (let x = 0; x < size; x++) {
-      const px = rowStart + 1 + x * 3
-      raw[px] = r
-      raw[px + 1] = g
-      raw[px + 2] = b
-    }
+    rgbBuffer.copy(raw, rowStart + 1, y * size * 3, (y + 1) * size * 3)
   }
   const idatData = zlib.deflateSync(raw)
-
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idatData), chunk('IEND', Buffer.alloc(0))])
 }
 
+// distance from point p to segment ab
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax
+  const dy = by - ay
+  const lenSq = dx * dx + dy * dy
+  let t = lenSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lenSq
+  t = Math.max(0, Math.min(1, t))
+  const cx = ax + t * dx
+  const cy = ay + t * dy
+  return Math.hypot(px - cx, py - cy)
+}
+
+const BG = [26, 26, 26] // #1a1a1a graphite
+const BRASS = [232, 163, 61] // #e8a33d
+
+/** true if (x, y) in local icon-space falls on the brass dial mark */
+function hitsMark(x, y, size) {
+  const cx = size / 2
+  const cy = size / 2
+  const r = size * 0.3
+  const sw = size * 0.06
+  const capSw = size * 0.065
+  const handLen = r * 0.72
+  const minLen = r * 0.46
+
+  const distFromCenter = Math.hypot(x - cx, y - cy)
+  if (Math.abs(distFromCenter - r) <= sw / 2) return true
+
+  if (distToSegment(x, y, cx, cy, cx, cy - handLen) <= sw / 2) return true
+  if (distToSegment(x, y, cx, cy, cx + minLen * 0.82, cy + minLen * 0.56) <= sw / 2) return true
+  if (distToSegment(x, y, cx, cy - r - sw * 1.7, cx, cy - r - sw * 0.15) <= capSw / 2) return true
+
+  return false
+}
+
+function renderIcon(size) {
+  const SS = 4 // supersample factor for antialiasing
+  const rgb = Buffer.alloc(size * size * 3)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let hits = 0
+      for (let sy = 0; sy < SS; sy++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const px = x + (sx + 0.5) / SS
+          const py = y + (sy + 0.5) / SS
+          if (hitsMark(px, py, size)) hits++
+        }
+      }
+      const alpha = hits / (SS * SS)
+      const idx = (y * size + x) * 3
+      for (let c = 0; c < 3; c++) {
+        rgb[idx + c] = Math.round(BG[c] + (BRASS[c] - BG[c]) * alpha)
+      }
+    }
+  }
+  return encodePng(size, rgb)
+}
+
 const outDir = path.join(__dirname, '..', 'public')
-const color = [14, 165, 233] // sky-500, matches the app's accent color
 
-fs.writeFileSync(path.join(outDir, 'icon-192.png'), makePng(192, color))
-fs.writeFileSync(path.join(outDir, 'icon-512.png'), makePng(512, color))
-fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), makePng(180, color))
+fs.writeFileSync(path.join(outDir, 'icon-192.png'), renderIcon(192))
+fs.writeFileSync(path.join(outDir, 'icon-512.png'), renderIcon(512))
+fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), renderIcon(180))
 
-console.log('Placeholder icons written to public/')
+console.log('Chronograph-mark icons written to public/')
