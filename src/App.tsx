@@ -8,6 +8,7 @@ import { ProjectDetail } from './routes/ProjectDetail'
 import { ProjectsAdmin } from './routes/ProjectsAdmin'
 import { SectionDetail } from './routes/SectionDetail'
 import { SectionsAdmin } from './routes/SectionsAdmin'
+import { Settings } from './routes/Settings'
 import { StatusesAdmin } from './routes/StatusesAdmin'
 import { TaskDetail } from './routes/TaskDetail'
 import { TaskList } from './routes/TaskList'
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectsAdmin />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/statuses" element={<StatusesAdmin />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )

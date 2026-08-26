@@ -56,7 +56,7 @@ export function Dashboard() {
   }, [groupBy, projects, sections, tasks, entries, from, to])
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-4 safe-top">
       <h1 className="mb-3 text-xl font-semibold text-slate-100">Дашборд</h1>
 
       <div className="mb-4 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm">

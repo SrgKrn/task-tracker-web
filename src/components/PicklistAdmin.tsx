@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface Item {
@@ -37,6 +38,7 @@ export function PicklistAdmin<T extends Item>({
   onToggleFinal,
   onOpen,
 }: PicklistAdminProps<T>) {
+  const navigate = useNavigate()
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -71,7 +73,10 @@ export function PicklistAdmin<T extends Item>({
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
+      <button onClick={() => navigate('/settings')} className="mb-4 text-sm text-slate-400">
+        ← Настройки
+      </button>
       <h1 className="mb-4 text-xl font-semibold text-slate-100">{title}</h1>
 
       <div className="mb-4 flex gap-2">

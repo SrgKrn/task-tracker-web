@@ -29,7 +29,7 @@ export function ProjectDetail() {
   if (!project) return null
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
       <button onClick={() => navigate(-1)} className="mb-4 text-sm text-slate-400">
         ← Назад
       </button>

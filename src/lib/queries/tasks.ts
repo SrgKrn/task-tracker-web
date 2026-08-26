@@ -39,8 +39,9 @@ export function useCreateTask() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: NewTaskInput) => {
-      const { error } = await supabase.from('tasks').insert(input)
+      const { data, error } = await supabase.from('tasks').insert(input).select().single()
       if (error) throw error
+      return data as Task
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   })

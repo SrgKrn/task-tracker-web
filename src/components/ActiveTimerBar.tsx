@@ -16,8 +16,13 @@ export function ActiveTimerBar() {
   // the task's own screen already has a full timer control — avoid showing it twice
   if (location.pathname === `/tasks/${task.id}`) return null
 
+  const STALE_AFTER_MS = 2 * 60 * 60 * 1000
+  const isStale = Date.now() - new Date(activeTimer.started_at).getTime() >= STALE_AFTER_MS
+
   return (
-    <div className="flex items-center gap-3 border-b border-sky-600/40 bg-sky-600/10 px-4 py-2 text-sm">
+    <div
+      className={`flex items-center gap-3 border-b border-sky-600/40 bg-sky-600/10 px-4 py-2 text-sm ${isStale ? '' : 'safe-top'}`}
+    >
       <span className="text-sky-600">●</span>
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 truncate text-slate-100">
         {task.name}

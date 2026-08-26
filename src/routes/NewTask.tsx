@@ -25,7 +25,7 @@ export function NewTask() {
   const { showError } = useToast()
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
       <h1 className="mb-4 text-xl font-semibold text-slate-100">Новая задача</h1>
       <TaskForm
         initial={empty}

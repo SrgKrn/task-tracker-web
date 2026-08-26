@@ -8,7 +8,7 @@ import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useTask, useUpdateTask } from '../lib/queries/tasks'
+import { useCreateTask, useDeleteTask, useTask, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { formatHours } from '../lib/time'
 
@@ -26,6 +26,7 @@ export function TaskDetail() {
 
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const createTask = useCreateTask()
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
@@ -55,7 +56,7 @@ export function TaskDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
       <button onClick={() => navigate(-1)} className="mb-4 text-sm text-slate-400">
         ← Назад
       </button>
@@ -91,6 +92,26 @@ export function TaskDetail() {
       />
 
       <TaskTimeline taskId={task.id} />
+
+      <button
+        onClick={() =>
+          createTask.mutate(
+            {
+              name: `${task.name} (копия)`,
+              project_id: task.project_id,
+              section_id: task.section_id,
+              status_id: task.status_id,
+              planned_hours: task.planned_hours,
+              start_date: task.start_date,
+              end_date: task.end_date,
+            },
+            { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) },
+          )
+        }
+        className="mt-6 w-full rounded-lg border border-slate-700 px-4 py-2.5 font-medium text-slate-300 active:bg-slate-700"
+      >
+        Дублировать задачу
+      </button>
 
       <button
         onClick={() => setConfirmingDelete(true)}

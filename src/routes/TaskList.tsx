@@ -29,6 +29,7 @@ export function TaskList() {
   const [periodTo, setPeriodTo] = useState('')
   const [showPeriod, setShowPeriod] = useState(false)
   const [hideCompleted, setHideCompleted] = useState(true)
+  const [sortByDue, setSortByDue] = useState(false)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -42,9 +43,19 @@ export function TaskList() {
       .filter((t) => !hideCompleted || !(t.status_id && statusById.get(t.status_id)?.is_final))
   }, [tasks, search, periodFrom, periodTo, hideCompleted, statusById])
 
+  const sorted = useMemo(() => {
+    if (!sortByDue) return filtered
+    return [...filtered].sort((a, b) => {
+      if (!a.end_date && !b.end_date) return 0
+      if (!a.end_date) return 1
+      if (!b.end_date) return -1
+      return a.end_date.localeCompare(b.end_date)
+    })
+  }, [filtered, sortByDue])
+
   const groups = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ id: 'all', name: 'Все задачи', tasks: filtered }]
+      return [{ id: 'all', name: 'Все задачи', tasks: sorted }]
     }
     const buckets = groupBy === 'section' ? sections : projects
     const key = groupBy === 'section' ? 'section_id' : 'project_id'
@@ -52,13 +63,13 @@ export function TaskList() {
       .map((bucket) => ({
         id: bucket.id,
         name: bucket.name,
-        tasks: filtered.filter((t: Task) => t[key as 'section_id' | 'project_id'] === bucket.id),
+        tasks: sorted.filter((t: Task) => t[key as 'section_id' | 'project_id'] === bucket.id),
       }))
       .filter((group) => group.tasks.length > 0)
-  }, [groupBy, filtered, sections, projects])
+  }, [groupBy, sorted, sections, projects])
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4 safe-top safe-bottom">
+    <div className="mx-auto max-w-lg px-4 py-4 safe-top">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-100">Задачи</h1>
         <Link
@@ -83,6 +94,15 @@ export function TaskList() {
           }`}
         >
           Период
+        </button>
+        <button
+          onClick={() => setSortByDue((v) => !v)}
+          title="Сортировать по сроку"
+          className={`rounded-lg border px-3 text-sm ${
+            sortByDue ? 'border-sky-600 text-sky-600' : 'border-slate-700 text-slate-400'
+          }`}
+        >
+          ⇅ Срок
         </button>
       </div>
 
