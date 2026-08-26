@@ -35,7 +35,7 @@ export function NewTask() {
         submitLabel="Создать"
         onSubmit={(values) =>
           createTask.mutate(values, {
-            onSuccess: () => navigate('/'),
+            onSuccess: (row) => navigate(`/tasks/${row.id}`),
             onError: (error) => showError(describeError(error)),
           })
         }

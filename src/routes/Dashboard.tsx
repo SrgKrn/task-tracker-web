@@ -56,10 +56,10 @@ export function Dashboard() {
   }, [groupBy, projects, sections, tasks, entries, from, to])
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4 safe-top">
+    <div className="mx-auto max-w-lg px-4 py-4 safe-top lg:max-w-3xl">
       <h1 className="mb-3 text-xl font-semibold text-slate-100">Дашборд</h1>
 
-      <div className="mb-4 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm">
+      <div className="mb-4 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm lg:max-w-xs">
         {PERIOD_PRESETS.map((p) => (
           <button
             key={p.key}
@@ -87,7 +87,7 @@ export function Dashboard() {
         «Задач закрыто» — по дате последнего изменения задачи, а не по учёту истории смены статусов.
       </p>
 
-      <div className="mb-3 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm">
+      <div className="mb-3 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm lg:max-w-xs">
         {(
           [
             ['project', 'По проектам'],
@@ -106,7 +106,7 @@ export function Dashboard() {
         ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
         {rows.map((row) => {
           const ratio = row.planHours > 0 ? Math.min(1, row.factHours / row.planHours) : row.factHours > 0 ? 1 : 0
           return (

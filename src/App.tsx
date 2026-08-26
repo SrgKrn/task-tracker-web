@@ -11,7 +11,7 @@ import { SectionsAdmin } from './routes/SectionsAdmin'
 import { Settings } from './routes/Settings'
 import { StatusesAdmin } from './routes/StatusesAdmin'
 import { TaskDetail } from './routes/TaskDetail'
-import { TaskList } from './routes/TaskList'
+import { TaskWorkspace } from './routes/TaskWorkspace'
 
 function LoginRoute() {
   const { session } = useAuth()
@@ -24,10 +24,11 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<TaskList />} />
+        <Route path="/" element={<TaskWorkspace />}>
+          <Route path="tasks/new" element={<NewTask />} />
+          <Route path="tasks/:id" element={<TaskDetail />} />
+        </Route>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/tasks/new" element={<NewTask />} />
-        <Route path="/tasks/:id" element={<TaskDetail />} />
         <Route path="/sections" element={<SectionsAdmin />} />
         <Route path="/sections/:id" element={<SectionDetail />} />
         <Route path="/projects" element={<ProjectsAdmin />} />

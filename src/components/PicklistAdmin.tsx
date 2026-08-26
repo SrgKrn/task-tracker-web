@@ -73,8 +73,8 @@ export function PicklistAdmin<T extends Item>({
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
-      <button onClick={() => navigate('/settings')} className="mb-4 text-sm text-slate-400">
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top lg:max-w-2xl">
+      <button onClick={() => navigate('/settings')} className="mb-4 text-sm text-slate-400 lg:hidden">
         ← Настройки
       </button>
       <h1 className="mb-4 text-xl font-semibold text-slate-100">{title}</h1>
@@ -99,9 +99,9 @@ export function PicklistAdmin<T extends Item>({
         {items.map((item, index) => (
           <li
             key={item.id}
-            className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2"
+            className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 lg:hover:bg-slate-800"
           >
-            <div className="flex flex-col">
+            <div className="flex flex-col lg:flex-row lg:gap-1">
               <button
                 onClick={() => move(index, -1)}
                 disabled={index === 0}

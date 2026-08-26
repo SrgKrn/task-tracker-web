@@ -69,7 +69,7 @@ export function TaskList() {
   }, [groupBy, sorted, sections, projects])
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4 safe-top">
+    <div className="mx-auto max-w-lg px-4 py-4 safe-top lg:mx-0 lg:max-w-none lg:w-full">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-100">Задачи</h1>
         <Link

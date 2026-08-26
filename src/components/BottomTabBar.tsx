@@ -48,7 +48,7 @@ export function BottomTabBar() {
   const location = useLocation()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-900/90 backdrop-blur safe-bottom">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-900/90 backdrop-blur safe-bottom lg:hidden">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((tab) => {
           const active = tab.match(location.pathname)
