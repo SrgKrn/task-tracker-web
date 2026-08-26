@@ -1,0 +1,17 @@
+import { Navigate, Outlet } from 'react-router-dom'
+import { useAuth } from '../lib/AuthContext'
+import { AppHeader } from './AppHeader'
+
+export function ProtectedLayout() {
+  const { session, loading } = useAuth()
+
+  if (loading) return null
+  if (!session) return <Navigate to="/login" replace />
+
+  return (
+    <div className="min-h-full">
+      <AppHeader />
+      <Outlet />
+    </div>
+  )
+}

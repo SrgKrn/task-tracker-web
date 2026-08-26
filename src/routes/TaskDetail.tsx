@@ -1,0 +1,99 @@
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { TaskForm, type TaskFormValues } from '../components/TaskForm'
+import { TimerButton } from '../components/TimerButton'
+import { useProjects } from '../lib/queries/projects'
+import { useSections } from '../lib/queries/sections'
+import { useStatuses } from '../lib/queries/statuses'
+import { useDeleteTask, useTask, useUpdateTask } from '../lib/queries/tasks'
+import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
+import { formatHours } from '../lib/time'
+
+export function TaskDetail() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+
+  const { data: task } = useTask(id)
+  const { data: projects = [] } = useProjects()
+  const { data: sections = [] } = useSections()
+  const { data: statuses = [] } = useStatuses()
+  const { data: activeTimer } = useActiveTimer()
+
+  const updateTask = useUpdateTask()
+  const deleteTask = useDeleteTask()
+  const startTimer = useStartTimer()
+  const stopTimer = useStopTimer()
+  const adjustFactHours = useAdjustFactHours()
+
+  const [factInput, setFactInput] = useState<string | null>(null)
+
+  if (!task) return null
+
+  const values: TaskFormValues = {
+    name: task.name,
+    project_id: task.project_id,
+    section_id: task.section_id,
+    status_id: task.status_id,
+    planned_hours: task.planned_hours,
+    start_date: task.start_date,
+    end_date: task.end_date,
+  }
+
+  function commitFactHours() {
+    if (factInput === null) return
+    const parsed = Number(factInput)
+    if (!Number.isNaN(parsed) && task && parsed !== task.fact_hours) {
+      adjustFactHours.mutate({ taskId: task.id, currentFactHours: task.fact_hours, newFactHours: parsed })
+    }
+    setFactInput(null)
+  }
+
+  return (
+    <div className="mx-auto max-w-lg px-4 py-6 safe-top safe-bottom">
+      <button onClick={() => navigate(-1)} className="mb-4 text-sm text-slate-400">
+        ← Назад
+      </button>
+
+      <div className="mb-5">
+        <TimerButton
+          taskId={task.id}
+          activeTimer={activeTimer}
+          onStart={() => startTimer.mutate(task.id)}
+          onStop={() => stopTimer.mutate()}
+        />
+      </div>
+
+      <div className="mb-5">
+        <label className="mb-1 block text-sm text-slate-400">Факт, часы (можно исправить вручную)</label>
+        <input
+          type="number"
+          step="0.25"
+          value={factInput ?? formatHours(task.fact_hours)}
+          onChange={(e) => setFactInput(e.target.value)}
+          onBlur={commitFactHours}
+          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+        />
+      </div>
+
+      <TaskForm
+        initial={values}
+        projects={projects}
+        sections={sections}
+        statuses={statuses}
+        submitLabel="Сохранить"
+        onSubmit={(fields) => updateTask.mutate({ id: task.id, fields })}
+      />
+
+      <button
+        onClick={() => {
+          if (confirm('Удалить задачу вместе с историей трекинга?')) {
+            deleteTask.mutate(task.id, { onSuccess: () => navigate('/') })
+          }
+        }}
+        className="mt-6 w-full rounded-lg border border-red-800 px-4 py-2.5 font-medium text-red-400 active:bg-red-950"
+      >
+        Удалить задачу
+      </button>
+    </div>
+  )
+}
