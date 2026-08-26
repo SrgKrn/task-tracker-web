@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
+import { TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
 import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
@@ -88,6 +89,8 @@ export function TaskDetail() {
         submitLabel="Сохранить"
         onSubmit={(fields) => updateTask.mutate({ id: task.id, fields }, { onError })}
       />
+
+      <TaskTimeline taskId={task.id} />
 
       <button
         onClick={() => setConfirmingDelete(true)}

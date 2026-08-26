@@ -10,22 +10,32 @@ interface PicklistAdminProps<T extends Item> {
   title: string
   placeholder: string
   items: T[]
+  loading?: boolean
   labelOf: (item: T) => string
   onCreate: (name: string) => void
   onUpdate: (id: string, name: string) => void
   onDelete: (id: string) => void
   onReorder: (items: T[]) => void
+  /** optional "this item marks something done" flag, e.g. statuses.is_final */
+  finalOf?: (item: T) => boolean
+  onToggleFinal?: (item: T, value: boolean) => void
+  /** when provided, adds a "view tasks in this bucket" affordance per row */
+  onOpen?: (item: T) => void
 }
 
 export function PicklistAdmin<T extends Item>({
   title,
   placeholder,
   items,
+  loading = false,
   labelOf,
   onCreate,
   onUpdate,
   onDelete,
   onReorder,
+  finalOf,
+  onToggleFinal,
+  onOpen,
 }: PicklistAdminProps<T>) {
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -123,6 +133,28 @@ export function PicklistAdmin<T extends Item>({
               </button>
             )}
 
+            {onOpen && (
+              <button
+                onClick={() => onOpen(item)}
+                className="shrink-0 text-slate-400 active:text-sky-600"
+                aria-label="Открыть задачи"
+              >
+                →
+              </button>
+            )}
+
+            {finalOf && onToggleFinal && (
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={finalOf(item)}
+                  onChange={(e) => onToggleFinal(item, e.target.checked)}
+                  className="accent-sky-600"
+                />
+                Финальный
+              </label>
+            )}
+
             <button
               onClick={() => setDeletingItem(item)}
               className="text-red-400 active:text-red-500"
@@ -132,7 +164,9 @@ export function PicklistAdmin<T extends Item>({
             </button>
           </li>
         ))}
-        {items.length === 0 && <li className="text-slate-500">Пока пусто.</li>}
+        {items.length === 0 && (
+          <li className="text-slate-500">{loading ? 'Загрузка…' : 'Пока пусто.'}</li>
+        )}
       </ul>
 
       <ConfirmDialog

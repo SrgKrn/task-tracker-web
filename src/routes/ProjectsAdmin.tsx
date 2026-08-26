@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { PicklistAdmin } from '../components/PicklistAdmin'
 import { describeError, useToast } from '../lib/Toast'
 import {
@@ -9,7 +10,8 @@ import {
 } from '../lib/queries/projects'
 
 export function ProjectsAdmin() {
-  const { data: projects = [] } = useProjects()
+  const navigate = useNavigate()
+  const { data: projects = [], isLoading } = useProjects()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
@@ -22,11 +24,13 @@ export function ProjectsAdmin() {
       title="Проекты"
       placeholder="Название проекта"
       items={projects}
+      loading={isLoading}
       labelOf={(p) => p.name}
       onCreate={(name) => createProject.mutate(name, { onError })}
       onUpdate={(id, name) => updateProject.mutate({ id, name }, { onError })}
       onDelete={(id) => deleteProject.mutate(id, { onError })}
       onReorder={(items) => reorderProjects.mutate(items, { onError })}
+      onOpen={(p) => navigate(`/projects/${p.id}`)}
     />
   )
 }

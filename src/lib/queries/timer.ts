@@ -1,6 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
-import type { ActiveTimer } from '../types'
+import type { ActiveTimer, TimeEntry } from '../types'
+
+export function useTimeEntries(taskId: string | undefined) {
+  return useQuery({
+    queryKey: ['time_entries', taskId],
+    enabled: !!taskId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at')
+      if (error) throw error
+      return data as TimeEntry[]
+    },
+  })
+}
 
 export function useActiveTimer() {
   return useQuery({
@@ -58,6 +74,7 @@ export function useStartTimer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['active_timer'] })
       qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['time_entries'] })
     },
   })
 }
@@ -74,6 +91,7 @@ export function useStopTimer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['active_timer'] })
       qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['time_entries'] })
     },
   })
 }
@@ -103,6 +121,7 @@ export function useAdjustFactHours() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['tasks', variables.taskId] })
+      qc.invalidateQueries({ queryKey: ['time_entries', variables.taskId] })
     },
   })
 }

@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { ActiveTimerBar } from './ActiveTimerBar'
 import { AppHeader } from './AppHeader'
 import { StaleTimerBanner } from './StaleTimerBanner'
 
@@ -13,6 +14,7 @@ export function ProtectedLayout() {
     <div className="min-h-full">
       <AppHeader />
       <StaleTimerBanner />
+      <ActiveTimerBar />
       <Outlet />
     </div>
   )

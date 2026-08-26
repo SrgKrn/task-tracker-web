@@ -34,8 +34,13 @@ export function createPicklistQueries<T extends Orderable>(table: string, nameCo
           .order('sort_order', { ascending: false })
           .limit(1)
         const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0
-        const { error } = await supabase.from(table).insert({ [nameColumn]: name, sort_order: nextOrder })
+        const { data, error } = await supabase
+          .from(table)
+          .insert({ [nameColumn]: name, sort_order: nextOrder })
+          .select()
+          .single()
         if (error) throw error
+        return data as T
       },
       onSuccess: () => qc.invalidateQueries({ queryKey }),
     })
