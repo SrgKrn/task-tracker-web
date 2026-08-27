@@ -1,33 +1,42 @@
 @import "tailwindcss";
 
 /*
- * "Хронограф": neutral graphite shell, brass as the one accent in the whole app.
- * Brass reads as lit metal against black — deliberately dark-only, no light variant.
- * Remapping the slate/sky/red/emerald scales (rather than editing every component's
- * classes) means every existing bg-slate-800 / text-sky-600 / etc. picks this up for free.
+ * Semternity: графит + латунь. Латунь означает «сейчас» — активный таймер, текущий день,
+ * выбранный фильтр, главное действие. Терракота только для просрочки и переработки.
+ * Тема тёмная намеренно: латунь читается как металл именно на чёрном.
+ *
+ * Токены заданы дважды: как семантические CSS-переменные (--s-*) для нестандартных мест
+ * вроде conic-gradient колец, и через перемапливание шкал Tailwind — чтобы обычные утилиты
+ * (bg-slate-800, text-sky-600) сразу давали цвета из палитры.
  */
 @theme {
-  --color-slate-100: #ededed;
-  --color-slate-300: #cfcfcf;
-  --color-slate-400: #9a9a9a;
-  --color-slate-500: #8f8f8f;
-  --color-slate-700: #2c2c2c;
-  --color-slate-800: #1a1a1a;
-  --color-slate-900: #121212;
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  /* brass — the single accent, used for primary actions, active tab, and the timer/tracking state */
+  /* нейтрали */
+  --color-slate-50: #f4f4f4;  /* text-strong: крупные числа */
+  --color-slate-100: #ededed; /* text */
+  --color-slate-300: #cfcfd4; /* text-2: значения полей */
+  --color-slate-400: #9a9aa2; /* muted */
+  --color-slate-500: #7d7d85; /* muted-2: метки, мета */
+  --color-slate-600: #5c5c64; /* faint: сноски, отключённое */
+  --color-slate-700: #24242b; /* border */
+  --color-slate-800: #15151a; /* surface */
+  --color-slate-900: #0d0d0f; /* bg */
+
+  /* латунь — единственный акцент */
+  --color-sky-400: #f0b45c;
   --color-sky-500: #f0b968;
   --color-sky-600: #e8a33d;
-  --color-sky-700: #c98a2e;
+  --color-sky-700: #c98a2e; /* accent-dim: надпись «идёт учёт» */
 
-  /* danger — errors and destructive actions only, never decorative */
+  /* терракота — просрочка, переработка, удаление */
   --color-red-400: #d97256;
   --color-red-500: #c1583f;
   --color-red-800: #5a2a1c;
   --color-red-950: #2a140d;
 
-  /* success — brief confirmations only (e.g. "saved"), kept separate from brass so it never
-     reads as "still tracking" */
+  /* зелень — финальные статусы и подтверждения */
   --color-emerald-400: #7fb894;
   --color-emerald-600: #5f9e6f;
   --color-emerald-700: #4d8259;
@@ -35,6 +44,30 @@
 
 :root {
   color-scheme: dark;
+
+  --s-bg: #0d0d0f;
+  --s-surface: #15151a;
+  --s-surface-active: #16161a;
+  --s-surface-2: #121216;
+  --s-chrome: #0f0f12;
+  --s-border: #24242b;
+  --s-border-strong: #2a2a32;
+  --s-border-strong-2: #2f2f37;
+  --s-hairline: #1f1f25;
+  --s-hairline-2: #1c1c22;
+  --s-hairline-3: #1a1a20;
+  --s-ring-track: #2b2b32;
+  --s-ring-track-lg: #212127;
+  --s-accent: #e8a33d;
+  --s-accent-muted: rgba(232, 163, 61, 0.5);
+  --s-accent-ghost: rgba(232, 163, 61, 0.14);
+  --s-accent-dim: #c98a2e;
+  --s-timer-bg: #17130c;
+  --s-timer-track: #2a2318;
+  --s-success: #7fb894;
+  --s-danger: #d97256;
+  --s-on-accent: #121212;
+  --s-tab-idle: #6e6e77;
 }
 
 html,
@@ -44,9 +77,16 @@ body,
 }
 
 body {
-  background-color: #121212;
+  background-color: var(--s-bg);
   color: #ededed;
+  font-family: "Instrument Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* числа не должны «прыгать» при тике таймера */
+.tabular,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
 }
 
 .safe-top {
@@ -55,4 +95,12 @@ body {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* скрытый скроллбар для внутренних прокручиваемых областей */
+.sc::-webkit-scrollbar {
+  display: none;
+}
+.sc {
+  scrollbar-width: none;
 }

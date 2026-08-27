@@ -37,6 +37,8 @@ export interface Task {
   fact_hours: number
   start_date: string | null
   end_date: string | null
+  /** ежедневная (рутинная) задача — всегда попадает в «Сегодня» */
+  is_daily: boolean
   created_at: string
   updated_at: string
 }

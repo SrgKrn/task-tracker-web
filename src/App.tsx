@@ -12,6 +12,7 @@ import { Settings } from './routes/Settings'
 import { StatusesAdmin } from './routes/StatusesAdmin'
 import { TaskDetail } from './routes/TaskDetail'
 import { TaskWorkspace } from './routes/TaskWorkspace'
+import { Today } from './routes/Today'
 
 function LoginRoute() {
   const { session } = useAuth()
@@ -24,9 +25,10 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<TaskWorkspace />}>
-          <Route path="tasks/new" element={<NewTask />} />
-          <Route path="tasks/:id" element={<TaskDetail />} />
+        <Route path="/" element={<Today />} />
+        <Route path="/tasks" element={<TaskWorkspace />}>
+          <Route path="new" element={<NewTask />} />
+          <Route path=":id" element={<TaskDetail />} />
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/sections" element={<SectionsAdmin />} />

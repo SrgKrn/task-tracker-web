@@ -1,4 +1,3 @@
-import { formatElapsed, useTicker } from '../lib/time'
 import type { ActiveTimer } from '../lib/types'
 
 interface TimerButtonProps {
@@ -8,28 +7,37 @@ interface TimerButtonProps {
   onStop: () => void
 }
 
+/** Главное действие карточки: латунь с квадратом-стопом при учёте, контур с треугольником в покое. */
 export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButtonProps) {
-  const isThisTask = activeTimer?.task_id === taskId
-  useTicker(isThisTask)
-
-  if (isThisTask && activeTimer) {
-    return (
-      <button
-        onClick={onStop}
-        className="flex w-full items-center justify-center gap-3 rounded-lg bg-sky-600 px-4 py-3 font-medium text-slate-900 active:bg-sky-700"
-      >
-        <span className="tabular-nums">{formatElapsed(activeTimer.started_at)}</span>
-        <span>Остановить</span>
-      </button>
-    )
-  }
+  const isRunning = activeTimer?.task_id === taskId
 
   return (
     <button
-      onClick={onStart}
-      className="w-full rounded-lg border border-sky-600 px-4 py-3 font-medium text-sky-600 active:bg-sky-600/10"
+      type="button"
+      onClick={isRunning ? onStop : onStart}
+      className="flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] text-sm font-semibold"
+      style={{
+        background: isRunning ? 'var(--s-accent)' : 'transparent',
+        border: '1px solid var(--s-accent)',
+        color: isRunning ? 'var(--s-on-accent)' : 'var(--s-accent)',
+      }}
     >
-      ▶ Начать выполнение
+      {isRunning ? (
+        <span
+          style={{ width: 11, height: 11, borderRadius: 2, background: 'var(--s-on-accent)' }}
+        />
+      ) : (
+        <span
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '10px solid var(--s-accent)',
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+          }}
+        />
+      )}
+      {isRunning ? 'Остановить' : 'Начать учёт'}
     </button>
   )
 }

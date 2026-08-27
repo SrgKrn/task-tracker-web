@@ -1,4 +1,4 @@
-// PWA icon generator: brass chronograph-dial mark on graphite, full-bleed square
+// PWA icon generator: brass Semternity mark (ring + dot) on graphite, full-bleed square
 // (iOS applies its own corner rounding/mask, so no rounding is baked in here).
 // Rendered by supersampled distance-field hit-testing + box-downsample antialiasing,
 // so no canvas/browser/native deps are needed — just zlib for PNG compression.
@@ -53,37 +53,30 @@ function encodePng(size, rgbBuffer) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idatData), chunk('IEND', Buffer.alloc(0))])
 }
 
-// distance from point p to segment ab
-function distToSegment(px, py, ax, ay, bx, by) {
-  const dx = bx - ax
-  const dy = by - ay
-  const lenSq = dx * dx + dy * dy
-  let t = lenSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lenSq
-  t = Math.max(0, Math.min(1, t))
-  const cx = ax + t * dx
-  const cy = ay + t * dy
-  return Math.hypot(px - cx, py - cy)
-}
-
-const BG = [26, 26, 26] // #1a1a1a graphite
+const BG = [21, 21, 26] // #15151a graphite
 const BRASS = [232, 163, 61] // #e8a33d
 
-/** true if (x, y) in local icon-space falls on the brass dial mark */
+/**
+ * Знак Semternity: кольцо с одной точкой сверху («подвижное подобие вечности»)
+ * плюс внутреннее кольцо. Никаких стрелок часов.
+ */
 function hitsMark(x, y, size) {
   const cx = size / 2
   const cy = size / 2
-  const r = size * 0.3
-  const sw = size * 0.06
-  const capSw = size * 0.065
-  const handLen = r * 0.72
-  const minLen = r * 0.46
+  const r = size * 0.28
+  const sw = size * 0.062
+  const dotR = size * 0.062
+  const innerR = r * 0.5
+  const innerSw = size * 0.022
 
   const distFromCenter = Math.hypot(x - cx, y - cy)
-  if (Math.abs(distFromCenter - r) <= sw / 2) return true
 
-  if (distToSegment(x, y, cx, cy, cx, cy - handLen) <= sw / 2) return true
-  if (distToSegment(x, y, cx, cy, cx + minLen * 0.82, cy + minLen * 0.56) <= sw / 2) return true
-  if (distToSegment(x, y, cx, cy - r - sw * 1.7, cx, cy - r - sw * 0.15) <= capSw / 2) return true
+  // внешнее кольцо
+  if (Math.abs(distFromCenter - r) <= sw / 2) return true
+  // внутреннее кольцо
+  if (Math.abs(distFromCenter - innerR) <= innerSw / 2) return true
+  // точка сверху по центру, сидит на ободе
+  if (Math.hypot(x - cx, y - (cy - r)) <= dotR) return true
 
   return false
 }
@@ -117,4 +110,4 @@ fs.writeFileSync(path.join(outDir, 'icon-192.png'), renderIcon(192))
 fs.writeFileSync(path.join(outDir, 'icon-512.png'), renderIcon(512))
 fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), renderIcon(180))
 
-console.log('Chronograph-mark icons written to public/')
+console.log('Semternity mark icons written to public/')

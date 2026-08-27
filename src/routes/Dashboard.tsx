@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
+import { Ring } from '../components/Ring'
+import { Chip, FieldLabel, Overline } from '../components/ui'
 import {
   daysBetweenInclusive,
   daysInCalendarMonth,
   overlapsPeriod,
   PERIOD_PRESETS,
   rangeForPreset,
+  todayStr,
   type PeriodPreset,
 } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
@@ -13,14 +16,13 @@ import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
-import { formatHours } from '../lib/time'
+import { formatHoursRu } from '../lib/time'
 
 type GroupBy = 'project' | 'section'
 type PresetKey = PeriodPreset['key'] | 'custom'
 
-function todayStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+function shortDate(iso: string): string {
+  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`
 }
 
 export function Dashboard() {
@@ -36,7 +38,6 @@ export function Dashboard() {
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
   const { data: userSettings } = useUserSettings()
-  // time_entries.created_at is a timestamp — widen the date-only range to a half-open instant range
   const { data: entries = [] } = useTimeEntriesInRange(`${from}T00:00:00`, `${to}T23:59:59.999`)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
@@ -50,6 +51,11 @@ export function Dashboard() {
   const totalFactHours = useMemo(
     () => entries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
     [entries],
+  )
+
+  const totalPlanHours = useMemo(
+    () => tasks.filter((t) => overlapsPeriod(t, from, to)).reduce((sum, t) => sum + t.planned_hours, 0),
+    [tasks, from, to],
   )
 
   const totalOverHours = useMemo(() => {
@@ -76,11 +82,13 @@ export function Dashboard() {
   const dailyTarget = userSettings?.planned_hours_per_day ?? null
   const monthlyTarget = userSettings?.planned_hours_per_month ?? null
   const isProrated = !dailyTarget && !!monthlyTarget
-  const planForPeriod = dailyTarget
+  const budgetForPeriod = dailyTarget
     ? dailyTarget * daysInPeriod
     : monthlyTarget
       ? monthlyTarget * (daysInPeriod / daysInCalendarMonth(from))
       : null
+
+  const sumPct = totalPlanHours > 0 ? Math.round((totalFactHours / totalPlanHours) * 100) : 0
 
   const rows = useMemo(() => {
     const buckets = groupBy === 'project' ? projects : sections
@@ -93,138 +101,187 @@ export function Dashboard() {
           .reduce((sum, t) => sum + t.planned_hours, 0)
         let factHours = 0
         let overHours = 0
+        let counted = 0
         for (const t of bucketTasks) {
           const minutes = factByTask.get(t.id)
           if (!minutes) continue
+          counted += 1
           const factH = minutes / 60
           factHours += factH
           if (t.planned_hours > 0 && factH > t.planned_hours) overHours += factH - t.planned_hours
         }
-        return { id: bucket.id, name: bucket.name, planHours, factHours, overHours }
+        return { id: bucket.id, name: bucket.name, planHours, factHours, overHours, counted }
       })
       .filter((r) => r.planHours > 0 || r.factHours > 0)
       .sort((a, b) => b.factHours - a.factHours)
   }, [groupBy, projects, sections, tasks, factByTask, from, to])
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4 safe-top lg:max-w-3xl">
-      <h1 className="mb-3 text-xl font-semibold text-slate-100">Дашборд</h1>
-
-      <div className="mb-3 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm lg:max-w-md">
-        {[...PERIOD_PRESETS, { key: 'custom' as const, label: 'Свой диапазон' }].map((p) => (
-          <button
-            key={p.key}
-            onClick={() => setPreset(p.key)}
-            className={`flex-1 rounded-md py-1.5 ${
-              preset === p.key ? 'bg-sky-600 text-slate-900' : 'text-slate-400'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {preset === 'custom' && (
-        <div className="mb-4 flex gap-2 lg:max-w-xs">
-          <input
-            type="date"
-            value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
-          />
-          <input
-            type="date"
-            value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
-          />
+    <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
+      <div className="safe-top flex flex-col gap-3 px-5 pt-3.5 pb-3">
+        <div className="flex flex-col gap-0.5">
+          <Overline className="tracking-[.14em]">
+            {shortDate(from)} — {shortDate(to)}
+          </Overline>
+          <h1 className="text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
         </div>
-      )}
-
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-          <p className="text-xs text-slate-500">Часов затрачено</p>
-          <p className="text-lg font-semibold tabular-nums text-slate-100">{formatHours(totalFactHours)}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PERIOD_PRESETS.map((p) => (
+            <Chip key={p.key} active={preset === p.key} onClick={() => setPreset(p.key)}>
+              {p.label}
+            </Chip>
+          ))}
+          <Chip active={preset === 'custom'} onClick={() => setPreset('custom')}>
+            Свой диапазон
+          </Chip>
         </div>
-        <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-          <p className="text-xs text-slate-500">Задач закрыто</p>
-          <p className="text-lg font-semibold tabular-nums text-slate-100">{closedCount}</p>
-        </div>
-      </div>
-      <p className="mb-4 text-xs text-slate-500">
-        «Задач закрыто» — по дате последнего изменения задачи, а не по учёту истории смены статусов.
-      </p>
-
-      {planForPeriod !== null && (
-        <div className="mb-4 rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-          <p className="mb-2 text-sm font-medium text-slate-100">Общий план</p>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-xs text-slate-500">План</p>
-              <p className="tabular-nums text-slate-100">{formatHours(planForPeriod)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Факт</p>
-              <p className="tabular-nums text-slate-100">{formatHours(totalFactHours)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Незапланировано</p>
-              <p className={`tabular-nums ${totalOverHours > 0 ? 'text-red-400' : 'text-slate-100'}`}>
-                {formatHours(totalOverHours)}
-              </p>
-            </div>
+        {preset === 'custom' && (
+          <div className="flex items-center gap-2 lg:max-w-xs">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
+              style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+            />
+            <span className="font-mono text-xs text-slate-600">—</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
+              style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+            />
           </div>
-          {isProrated && (
-            <p className="mt-2 text-xs text-slate-500">
-              План рассчитан из месячной цели пропорционально числу дней в выбранном периоде.
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="mb-3 flex gap-1 rounded-lg bg-slate-800 p-1 text-sm lg:max-w-xs">
-        {(
-          [
-            ['project', 'По проектам'],
-            ['section', 'По разделам'],
-          ] as [GroupBy, string][]
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            onClick={() => setGroupBy(value)}
-            className={`flex-1 rounded-md py-1.5 ${
-              groupBy === value ? 'bg-sky-600 text-slate-900' : 'text-slate-400'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        )}
       </div>
 
-      <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
-        {rows.map((row) => {
-          const isOverrun = row.overHours > 0
-          const ratio = row.planHours > 0 ? Math.min(1, row.factHours / row.planHours) : row.factHours > 0 ? 1 : 0
-          return (
-            <div key={row.id} className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-              <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="text-slate-100">{row.name}</span>
-                <span className={`tabular-nums ${isOverrun ? 'text-red-400' : 'text-slate-400'}`}>
-                  {formatHours(row.factHours)} / {formatHours(row.planHours)} ч
-                  {isOverrun && ` (+${formatHours(row.overHours)})`}
+      {/* кольцо периода */}
+      <div
+        className="flex items-center gap-[18px] px-5 pb-[18px]"
+        style={{ borderBottom: '1px solid var(--s-hairline-2)' }}
+      >
+        <Ring
+          size={104}
+          pct={sumPct}
+          state={sumPct > 100 ? 'over' : 'running'}
+          centerBg="var(--s-bg)"
+          marker
+        >
+          <span className="flex flex-col items-center gap-px">
+            <span className="tabular font-mono text-[23px] font-semibold text-slate-50">{sumPct}%</span>
+            <span className="font-mono text-[9.5px] uppercase tracking-[.12em] text-slate-500">плана</span>
+          </span>
+        </Ring>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <div className="flex flex-col gap-px">
+            <FieldLabel>Часов затрачено</FieldLabel>
+            <span className="tabular font-mono text-[21px] font-semibold leading-[1.1] text-slate-50">
+              {formatHoursRu(totalFactHours)}{' '}
+              <span className="text-[13px] text-[#6e6e77]">/ {formatHoursRu(totalPlanHours)} ч</span>
+            </span>
+          </div>
+          <div className="flex flex-col gap-px">
+            <FieldLabel>Задач закрыто</FieldLabel>
+            <span className="tabular font-mono text-[21px] font-semibold leading-[1.1] text-slate-50">
+              {closedCount}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* личная цель по загрузке */}
+      {budgetForPeriod !== null && (
+        <div className="px-5 pt-3.5">
+          <div
+            className="flex flex-col gap-2 rounded-2xl p-3.5"
+            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          >
+            <Overline>Общий план</Overline>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="flex flex-col gap-px">
+                <FieldLabel>План</FieldLabel>
+                <span className="tabular font-mono text-[15px] font-semibold text-slate-100">
+                  {formatHoursRu(budgetForPeriod)}
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-700">
-                <div
-                  className={`h-full rounded-full ${isOverrun ? 'bg-red-500' : 'bg-sky-600'}`}
-                  style={{ width: `${Math.max(ratio, isOverrun ? 1 : 0) * 100}%`, opacity: ratio >= 1 ? 1 : 0.6 }}
-                />
+              <div className="flex flex-col gap-px">
+                <FieldLabel>Факт</FieldLabel>
+                <span className="tabular font-mono text-[15px] font-semibold text-slate-100">
+                  {formatHoursRu(totalFactHours)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-px">
+                <FieldLabel>Сверх</FieldLabel>
+                <span
+                  className={`tabular font-mono text-[15px] font-semibold ${
+                    totalOverHours > 0 ? 'text-red-400' : 'text-slate-100'
+                  }`}
+                >
+                  {formatHoursRu(totalOverHours)}
+                </span>
+              </div>
+            </div>
+            {isProrated && (
+              <p className="font-mono text-[10.5px] leading-[1.5] text-slate-600">
+                План рассчитан из месячной цели пропорционально числу дней в периоде.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-1.5 px-5 pt-3.5 pb-2.5">
+        <Chip active={groupBy === 'project'} onClick={() => setGroupBy('project')}>
+          По проектам
+        </Chip>
+        <Chip active={groupBy === 'section'} onClick={() => setGroupBy('section')}>
+          По разделам
+        </Chip>
+      </div>
+
+      <div className="flex flex-col gap-[9px] px-5 pb-2 lg:grid lg:grid-cols-2 lg:gap-3">
+        {rows.map((row) => {
+          const pct = row.planHours > 0 ? Math.round((row.factHours / row.planHours) * 100) : row.factHours > 0 ? 100 : 0
+          const over = pct > 100
+          return (
+            <div
+              key={row.id}
+              className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3"
+              style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+            >
+              <Ring
+                size={38}
+                pct={pct}
+                color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'rgba(232,163,61,.55)'}
+              >
+                <span
+                  className={`tabular font-mono text-[9.5px] font-medium ${
+                    over ? 'text-red-400' : pct >= 50 ? 'text-sky-600' : 'text-slate-400'
+                  }`}
+                >
+                  {pct}%
+                </span>
+              </Ring>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100">{row.name}</p>
+                <span className="font-mono text-[11px] leading-[1.4] text-slate-500">
+                  {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч ·{' '}
+                  {over ? 'переработка' : `${row.counted} задач`}
+                </span>
               </div>
             </div>
           )
         })}
-        {rows.length === 0 && <p className="text-slate-500">За этот период нет плана или трекинга.</p>}
+        {rows.length === 0 && (
+          <p className="my-6 text-center text-[13px] text-slate-600">За этот период нет плана или трекинга.</p>
+        )}
       </div>
+
+      <p className="px-5 pb-2 font-mono text-[10.5px] leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
+        «Задач закрыто» считается по дате последнего изменения задачи, а не по истории смены статусов.
+      </p>
     </div>
   )
 }

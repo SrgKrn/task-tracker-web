@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Chip, FieldLabel, fieldClass } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useCreateProject } from '../lib/queries/projects'
 import { useCreateSection } from '../lib/queries/sections'
@@ -13,6 +14,7 @@ export interface TaskFormValues {
   planned_hours: number
   start_date: string | null
   end_date: string | null
+  is_daily: boolean
 }
 
 interface TaskFormProps {
@@ -21,12 +23,22 @@ interface TaskFormProps {
   sections: Section[]
   statuses: Status[]
   submitLabel: string
+  /** карточка редактирует существующую задачу — название и статус живут в её шапке */
+  compact?: boolean
   onSubmit: (values: TaskFormValues) => void
 }
 
 const NEW_OPTION = '__new__'
 
-export function TaskForm({ initial, projects, sections, statuses, submitLabel, onSubmit }: TaskFormProps) {
+export function TaskForm({
+  initial,
+  projects,
+  sections,
+  statuses,
+  submitLabel,
+  compact = false,
+  onSubmit,
+}: TaskFormProps) {
   const [values, setValues] = useState<TaskFormValues>(initial)
   const [plannedH, setPlannedH] = useState(Math.floor(initial.planned_hours))
   const [plannedM, setPlannedM] = useState(Math.round((initial.planned_hours % 1) * 60))
@@ -61,8 +73,11 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
     createSection.mutate(name, { onError, onSuccess: (row) => set('section_id', row.id) })
   }
 
-  function handleStatusChange(value: string) {
-    if (value !== NEW_OPTION) return set('status_id', value || null)
+  function handleStatusChange(id: string | null) {
+    set('status_id', id)
+  }
+
+  function handleNewStatus() {
     const name = window.prompt('Название нового статуса (например: 25%, В работе, Готово)')?.trim()
     if (!name) return
     createStatus.mutate(name, { onError, onSuccess: (row) => set('status_id', row.id) })
@@ -74,91 +89,51 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
     onSubmit(values)
   }
 
-  const fieldClass =
-    'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none'
+  const selectClass = `${fieldClass} appearance-none pr-8`
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm text-slate-400">Название задачи</label>
-        <input
-          value={values.name}
-          onChange={(e) => set('name', e.target.value)}
-          className={fieldClass}
-          placeholder="Что нужно сделать"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm text-slate-400">Проект</label>
-        <select value={values.project_id} onChange={(e) => handleProjectChange(e.target.value)} className={fieldClass} required>
-          <option value="" disabled>
-            Выберите проект
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-          <option value={NEW_OPTION}>+ Новый проект…</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm text-slate-400">Раздел</label>
-        <select value={values.section_id} onChange={(e) => handleSectionChange(e.target.value)} className={fieldClass} required>
-          <option value="" disabled>
-            Выберите раздел
-          </option>
-          {sections.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-          <option value={NEW_OPTION}>+ Новый раздел…</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm text-slate-400">Статус</label>
-        <select value={values.status_id ?? ''} onChange={(e) => handleStatusChange(e.target.value)} className={fieldClass}>
-          <option value="">Без статуса</option>
-          {statuses.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-          <option value={NEW_OPTION}>+ Новый статус…</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm text-slate-400">План</label>
-        <div className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {!compact && (
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>Название задачи</FieldLabel>
           <input
-            type="number"
-            min="0"
-            value={plannedH}
-            onChange={(e) => setPlanned(Math.max(0, Number(e.target.value)), plannedM)}
+            value={values.name}
+            onChange={(e) => set('name', e.target.value)}
             className={fieldClass}
+            placeholder="Что нужно сделать"
+            required
           />
-          <span className="shrink-0 text-sm text-slate-400">ч</span>
-          <input
-            type="number"
-            min="0"
-            max="59"
-            value={plannedM}
-            onChange={(e) => setPlanned(plannedH, Math.min(59, Math.max(0, Number(e.target.value))))}
-            className={fieldClass}
-          />
-          <span className="shrink-0 text-sm text-slate-400">мин</span>
+        </div>
+      )}
+
+      <div className="flex gap-[9px]">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <FieldLabel>План</FieldLabel>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min="0"
+              value={plannedH}
+              onChange={(e) => setPlanned(Math.max(0, Number(e.target.value)), plannedM)}
+              className={`${fieldClass} tabular min-w-0 font-mono`}
+            />
+            <span className="shrink-0 font-mono text-[11px] text-slate-500">ч</span>
+            <input
+              type="number"
+              min="0"
+              max="59"
+              value={plannedM}
+              onChange={(e) => setPlanned(plannedH, Math.min(59, Math.max(0, Number(e.target.value))))}
+              className={`${fieldClass} tabular min-w-0 font-mono`}
+            />
+            <span className="shrink-0 font-mono text-[11px] text-slate-500">мин</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <div className="min-w-0 flex-1">
-          <label className="mb-1 block text-sm text-slate-400">Срок с</label>
+      <div className="flex gap-[9px]">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <FieldLabel>Срок с</FieldLabel>
           <input
             type="date"
             value={values.start_date ?? ''}
@@ -166,8 +141,8 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
             className={`${fieldClass} min-w-0`}
           />
         </div>
-        <div className="min-w-0 flex-1">
-          <label className="mb-1 block text-sm text-slate-400">Срок до</label>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <FieldLabel>Срок до</FieldLabel>
           <input
             type="date"
             value={values.end_date ?? ''}
@@ -177,9 +152,76 @@ export function TaskForm({ initial, projects, sections, statuses, submitLabel, o
         </div>
       </div>
 
+      <div className="flex gap-[9px]">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <FieldLabel>Проект</FieldLabel>
+          <select
+            value={values.project_id}
+            onChange={(e) => handleProjectChange(e.target.value)}
+            className={selectClass}
+            required
+          >
+            <option value="" disabled>
+              Выберите проект
+            </option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+            <option value={NEW_OPTION}>+ Новый проект…</option>
+          </select>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <FieldLabel>Раздел</FieldLabel>
+          <select
+            value={values.section_id}
+            onChange={(e) => handleSectionChange(e.target.value)}
+            className={selectClass}
+            required
+          >
+            <option value="" disabled>
+              Выберите раздел
+            </option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+            <option value={NEW_OPTION}>+ Новый раздел…</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel>Статус</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          <Chip active={values.status_id === null} onClick={() => handleStatusChange(null)}>
+            Без статуса
+          </Chip>
+          {statuses.map((s) => (
+            <Chip key={s.id} active={values.status_id === s.id} onClick={() => handleStatusChange(s.id)}>
+              {s.label}
+            </Chip>
+          ))}
+          <Chip onClick={handleNewStatus}>+ Новый…</Chip>
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-[13px] text-slate-400">
+        <input
+          type="checkbox"
+          checked={values.is_daily}
+          onChange={(e) => set('is_daily', e.target.checked)}
+          className="accent-sky-600"
+        />
+        Ежедневная — всегда в списке дня
+      </label>
+
       <button
         type="submit"
-        className="w-full rounded-lg bg-sky-600 px-4 py-2.5 font-medium text-slate-900 active:bg-sky-700"
+        className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold"
+        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         {submitLabel}
       </button>

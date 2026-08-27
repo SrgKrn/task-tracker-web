@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
-import { TaskTimeline } from '../components/TaskTimeline'
+import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
+import { FieldLabel, Tag } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask, useDeleteTask, useTask, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { formatHours } from '../lib/time'
+import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -18,7 +20,7 @@ export function TaskDetail() {
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
 
-  const { data: task } = useTask(id)
+  const { data: task, isFetched } = useTask(id)
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
@@ -31,10 +33,23 @@ export function TaskDetail() {
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
 
-  const [factInput, setFactInput] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const isRunning = activeTimer?.task_id === id
+  useTicker(isRunning)
 
+  // задачу удалили (или ссылка устарела) — возвращаемся к списку, а не показываем пустую карточку
+  if (isFetched && !task) return <Navigate to="/tasks" replace />
   if (!task) return null
+
+  const status = task.status_id ? statuses.find((s) => s.id === task.status_id) : undefined
+  const project = projects.find((p) => p.id === task.project_id)
+  const section = sections.find((s) => s.id === task.section_id)
+
+  const done = !!status?.is_final
+  const fact = isRunning && activeTimer ? task.fact_hours + elapsedHours(activeTimer.started_at) : task.fact_hours
+  const pct = task.planned_hours > 0 ? (fact / task.planned_hours) * 100 : 0
+  const over = pct > 100 && !done
+  const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
 
   const values: TaskFormValues = {
     name: task.name,
@@ -44,92 +59,155 @@ export function TaskDetail() {
     planned_hours: task.planned_hours,
     start_date: task.start_date,
     end_date: task.end_date,
+    is_daily: task.is_daily,
   }
 
-  function commitFactHours() {
-    if (factInput === null) return
-    const parsed = Number(factInput)
-    if (!Number.isNaN(parsed) && task && parsed !== task.fact_hours) {
-      adjustFactHours.mutate({ taskId: task.id, currentFactHours: task.fact_hours, newFactHours: parsed }, { onError })
-    }
-    setFactInput(null)
+  function adjustFact(delta: number) {
+    if (!task) return
+    const next = Math.max(0, Math.round((task.fact_hours + delta) * 2) / 2)
+    if (next === task.fact_hours) return
+    adjustFactHours.mutate(
+      { taskId: task.id, currentFactHours: task.fact_hours, newFactHours: next },
+      { onError },
+    )
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
-      <button onClick={() => navigate(-1)} className="mb-4 text-sm text-slate-400">
-        ← Назад
-      </button>
-
-      <div className="mb-5">
-        <TimerButton
-          taskId={task.id}
-          activeTimer={activeTimer}
-          onStart={() => startTimer.mutate(task.id, { onError })}
-          onStop={() => stopTimer.mutate(undefined, { onError })}
-        />
+    <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:h-screen lg:max-w-none lg:w-full">
+      <div className="safe-top flex items-center justify-between px-5 pt-3.5">
+        <button type="button" onClick={() => navigate('/tasks')} className="flex items-center gap-2 text-[13px] text-slate-400">
+          <span className="text-[15px]">←</span>Назад
+        </button>
+        <div className="flex gap-3.5 text-[13px]">
+          <button
+            type="button"
+            onClick={() =>
+              createTask.mutate(
+                {
+                  name: `${task.name} (копия)`,
+                  project_id: task.project_id,
+                  section_id: task.section_id,
+                  status_id: task.status_id,
+                  planned_hours: task.planned_hours,
+                  start_date: task.start_date,
+                  end_date: task.end_date,
+                  is_daily: task.is_daily,
+                },
+                { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) },
+              )
+            }
+            className="text-slate-400"
+          >
+            Дублировать
+          </button>
+          <button type="button" onClick={() => setConfirmingDelete(true)} className="text-red-400">
+            Удалить
+          </button>
+        </div>
       </div>
 
-      <div className="mb-5">
-        <label className="mb-1 block text-sm text-slate-400">Факт, часы</label>
-        <input
-          type="number"
-          step="0.25"
-          value={factInput ?? formatHours(task.fact_hours)}
-          onChange={(e) => setFactInput(e.target.value)}
-          onBlur={commitFactHours}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-        />
+      {/* шапка задачи */}
+      <div
+        className="flex flex-col gap-3.5 px-5 pt-4 pb-4"
+        style={{ borderBottom: '1px solid var(--s-hairline-2)' }}
+      >
+        <div className="flex items-center gap-2">
+          {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
+          <span className="truncate font-mono text-[11.5px] text-slate-500">
+            {[project?.name, section?.name].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+        <h1
+          className="text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+          style={{ textWrap: 'pretty' }}
+        >
+          {task.name}
+        </h1>
+
+        <div className="flex items-center gap-[18px] pt-0.5">
+          <Ring size={112} pct={done ? 100 : pct} state={ringState} centerBg="var(--s-bg)" marker={isRunning}>
+            <span className="flex flex-col items-center gap-px">
+              <span
+                className={`tabular font-mono font-semibold ${
+                  isRunning ? 'text-[22px] text-sky-600' : 'text-2xl text-slate-50'
+                }`}
+              >
+                {isRunning && activeTimer ? formatClock(activeTimer.started_at) : `${formatHoursRu(fact)} ч`}
+              </span>
+              <span className="font-mono text-[9.5px] uppercase tracking-[.14em] text-slate-500">
+                {isRunning ? 'идёт учёт' : 'факт'}
+              </span>
+            </span>
+          </Ring>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+            <div className="flex flex-col gap-px">
+              <FieldLabel>Факт / план</FieldLabel>
+              <span className="tabular font-mono text-[19px] font-semibold leading-[1.1] text-slate-50">
+                {formatHoursRu(fact)}{' '}
+                <span className="text-sm text-[#6e6e77]">/ {formatHoursRu(task.planned_hours)} ч</span>
+              </span>
+            </div>
+            <TimerButton
+              taskId={task.id}
+              activeTimer={activeTimer}
+              onStart={() => startTimer.mutate(task.id, { onError })}
+              onStop={() => stopTimer.mutate(undefined, { onError })}
+            />
+          </div>
+        </div>
       </div>
 
-      <TaskForm
-        initial={values}
-        projects={projects}
-        sections={sections}
-        statuses={statuses}
-        submitLabel="Сохранить"
-        onSubmit={(fields) =>
-          updateTask.mutate(
-            { id: task.id, fields },
-            {
-              onError,
-              onSuccess: () => {
-                showSuccess('Сохранено')
-                navigate('/')
+      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        {/* быстрая правка факта — шаг 0,5 ч */}
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>Факт (правка)</FieldLabel>
+          <div
+            className="flex h-10 items-center justify-between rounded-xl px-3"
+            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          >
+            <span className="tabular font-mono text-sm font-medium text-slate-100">
+              {formatHoursRu(task.fact_hours)} ч
+            </span>
+            <span className="flex gap-3 text-[13px] text-slate-600">
+              <button type="button" onClick={() => adjustFact(-0.5)} aria-label="Убавить полчаса">
+                −
+              </button>
+              <button type="button" onClick={() => adjustFact(0.5)} aria-label="Прибавить полчаса">
+                +
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <TaskForm
+          initial={values}
+          projects={projects}
+          sections={sections}
+          statuses={statuses}
+          submitLabel="Сохранить"
+          compact
+          onSubmit={(fields) => {
+            const goingFinal = !!fields.status_id && statuses.find((s) => s.id === fields.status_id)?.is_final
+            updateTask.mutate(
+              { id: task.id, fields },
+              {
+                onError,
+                onSuccess: () => {
+                  // финальный статус останавливает учёт
+                  if (goingFinal && isRunning) stopTimer.mutate(undefined, { onError })
+                  showSuccess('Сохранено')
+                  navigate('/tasks')
+                },
               },
-            },
-          )
-        }
-      />
+            )
+          }}
+        />
 
-      <TaskTimeline taskId={task.id} />
+        <TaskTimeline taskId={task.id} isRunning={isRunning} />
+      </div>
 
-      <button
-        onClick={() =>
-          createTask.mutate(
-            {
-              name: `${task.name} (копия)`,
-              project_id: task.project_id,
-              section_id: task.section_id,
-              status_id: task.status_id,
-              planned_hours: task.planned_hours,
-              start_date: task.start_date,
-              end_date: task.end_date,
-            },
-            { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) },
-          )
-        }
-        className="mt-6 w-full rounded-lg border border-slate-700 px-4 py-2.5 font-medium text-slate-300 active:bg-slate-700"
-      >
-        Дублировать задачу
-      </button>
-
-      <button
-        onClick={() => setConfirmingDelete(true)}
-        className="mt-6 w-full rounded-lg border border-red-800 px-4 py-2.5 font-medium text-red-400 active:bg-red-950"
-      >
-        Удалить задачу
-      </button>
+      <CommentBar taskId={task.id} />
 
       <ConfirmDialog
         open={confirmingDelete}
@@ -138,7 +216,7 @@ export function TaskDetail() {
         onCancel={() => setConfirmingDelete(false)}
         onConfirm={() => {
           setConfirmingDelete(false)
-          deleteTask.mutate(task.id, { onSuccess: () => navigate('/'), onError })
+          deleteTask.mutate(task.id, { onSuccess: () => navigate('/tasks'), onError })
         }}
       />
     </div>

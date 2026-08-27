@@ -18,11 +18,11 @@ export default defineConfig({
         globIgnores: ['**/exportExcel-*.js', '**/exportPdf-*.js', '**/html2canvas-*.js', '**/purify.es-*.js', '**/index.es-*.js'],
       },
       manifest: {
-        name: 'Хронограф',
-        short_name: 'Хронограф',
-        description: 'Task and time tracker',
-        theme_color: '#121212',
-        background_color: '#121212',
+        name: 'Semternity',
+        short_name: 'Semternity',
+        description: 'Трекер задач и времени',
+        theme_color: '#0d0d0f',
+        background_color: '#0d0d0f',
         display: 'standalone',
         start_url: '/',
         icons: [

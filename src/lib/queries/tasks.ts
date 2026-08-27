@@ -18,9 +18,11 @@ export function useTask(id: string | undefined) {
     queryKey: ['tasks', id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from('tasks').select('*').eq('id', id).single()
+      // maybeSingle: удалённая задача возвращает null, а не ошибку — карточке нужно
+      // отличать «ещё грузится» от «больше не существует», чтобы увести на список
+      const { data, error } = await supabase.from('tasks').select('*').eq('id', id).maybeSingle()
       if (error) throw error
-      return data as Task
+      return (data as Task | null) ?? null
     },
   })
 }
@@ -33,6 +35,7 @@ export interface NewTaskInput {
   planned_hours: number
   start_date: string | null
   end_date: string | null
+  is_daily?: boolean
 }
 
 export function useCreateTask() {
@@ -48,7 +51,17 @@ export function useCreateTask() {
 }
 
 export type TaskFieldsInput = Partial<
-  Pick<Task, 'name' | 'project_id' | 'section_id' | 'status_id' | 'planned_hours' | 'start_date' | 'end_date'>
+  Pick<
+    Task,
+    | 'name'
+    | 'project_id'
+    | 'section_id'
+    | 'status_id'
+    | 'planned_hours'
+    | 'start_date'
+    | 'end_date'
+    | 'is_daily'
+  >
 >
 
 export function useUpdateTask() {

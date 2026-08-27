@@ -14,6 +14,7 @@ const empty: TaskFormValues = {
   planned_hours: 0,
   start_date: null,
   end_date: null,
+  is_daily: false,
 }
 
 export function NewTask() {
@@ -25,8 +26,13 @@ export function NewTask() {
   const { showError } = useToast()
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
-      <h1 className="mb-4 text-xl font-semibold text-slate-100">Новая задача</h1>
+    <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-6 lg:mx-0 lg:w-full lg:max-w-none">
+      <button type="button" onClick={() => navigate('/tasks')} className="mb-4 flex items-center gap-2 text-[13px] text-slate-400">
+        <span className="text-[15px]">←</span>Назад
+      </button>
+      <h1 className="mb-4 text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">
+        Новая задача
+      </h1>
       <TaskForm
         initial={empty}
         projects={projects}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Logo } from '../components/ui'
 import { supabase } from '../lib/supabaseClient'
 
 export function Login() {
@@ -31,9 +32,14 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center px-4 safe-top safe-bottom">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold text-slate-100">
+    <div className="safe-top safe-bottom flex min-h-full items-center justify-center px-5">
+      <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-3.5">
+        <div className="mb-2 flex items-center gap-2.5">
+          <Logo size={28} />
+          <span className="text-lg font-semibold tracking-[.01em] text-slate-100">Semternity</span>
+        </div>
+
+        <h1 className="text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">
           {mode === 'signin' ? 'Вход' : 'Регистрация'}
         </h1>
 
@@ -44,7 +50,8 @@ export function Login() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
+          className="h-[46px] rounded-[14px] px-3.5 text-[15px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
         <input
           type="password"
@@ -53,16 +60,18 @@ export function Login() {
           placeholder="Пароль"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
+          className="h-[46px] rounded-[14px] px-3.5 text-[15px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {info && <p className="text-sm text-emerald-400">{info}</p>}
+        {error && <p className="text-[13px] text-red-400">{error}</p>}
+        {info && <p className="text-[13px] text-emerald-400">{info}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-sky-600 px-4 py-2 font-medium text-slate-900 disabled:opacity-50 active:bg-sky-700"
+          className="h-12 rounded-[15px] text-[14.5px] font-semibold disabled:opacity-50"
+          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           {mode === 'signin' ? 'Войти' : 'Создать аккаунт'}
         </button>
@@ -70,7 +79,7 @@ export function Login() {
         <button
           type="button"
           onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-          className="w-full text-sm text-slate-400 underline"
+          className="text-[13px] text-slate-400"
         >
           {mode === 'signin' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
         </button>

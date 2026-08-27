@@ -73,11 +73,11 @@ export function PicklistAdmin<T extends Item>({
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top lg:max-w-2xl">
-      <button onClick={() => navigate('/settings')} className="mb-4 text-sm text-slate-400 lg:hidden">
-        ← Настройки
+    <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
+      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-[13px] text-slate-400">
+        <span className="text-[15px]">←</span>Ещё
       </button>
-      <h1 className="mb-4 text-xl font-semibold text-slate-100">{title}</h1>
+      <h1 className="mb-4 text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
 
       <div className="mb-4 flex gap-2">
         <input
@@ -85,11 +85,12 @@ export function PicklistAdmin<T extends Item>({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           placeholder={placeholder}
-          className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
+          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-[13.5px] text-slate-100 outline-none placeholder:text-[#6e6e77] focus:border-sky-600"
         />
         <button
           onClick={handleCreate}
-          className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-slate-900 active:bg-sky-700"
+          className="h-[38px] shrink-0 rounded-[11px] px-4 text-[13.5px] font-semibold"
+          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           Добавить
         </button>
@@ -99,13 +100,13 @@ export function PicklistAdmin<T extends Item>({
         {items.map((item, index) => (
           <li
             key={item.id}
-            className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 lg:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5 lg:hover:bg-[var(--s-surface-active)]"
           >
-            <div className="flex flex-col lg:flex-row lg:gap-1">
+            <div className="flex flex-col text-[11px] leading-none lg:flex-row lg:gap-1">
               <button
                 onClick={() => move(index, -1)}
                 disabled={index === 0}
-                className="text-slate-400 disabled:opacity-20"
+                className="text-slate-500 disabled:opacity-20"
                 aria-label="Переместить выше"
               >
                 ▲
@@ -113,7 +114,7 @@ export function PicklistAdmin<T extends Item>({
               <button
                 onClick={() => move(index, 1)}
                 disabled={index === items.length - 1}
-                className="text-slate-400 disabled:opacity-20"
+                className="text-slate-500 disabled:opacity-20"
                 aria-label="Переместить ниже"
               >
                 ▼
@@ -127,13 +128,10 @@ export function PicklistAdmin<T extends Item>({
                 onChange={(e) => setEditingValue(e.target.value)}
                 onBlur={commitEdit}
                 onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                className="flex-1 rounded border border-sky-600 bg-slate-900 px-2 py-1 text-slate-100 focus:outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100 outline-none"
               />
             ) : (
-              <button
-                onClick={() => startEdit(item)}
-                className="flex-1 text-left text-slate-100"
-              >
+              <button onClick={() => startEdit(item)} className="min-w-0 flex-1 truncate text-left text-sm text-slate-100">
                 {labelOf(item)}
               </button>
             )}
@@ -170,7 +168,9 @@ export function PicklistAdmin<T extends Item>({
           </li>
         ))}
         {items.length === 0 && (
-          <li className="text-slate-500">{loading ? 'Загрузка…' : 'Пока пусто.'}</li>
+          <li className="py-4 text-center text-[13px] text-slate-600">
+            {loading ? 'Загрузка…' : 'Пока пусто.'}
+          </li>
         )}
       </ul>
 

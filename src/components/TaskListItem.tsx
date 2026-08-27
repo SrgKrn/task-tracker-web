@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
+import { Tag } from './ui'
 import type { ActiveTimer, Project, Section, Status, Task } from '../lib/types'
-import { formatElapsed, formatHours, useTicker } from '../lib/time'
+import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 
 interface TaskListItemProps {
   task: Task
@@ -12,7 +14,7 @@ interface TaskListItemProps {
   onStopTimer: () => void
 }
 
-function isOverdue(task: Task, status: Status | undefined): boolean {
+export function isOverdue(task: Task, status: Status | undefined): boolean {
   if (!task.end_date || status?.is_final) return false
   return new Date(task.end_date) < new Date(new Date().toDateString())
 }
@@ -26,101 +28,72 @@ export function TaskListItem({
   onStartTimer,
   onStopTimer,
 }: TaskListItemProps) {
-  const isTracking = activeTimer?.task_id === task.id
-  useTicker(isTracking)
-  const overdue = isOverdue(task, status)
-  const progress = task.planned_hours > 0 ? Math.min(1, task.fact_hours / task.planned_hours) : 0
-  const isOverrun = task.planned_hours > 0 && task.fact_hours > task.planned_hours
-  const isDoneOnPlan = !!status?.is_final && task.planned_hours > 0 && !isOverrun
+  const isRunning = activeTimer?.task_id === task.id
+  useTicker(isRunning)
 
-  const borderClass = isOverrun
-    ? 'border-l-2 border-l-red-500'
-    : isDoneOnPlan
-      ? 'border-l-2 border-l-emerald-600'
-      : ''
+  const done = !!status?.is_final
+  // факт активной задачи растёт на лету — считаем от started_at, а не накоплением тиков
+  const fact = isRunning && activeTimer ? task.fact_hours + elapsedHours(activeTimer.started_at) : task.fact_hours
+  const pct = task.planned_hours > 0 ? (fact / task.planned_hours) * 100 : 0
+  const over = pct > 100 && !done
+  const overdue = isOverdue(task, status)
+
+  const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
+  const cardBg = isRunning ? 'var(--s-surface-active)' : 'var(--s-surface)'
+
+  const meta = `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч · ${
+    done ? 'закрыто' : overdue ? 'просрочено' : (project?.name ?? section?.name ?? '')
+  }`
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-2.5 ${borderClass} ${
-        status?.is_final ? 'opacity-60' : ''
-      }`}
+      className="flex items-center gap-3 rounded-[15px] px-[13px] py-[11px]"
+      style={{
+        background: cardBg,
+        border: `1px solid ${isRunning ? 'var(--s-accent)' : 'var(--s-border)'}`,
+      }}
     >
-      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-        <p className="truncate text-slate-100">{task.name}</p>
-
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-          {project && (
-            <span className="inline-flex items-center gap-1">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                <path
-                  d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                />
-              </svg>
-              {project.name}
-            </span>
-          )}
-          {section && (
-            <span className="inline-flex items-center gap-1">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                <path
-                  d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {section.name}
-            </span>
-          )}
-          {task.end_date && (
-            <span className={overdue ? 'font-medium text-red-400' : ''}>
-              до {new Date(task.end_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
-            </span>
-          )}
-        </div>
-
-        {status && (
-          <span
-            className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs"
-            style={{
-              backgroundColor: status.is_final ? 'var(--color-sky-600)' : 'rgba(232, 163, 61, 0.14)',
-              color: status.is_final ? 'var(--color-slate-900)' : 'var(--color-sky-600)',
-            }}
-          >
-            {status.label}
-          </span>
+      <Ring
+        size={32}
+        pct={done ? 100 : pct}
+        state={ringState}
+        centerBg={cardBg}
+        onClick={isRunning ? onStopTimer : onStartTimer}
+        ariaLabel={isRunning ? 'Остановить учёт' : 'Начать учёт'}
+      >
+        {isRunning ? (
+          <StopGlyph />
+        ) : done ? (
+          <span className="font-mono text-xs font-medium text-emerald-400">✓</span>
+        ) : (
+          <PlayGlyph />
         )}
+      </Ring>
 
-        <div className="mt-1.5 h-1 w-full max-w-40 overflow-hidden rounded-full bg-slate-700">
-          <div
-            className={`h-full rounded-full ${isOverrun ? 'bg-red-500' : 'bg-sky-600'}`}
-            style={{ width: `${Math.max(progress, isOverrun ? 1 : 0) * 100}%`, opacity: progress >= 1 ? 1 : 0.6 }}
-          />
-        </div>
+      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
+        <p
+          className={`truncate text-[14.5px] leading-[1.3] ${
+            done ? 'font-normal text-[#8a8a92] line-through' : 'font-medium text-slate-100'
+          }`}
+        >
+          {task.name}
+        </p>
+        <span
+          className={`font-mono text-[11px] leading-[1.4] ${
+            overdue && !done ? 'text-red-400' : done ? 'text-slate-600' : 'text-slate-500'
+          }`}
+        >
+          {meta}
+        </span>
       </Link>
 
-      <div className="flex shrink-0 flex-col items-end gap-1.5 text-sm">
-        <p className={isOverrun ? 'font-medium text-red-400' : 'text-slate-300'}>
-          {formatHours(task.fact_hours)} / {formatHours(task.planned_hours)} ч
-        </p>
-        {isTracking && activeTimer ? (
-          <button
-            onClick={onStopTimer}
-            className="rounded-full bg-sky-600 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-900 active:bg-sky-700"
-          >
-            {formatElapsed(activeTimer.started_at)} ■
-          </button>
-        ) : (
-          <button
-            onClick={onStartTimer}
-            className="rounded-full border border-sky-600 px-2.5 py-1 text-xs font-medium text-sky-600 active:bg-sky-600/10"
-          >
-            ▶ Старт
-          </button>
-        )}
-      </div>
+      {isRunning && activeTimer ? (
+        <span className="tabular shrink-0 font-mono text-[13.5px] font-semibold text-sky-600">
+          {formatClock(activeTimer.started_at)}
+        </span>
+      ) : done ? null : status ? (
+        <Tag>{status.label}</Tag>
+      ) : null}
     </div>
   )
 }

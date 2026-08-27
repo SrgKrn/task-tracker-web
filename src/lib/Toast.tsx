@@ -30,15 +30,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showError, showSuccess }}>
       {children}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 safe-bottom">
+      <div className="safe-bottom pointer-events-none fixed inset-x-0 bottom-[104px] z-50 flex flex-col items-center gap-2 px-4 lg:bottom-4">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`w-full max-w-sm rounded-lg border px-4 py-3 text-sm shadow-lg ${
+            className="w-full max-w-sm rounded-2xl px-4 py-3 text-[13px]"
+            style={
               t.tone === 'error'
-                ? 'border-red-500/40 bg-red-500/15 text-red-400'
-                : 'border-emerald-600/40 bg-emerald-600/15 text-emerald-400'
-            }`}
+                ? {
+                    background: 'rgba(217,114,86,.12)',
+                    border: '1px solid rgba(217,114,86,.45)',
+                    color: 'var(--s-danger)',
+                  }
+                : {
+                    background: 'rgba(127,184,148,.14)',
+                    border: '1px solid rgba(127,184,148,.4)',
+                    color: 'var(--s-success)',
+                  }
+            }
           >
             {t.message}
           </div>

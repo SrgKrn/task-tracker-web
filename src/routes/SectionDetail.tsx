@@ -29,13 +29,15 @@ export function SectionDetail() {
   if (!section) return null
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 safe-top">
-      <button onClick={() => navigate(-1)} className="mb-4 text-sm text-slate-400">
-        ← Назад
+    <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2">
+      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-[13px] text-slate-400">
+        <span className="text-[15px]">←</span>Назад
       </button>
-      <h1 className="mb-4 text-xl font-semibold text-slate-100">{section.name}</h1>
+      <h1 className="mb-4 text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">
+        {section.name}
+      </h1>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-[9px]">
         {sectionTasks.map((task) => (
           <TaskListItem
             key={task.id}
@@ -48,7 +50,9 @@ export function SectionDetail() {
             onStopTimer={() => stopTimer.mutate(undefined, { onError })}
           />
         ))}
-        {sectionTasks.length === 0 && <p className="text-slate-500">В этом разделе пока нет задач.</p>}
+        {sectionTasks.length === 0 && (
+          <p className="my-6 text-center text-[13px] text-slate-600">В этом разделе пока нет задач.</p>
+        )}
       </div>
     </div>
   )

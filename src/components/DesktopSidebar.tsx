@@ -1,87 +1,82 @@
 import { Link, useLocation } from 'react-router-dom'
+import { Logo } from './ui'
 import { supabase } from '../lib/supabaseClient'
 
 const links = [
   {
     to: '/',
-    label: 'Задачи',
-    match: (path: string) => path === '/' || path.startsWith('/tasks'),
+    label: 'Сегодня',
+    match: (p: string) => p === '/',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M5 6h14M5 12h14M5 18h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      <span className="relative block h-[18px] w-[18px] rounded-full border-2 border-current">
+        <span
+          className="absolute h-[3.5px] w-[3.5px] rounded-full bg-current"
+          style={{ top: -2, left: '50%', marginLeft: -1.75 }}
+        />
+      </span>
+    ),
+  },
+  {
+    to: '/tasks',
+    label: 'Задачи',
+    match: (p: string) => p.startsWith('/tasks'),
+    icon: (
+      <span className="flex h-[18px] w-[18px] flex-col justify-center gap-1">
+        <span className="h-0.5 rounded-sm bg-current" />
+        <span className="h-0.5 rounded-sm bg-current" />
+        <span className="h-0.5 w-[60%] rounded-sm bg-current" />
+      </span>
     ),
   },
   {
     to: '/dashboard',
-    label: 'Дашборд',
-    match: (path: string) => path === '/dashboard',
+    label: 'Сводка',
+    match: (p: string) => p === '/dashboard',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M5 19V10M12 19V5M19 19v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      <span className="flex h-[18px] w-[18px] items-end gap-[3px]">
+        <span className="h-[8px] flex-1 rounded-[1px] bg-current" />
+        <span className="h-[14px] flex-1 rounded-[1px] bg-current" />
+        <span className="h-[11px] flex-1 rounded-[1px] bg-current" />
+      </span>
     ),
   },
   {
-    to: '/sections',
-    label: 'Разделы',
-    match: (path: string) => path.startsWith('/sections'),
+    to: '/settings',
+    label: 'Ещё',
+    match: (p: string) =>
+      p.startsWith('/settings') || p.startsWith('/sections') || p.startsWith('/projects') || p.startsWith('/statuses'),
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path
-          d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    to: '/projects',
-    label: 'Проекты',
-    match: (path: string) => path.startsWith('/projects'),
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-      </svg>
-    ),
-  },
-  {
-    to: '/statuses',
-    label: 'Статусы',
-    match: (path: string) => path.startsWith('/statuses'),
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <span className="flex h-[18px] w-[18px] items-center justify-center gap-[3px]">
+        <span className="h-[3px] w-[3px] rounded-full bg-current" />
+        <span className="h-[3px] w-[3px] rounded-full bg-current" />
+        <span className="h-[3px] w-[3px] rounded-full bg-current" />
+      </span>
     ),
   },
 ]
 
-function ChronographMark() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="13" r="7" stroke="var(--color-sky-600)" strokeWidth="1.6" />
-      <line x1="12" y1="13" x2="12" y2="9" stroke="var(--color-sky-600)" strokeWidth="1.6" strokeLinecap="round" />
-      <line x1="12" y1="13" x2="14.5" y2="14.5" stroke="var(--color-sky-600)" strokeWidth="1.6" strokeLinecap="round" />
-      <line x1="12" y1="3.5" x2="12" y2="5" stroke="var(--color-sky-600)" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-export function DesktopSidebar() {
+export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
 
   return (
-    <aside className="hidden shrink-0 flex-col border-r border-slate-800 lg:flex lg:w-60">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <ChronographMark />
-        <span className="font-semibold text-slate-100">Хронограф</span>
+    <aside
+      className="hidden shrink-0 flex-col lg:flex lg:w-60"
+      style={{ borderRight: '1px solid var(--s-hairline)' }}
+    >
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <Logo size={24} />
+        <span className="font-semibold tracking-[.01em] text-slate-100">Semternity</span>
+      </div>
+
+      <div className="px-3 pb-3">
+        <button
+          type="button"
+          onClick={onCreate}
+          className="w-full rounded-xl py-2 text-sm font-semibold"
+          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        >
+          + Новая задача
+        </button>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
@@ -92,7 +87,9 @@ export function DesktopSidebar() {
               key={link.to}
               to={link.to}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
-                active ? 'bg-sky-600 text-slate-900' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                active
+                  ? 'bg-sky-600 font-medium text-[var(--s-on-accent)]'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
               }`}
             >
               {link.icon}
@@ -103,6 +100,7 @@ export function DesktopSidebar() {
       </nav>
 
       <button
+        type="button"
         onClick={() => supabase.auth.signOut()}
         className="mx-3 mb-5 rounded-lg px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300"
       >
