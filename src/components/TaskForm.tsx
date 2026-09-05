@@ -129,7 +129,7 @@ export function TaskForm({
               onChange={(e) => setPlanned(Math.max(0, Number(e.target.value)), plannedM)}
               className={`${fieldClass} tabular min-w-0 font-mono`}
             />
-            <span className="shrink-0 font-mono text-[11px] text-slate-500">ч</span>
+            <span className="shrink-0 font-mono text-2xs text-slate-500">ч</span>
             <input
               type="number"
               min="0"
@@ -138,7 +138,7 @@ export function TaskForm({
               onChange={(e) => setPlanned(plannedH, Math.min(59, Math.max(0, Number(e.target.value))))}
               className={`${fieldClass} tabular min-w-0 font-mono`}
             />
-            <span className="shrink-0 font-mono text-[11px] text-slate-500">мин</span>
+            <span className="shrink-0 font-mono text-2xs text-slate-500">мин</span>
           </div>
         </div>
       </div>
@@ -203,7 +203,7 @@ export function TaskForm({
 
       <div className="flex flex-col gap-1.5">
         <FieldLabel>Статус</FieldLabel>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           <Chip active={values.status_id === null} onClick={() => handleStatusChange(null)}>
             Без статуса
           </Chip>
@@ -216,12 +216,13 @@ export function TaskForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-[13px] text-slate-400">
+      {/* вся строка — цель нажатия: голый чекбокс был 13×13 */}
+      <label className="-my-1 flex min-h-11 items-center gap-2.5 text-sm text-slate-400">
         <input
           type="checkbox"
           checked={values.is_daily}
           onChange={(e) => set('is_daily', e.target.checked)}
-          className="accent-sky-600"
+          className="h-[18px] w-[18px] shrink-0 accent-sky-600"
         />
         Ежедневная — всегда в списке дня
       </label>

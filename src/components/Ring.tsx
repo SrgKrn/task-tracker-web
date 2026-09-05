@@ -88,12 +88,14 @@ export function Ring({
     )
   }
 
+  // кликабельное кольцо — главное действие приложения, поэтому область нажатия
+  // растягивается до 44px, а сам диск остаётся того размера, что задан макетом
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="relative shrink-0 rounded-full"
+      className="hit-44 shrink-0 rounded-full"
       style={style}
     >
       {body}

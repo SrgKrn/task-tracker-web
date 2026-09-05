@@ -112,9 +112,9 @@ export function Dashboard() {
           <Overline className="tracking-[.14em]">
             {shortDate(from)} — {shortDate(to)}
           </Overline>
-          <h1 className="text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
+          <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {PERIOD_PRESETS.map((p) => (
             <Chip key={p.key} active={preset === p.key} onClick={() => setPreset(p.key)}>
               {p.label}
@@ -158,22 +158,22 @@ export function Dashboard() {
           marker
         >
           <span className="flex flex-col items-center gap-px">
-            <span className="tabular font-mono text-[23px] font-semibold text-slate-50">{sumPct}%</span>
-            <span className="font-mono text-[9.5px] uppercase tracking-[.12em] text-slate-500">плана</span>
+            <span className="tabular font-mono text-xl font-semibold text-slate-50">{sumPct}%</span>
+            <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">плана</span>
           </span>
         </Ring>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <div className="flex flex-col gap-px">
             <FieldLabel>Часов затрачено</FieldLabel>
-            <span className="tabular font-mono text-[21px] font-semibold leading-[1.1] text-slate-50">
+            <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
               {formatHoursRu(totalFactHours)}{' '}
-              <span className="text-[13px] text-[#6e6e77]">/ {formatHoursRu(totalPlanHours)} ч</span>
+              <span className="text-sm text-[#83838c]">/ {formatHoursRu(totalPlanHours)} ч</span>
             </span>
           </div>
           <div className="flex flex-col gap-px">
             <FieldLabel>Задач закрыто</FieldLabel>
-            <span className="tabular font-mono text-[21px] font-semibold leading-[1.1] text-slate-50">
+            <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
               {closedCount}
             </span>
           </div>
@@ -191,20 +191,20 @@ export function Dashboard() {
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="flex flex-col gap-px">
                 <FieldLabel>План</FieldLabel>
-                <span className="tabular font-mono text-[15px] font-semibold text-slate-100">
+                <span className="tabular font-mono text-base font-semibold text-slate-100">
                   {formatHoursRu(budgetForPeriod)}
                 </span>
               </div>
               <div className="flex flex-col gap-px">
                 <FieldLabel>Факт</FieldLabel>
-                <span className="tabular font-mono text-[15px] font-semibold text-slate-100">
+                <span className="tabular font-mono text-base font-semibold text-slate-100">
                   {formatHoursRu(totalFactHours)}
                 </span>
               </div>
               <div className="flex flex-col gap-px">
                 <FieldLabel>Сверх</FieldLabel>
                 <span
-                  className={`tabular font-mono text-[15px] font-semibold ${
+                  className={`tabular font-mono text-base font-semibold ${
                     totalOverHours > 0 ? 'text-red-400' : 'text-slate-100'
                   }`}
                 >
@@ -213,7 +213,7 @@ export function Dashboard() {
               </div>
             </div>
             {isProrated && (
-              <p className="font-mono text-[10.5px] leading-[1.5] text-slate-600">
+              <p className="font-mono text-2xs leading-[1.5] text-slate-600">
                 План рассчитан из месячной цели пропорционально числу дней в периоде.
               </p>
             )}
@@ -221,7 +221,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="flex gap-1.5 px-5 pt-3.5 pb-2.5">
+      <div className="flex gap-2 px-5 pt-3.5 pb-2.5">
         <Chip active={groupBy === 'project'} onClick={() => setGroupBy('project')}>
           По проектам
         </Chip>
@@ -246,7 +246,7 @@ export function Dashboard() {
                 color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'rgba(232,163,61,.55)'}
               >
                 <span
-                  className={`tabular font-mono text-[9.5px] font-medium ${
+                  className={`tabular font-mono text-2xs font-medium ${
                     over ? 'text-red-400' : pct >= 50 ? 'text-sky-600' : 'text-slate-400'
                   }`}
                 >
@@ -256,11 +256,11 @@ export function Dashboard() {
               <div className="min-w-0 flex-1">
                 <p
                   title={row.name}
-                  className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100"
+                  className="truncate text-sm font-medium leading-[1.3] text-slate-100"
                 >
                   {row.name}
                 </p>
-                <span className="font-mono text-[11px] leading-[1.4] text-slate-500">
+                <span className="font-mono text-2xs leading-[1.4] text-slate-500">
                   {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч ·{' '}
                   {over ? 'переработка' : `${row.counted} задач`}
                 </span>
@@ -271,7 +271,7 @@ export function Dashboard() {
         {rows.length === 0 && <EmptyState>За этот период нет плана или трекинга.</EmptyState>}
       </div>
 
-      <p className="px-5 pb-2 font-mono text-[10.5px] leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
+      <p className="px-5 pb-2 font-mono text-2xs leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
         «Задач закрыто» считается по фактическим переходам в финальный статус за период — история ведётся
         с 5 сентября 2026, более ранние закрытия в метрику не попадают.
       </p>

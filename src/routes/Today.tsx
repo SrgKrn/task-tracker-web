@@ -101,7 +101,7 @@ export function Today() {
         </div>
         <Link
           to="/settings"
-          className="h-[30px] w-[30px] rounded-full"
+          className="hit-44 block h-[30px] w-[30px] rounded-full"
           style={{ background: '#1c1c22', border: '1px solid #2a2a30' }}
           aria-label="Настройки"
         />
@@ -112,7 +112,7 @@ export function Today() {
         <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--s-bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-2xl font-semibold text-slate-50">{formatHoursRu(dayFact)}</span>
-            <span className="font-mono text-[9.5px] uppercase tracking-[.14em] text-slate-500">
+            <span className="font-mono text-2xs uppercase tracking-[.14em] text-slate-500">
               из {formatHoursRu(dayNorm)} ч
             </span>
           </span>
@@ -120,7 +120,7 @@ export function Today() {
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Overline>{formatTodayLabel()}</Overline>
-          <h1 className="text-[25px] font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
+          <h1 className="text-2xl font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--s-accent)' }} />
@@ -163,7 +163,7 @@ export function Today() {
             )
           })}
         </div>
-        <div className="flex justify-between px-5 pt-1.5 font-mono text-[10px] text-slate-600">
+        <div className="flex justify-between px-5 pt-1.5 font-mono text-2xs text-slate-600">
           {WEEKDAYS.map((d) => (
             <span key={d}>{d}</span>
           ))}
@@ -174,7 +174,7 @@ export function Today() {
       <div className="flex flex-col gap-[9px] px-5 pt-5 pb-2">
         <div className="flex items-baseline justify-between">
           <Overline>На сегодня</Overline>
-          <Link to="/tasks" className="text-[11.5px] text-sky-600">
+          <Link to="/tasks" className="-my-3.5 py-3.5 pl-3 text-xs text-sky-600">
             Все задачи →
           </Link>
         </div>
@@ -238,17 +238,17 @@ export function Today() {
                     }}
                     ariaLabel="Начать учёт"
                   >
-                    <span className="tabular font-mono text-[10px] font-medium text-red-400">{pct}%</span>
+                    <span className="tabular font-mono text-2xs font-medium text-red-400">{pct}%</span>
                   </Ring>
 
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
                     <p
                       title={task.name}
-                      className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100"
+                      className="truncate text-sm font-medium leading-[1.3] text-slate-100"
                     >
                       {task.name}
                     </p>
-                    <span className="font-mono text-[11.5px] text-red-400">
+                    <span className="font-mono text-xs text-red-400">
                       {category ? `${category} · ` : ''}срок прошёл {task.end_date?.slice(8, 10)}.
                       {task.end_date?.slice(5, 7)}
                     </span>
@@ -259,7 +259,7 @@ export function Today() {
                     onClick={() =>
                       updateTask.mutate({ id: task.id, fields: { end_date: today } }, { onError })
                     }
-                    className="shrink-0 text-xs font-medium text-red-400"
+                    className="-my-3 shrink-0 py-3 pl-2 text-xs font-medium text-red-400"
                   >
                     Перенести
                   </button>

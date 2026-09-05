@@ -55,7 +55,7 @@ export function StaleTimerBanner() {
 
   return (
     <div
-      className="safe-top flex items-center justify-between gap-3 px-5 py-2 text-[13px] text-sky-600"
+      className="safe-top flex items-center justify-between gap-3 px-5 py-2 text-sm text-sky-600"
       style={{ background: '#17130c', borderBottom: '1px solid rgba(232,163,61,.4)' }}
     >
       <span>Таймер идёт уже {hours} ч — забыли остановить?</span>

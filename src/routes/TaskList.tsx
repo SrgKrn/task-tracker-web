@@ -147,13 +147,13 @@ export function TaskList() {
           <Overline className="tracking-[.14em]">
             {activeCount} активных · {totalFact} / {totalPlan} ч
           </Overline>
-          <h1 className="text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
+          <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
         </div>
         <button
           type="button"
           onClick={() => setSortByDue((v) => !v)}
           title="Сортировать по сроку"
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] font-mono text-[13px] font-medium"
+          className="hit-44 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] font-mono text-sm font-medium"
           style={{
             background: 'var(--s-surface)',
             border: `1px solid ${sortByDue ? 'var(--s-accent)' : 'var(--s-border)'}`,
@@ -169,18 +169,18 @@ export function TaskList() {
           className="flex h-[38px] flex-1 items-center gap-2 rounded-[11px] px-3"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         >
-          <span className="h-3 w-3 shrink-0 rounded-full" style={{ border: '1.5px solid #6e6e77' }} />
+          <span className="h-3 w-3 shrink-0 rounded-full" style={{ border: '1.5px solid #83838c' }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию"
-            className="min-w-0 flex-1 bg-transparent text-[13.5px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[#83838c]"
           />
         </div>
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          className="flex h-[38px] shrink-0 items-center rounded-[11px] px-[13px] text-[12.5px]"
+          className="flex h-[38px] shrink-0 items-center rounded-[11px] px-[13px] text-xs"
           style={{
             background: filtersActive ? 'var(--s-accent)' : 'var(--s-surface)',
             border: `1px solid ${filtersActive ? 'var(--s-accent)' : 'var(--s-border)'}`,
@@ -197,7 +197,7 @@ export function TaskList() {
           style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
         >
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-[10.5px] leading-[1.4] text-slate-500">
+            <span className="font-mono text-2xs leading-[1.4] text-slate-500">
               Задачи, чей срок пересекается с периодом
             </span>
             <div className="flex items-center gap-2">
@@ -234,7 +234,7 @@ export function TaskList() {
           {sections.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Overline>Разделы</Overline>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {sections.map((s) => (
                   <Chip
                     key={s.id}
@@ -250,7 +250,7 @@ export function TaskList() {
                     }
                   >
                     {s.name}
-                    <span className="tabular ml-1.5 font-mono text-[10.5px] opacity-60">
+                    <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
                       {countsBySection.get(s.id) ?? 0}
                     </span>
                   </Chip>
@@ -262,7 +262,7 @@ export function TaskList() {
           {projects.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Overline>Проекты</Overline>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {projects.map((p) => (
                   <Chip
                     key={p.id}
@@ -278,7 +278,7 @@ export function TaskList() {
                     }
                   >
                     {p.name}
-                    <span className="tabular ml-1.5 font-mono text-[10.5px] opacity-60">
+                    <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
                       {countsByProject.get(p.id) ?? 0}
                     </span>
                   </Chip>
@@ -290,7 +290,7 @@ export function TaskList() {
       )}
 
       <div className="flex items-center justify-between gap-2.5 px-5 pb-2.5">
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           <Chip active={groupBy === 'section'} onClick={() => setGroupBy('section')}>
             Разделы
           </Chip>
@@ -317,7 +317,7 @@ export function TaskList() {
               <div key={group.id} className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
                   <Overline>{group.title}</Overline>
-                  <span className="tabular font-mono text-[11px] text-slate-600">{group.sum}</span>
+                  <span className="tabular font-mono text-2xs text-slate-600">{group.sum}</span>
                 </div>
                 {group.items.map((task) => (
                   <TaskListItem

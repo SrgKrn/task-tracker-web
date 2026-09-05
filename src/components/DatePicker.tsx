@@ -84,7 +84,7 @@ export function DatePicker({
   const cells = useMemo(() => monthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
 
   const height = small ? 'h-[34px]' : 'h-10'
-  const text = small ? 'text-[12.5px]' : 'text-[13.5px]'
+  const text = small ? 'text-xs' : 'text-sm'
 
   function shiftMonth(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
@@ -100,11 +100,11 @@ export function DatePicker({
         style={{
           background: 'var(--s-surface)',
           border: `1px solid ${open ? 'var(--s-accent)' : 'var(--s-border)'}`,
-          color: value ? 'var(--color-slate-100)' : '#6e6e77',
+          color: value ? 'var(--color-slate-100)' : '#83838c',
         }}
       >
         <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
-        <span className="shrink-0 text-[11px] text-slate-600">▾</span>
+        <span className="shrink-0 text-2xs text-slate-600">▾</span>
       </button>
 
       {open && (
@@ -120,19 +120,19 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => shiftMonth(-1)}
-              className="h-7 w-7 rounded-lg text-[13px] text-slate-400"
+              className="hit-44 h-8 w-8 rounded-lg text-sm text-slate-400"
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Предыдущий месяц"
             >
               ‹
             </button>
-            <span className="text-[13px] font-medium text-slate-100">
+            <span className="text-sm font-medium text-slate-100">
               {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
             </span>
             <button
               type="button"
               onClick={() => shiftMonth(1)}
-              className="h-7 w-7 rounded-lg text-[13px] text-slate-400"
+              className="hit-44 h-8 w-8 rounded-lg text-sm text-slate-400"
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Следующий месяц"
             >
@@ -142,7 +142,7 @@ export function DatePicker({
 
           <div className="mb-1 grid grid-cols-7 gap-0.5">
             {WEEKDAYS.map((d) => (
-              <span key={d} className="text-center font-mono text-[9.5px] uppercase text-slate-600">
+              <span key={d} className="text-center font-mono text-2xs uppercase text-slate-600">
                 {d}
               </span>
             ))}
@@ -161,7 +161,7 @@ export function DatePicker({
                     onChange(iso)
                     setOpen(false)
                   }}
-                  className="tabular flex h-8 items-center justify-center rounded-lg font-mono text-[12px]"
+                  className="tabular flex h-9 items-center justify-center rounded-lg font-mono text-xs"
                   style={{
                     background: selected ? 'var(--s-accent)' : 'transparent',
                     color: selected
@@ -185,7 +185,7 @@ export function DatePicker({
                 onChange(today)
                 setOpen(false)
               }}
-              className="mt-2.5 flex-1 rounded-lg py-1.5 text-[12px] text-slate-300"
+              className="mt-2.5 flex-1 rounded-lg py-1.5 text-xs text-slate-300"
               style={{ border: '1px solid var(--s-border)' }}
             >
               Сегодня
@@ -196,7 +196,7 @@ export function DatePicker({
                 onChange(null)
                 setOpen(false)
               }}
-              className="mt-2.5 flex-1 rounded-lg py-1.5 text-[12px] text-slate-500"
+              className="mt-2.5 flex-1 rounded-lg py-1.5 text-xs text-slate-500"
               style={{ border: '1px solid var(--s-border)' }}
             >
               Очистить

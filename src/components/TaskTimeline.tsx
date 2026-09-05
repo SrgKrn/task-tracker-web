@@ -55,17 +55,17 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
               className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full"
               style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : '#3a3a42' }}
             />
-            <p className="flex-1 text-[13.5px] leading-[1.35] text-slate-300">
+            <p className="flex-1 text-sm leading-[1.35] text-slate-300">
               {row.kind === 'timer' && `Трекинг: ${formatMinutes(row.entry.duration_minutes)}`}
               {row.kind === 'adjustment' && `Ручная правка: ${formatMinutes(row.entry.duration_minutes)}`}
               {row.kind === 'comment' && row.comment.body}
             </p>
-            <span className="shrink-0 font-mono text-[11px] leading-[1.4] text-slate-600">
+            <span className="shrink-0 font-mono text-2xs leading-[1.4] text-slate-600">
               {formatDateTime(row.at)}
             </span>
           </div>
         ))}
-        {rows.length === 0 && <p className="py-2 text-[13px] text-slate-600">Пока ничего нет.</p>}
+        {rows.length === 0 && <p className="py-2 text-sm text-slate-600">Пока ничего нет.</p>}
       </div>
     </div>
   )
@@ -96,14 +96,14 @@ export function CommentBar({ taskId }: { taskId: string }) {
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
         placeholder="Комментарий"
-        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-[13.5px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-sm text-slate-100 placeholder:text-[#83838c]"
         style={{ background: '#17171c', border: '1px solid var(--s-border-strong)' }}
       />
       <button
         type="button"
         onClick={submit}
         aria-label="Добавить комментарий"
-        className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-[17px]"
+        className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-lg"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         ↑

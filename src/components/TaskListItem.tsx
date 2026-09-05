@@ -110,7 +110,7 @@ export function TaskListItem({
                 close()
                 onDuplicate()
               }}
-              className="flex-1 text-[12.5px] font-medium text-slate-300"
+              className="flex-1 text-xs font-medium text-slate-300"
               style={{ background: '#1e1e24' }}
             >
               Дублировать
@@ -123,7 +123,7 @@ export function TaskListItem({
                 close()
                 onDelete()
               }}
-              className="flex-1 text-[12.5px] font-medium"
+              className="flex-1 text-xs font-medium"
               style={{ background: 'rgba(217,114,86,.18)', color: 'var(--s-danger)' }}
             >
               Удалить
@@ -178,7 +178,7 @@ export function TaskListItem({
         >
           <p
             title={task.name}
-            className={`truncate text-[14.5px] leading-[1.3] ${
+            className={`truncate text-sm leading-[1.3] ${
               done ? 'font-normal text-[#8a8a92] line-through' : 'font-medium text-slate-100'
             }`}
           >
@@ -186,7 +186,7 @@ export function TaskListItem({
           </p>
           <span
             title={meta}
-            className={`font-mono text-[11px] leading-[1.4] ${
+            className={`font-mono text-2xs leading-[1.4] ${
               overdue && !done ? 'text-red-400' : done ? 'text-slate-600' : 'text-slate-500'
             }`}
           >
@@ -195,7 +195,7 @@ export function TaskListItem({
         </Link>
 
         {isRunning && activeTimer ? (
-          <span className="tabular shrink-0 font-mono text-[13.5px] font-semibold text-sky-600">
+          <span className="tabular shrink-0 font-mono text-sm font-semibold text-sky-600">
             {formatClock(activeTimer.started_at)}
           </span>
         ) : done ? null : status ? (

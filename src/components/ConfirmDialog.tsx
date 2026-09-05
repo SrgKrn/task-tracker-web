@@ -34,19 +34,19 @@ export function ConfirmDialog({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[19px] font-semibold leading-[1.2] text-slate-100">{title}</h2>
-        {description && <p className="mt-2 text-[13px] leading-[1.5] text-slate-400">{description}</p>}
+        <h2 className="text-lg font-semibold leading-[1.2] text-slate-100">{title}</h2>
+        {description && <p className="mt-2 text-sm leading-[1.5] text-slate-400">{description}</p>}
         <div className="mt-5 flex gap-[9px]">
           <button
             onClick={onCancel}
-            className="h-12 flex-1 rounded-[15px] text-[14.5px] font-medium text-slate-300"
+            className="h-12 flex-1 rounded-[15px] text-sm font-medium text-slate-300"
             style={{ border: '1px solid var(--s-border-strong-2)' }}
           >
             Отмена
           </button>
           <button
             onClick={onConfirm}
-            className="h-12 flex-1 rounded-[15px] text-[14.5px] font-semibold"
+            className="h-12 flex-1 rounded-[15px] text-sm font-semibold"
             style={{
               background: danger ? 'var(--s-danger)' : 'var(--s-accent)',
               color: 'var(--s-on-accent)',

@@ -31,10 +31,10 @@ export function ProjectDetail() {
 
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2">
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-[13px] text-slate-400">
-        <span className="text-[15px]">←</span>Назад
+      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
+        <span className="text-base">←</span>Назад
       </button>
-      <h1 className="mb-4 text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">
+      <h1 className="mb-4 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">
         {project.name}
       </h1>
 

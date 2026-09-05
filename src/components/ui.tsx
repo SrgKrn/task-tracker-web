@@ -24,7 +24,7 @@ export function Logo({ size = 22, color = 'var(--s-accent)' }: { size?: number; 
 export function Overline({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`font-mono text-[10.5px] font-medium uppercase tracking-[.16em] text-slate-500 ${className}`}
+      className={`font-mono text-2xs font-medium uppercase tracking-[.16em] text-slate-500 ${className}`}
     >
       {children}
     </span>
@@ -34,7 +34,7 @@ export function Overline({ children, className = '' }: { children: ReactNode; cl
 /** Микро-метка над полем. */
 export function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-[10.5px] uppercase tracking-[.12em] text-slate-500">{children}</span>
+    <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">{children}</span>
   )
 }
 
@@ -51,7 +51,7 @@ export function Chip({ active = false, onClick, children, className = '' }: Chip
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-[9px] px-[13px] py-[7px] text-[12.5px] ${
+      className={`min-h-9 shrink-0 rounded-[9px] px-[13px] py-[9px] text-xs ${
         active
           ? 'bg-sky-600 font-medium text-[var(--s-on-accent)]'
           : 'border border-slate-700 bg-slate-800 text-[#8f8f98]'
@@ -74,7 +74,7 @@ const TAG_TONE: Record<TagTone, string> = {
 /** Тег статуса: пользовательские статусы нейтральны, латунь и зелень зарезервированы. */
 export function Tag({ tone = 'neutral', children }: { tone?: TagTone; children: ReactNode }) {
   return (
-    <span className={`shrink-0 rounded-md px-2 py-[3px] text-[10.5px] font-medium ${TAG_TONE[tone]}`}>
+    <span className={`shrink-0 rounded-md px-2 py-[3px] text-2xs font-medium ${TAG_TONE[tone]}`}>
       {children}
     </span>
   )
@@ -105,14 +105,14 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
       >
         <span className="h-[14px] w-[14px] rounded-full" style={{ background: 'var(--s-on-accent)' }} />
       </span>
-      {label && <span className="max-w-[52px] text-left text-[11px] text-[#8f8f98]">{label}</span>}
+      {label && <span className="max-w-[52px] text-left text-2xs text-[#8f8f98]">{label}</span>}
     </button>
   )
 }
 
 /** Единый стиль поля ввода из макета. */
 export const fieldClass =
-  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-[13.5px] text-slate-100 outline-none focus:border-sky-600'
+  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 focus:border-sky-600'
 
 /** Заглушка-плейсхолдер на время первой загрузки — вместо пустого экрана. */
 export function Skeleton({ className = '', rounded = '15px' }: { className?: string; rounded?: string }) {
@@ -161,7 +161,7 @@ export function EmptyState({ children }: { children: ReactNode }) {
           }}
         />
       </span>
-      <p className="max-w-[260px] text-[13px] leading-[1.5] text-slate-600">{children}</p>
+      <p className="max-w-[260px] text-sm leading-[1.5] text-slate-600">{children}</p>
     </div>
   )
 }

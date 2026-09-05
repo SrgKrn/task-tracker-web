@@ -77,26 +77,26 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
         onClick={(e) => e.stopPropagation()}
       >
         <span className="mx-auto h-1 w-[38px] rounded-full" style={{ background: 'var(--s-border-strong-2)' }} />
-        <h3 className="text-[19px] font-semibold leading-[1.2] text-slate-100">Новая задача</h3>
+        <h3 className="text-lg font-semibold leading-[1.2] text-slate-100">Новая задача</h3>
 
         <input
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-[15px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
           style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
 
         {missingRefs ? (
-          <p className="text-[13px] leading-[1.5] text-slate-600">
+          <p className="text-sm leading-[1.5] text-slate-600">
             Сначала создайте хотя бы один раздел и проект в «Ещё» — задача не может существовать без них.
           </p>
         ) : (
           <>
             <div className="flex flex-col gap-1.5">
               <FieldLabel>Раздел</FieldLabel>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {sections.map((s) => (
                   <Chip key={s.id} active={sectionId === s.id} onClick={() => setSectionId(s.id)}>
                     {s.name}
@@ -107,7 +107,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
 
             <div className="flex flex-col gap-1.5">
               <FieldLabel>Проект</FieldLabel>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {projects.map((p) => (
                   <Chip key={p.id} active={projectId === p.id} onClick={() => setProjectId(p.id)}>
                     {p.name}
@@ -122,18 +122,18 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
                 <button
                   type="button"
                   onClick={() => setPlan((v) => Math.max(0.5, v - 0.5))}
-                  className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
+                  className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
                   style={{ border: '1px solid var(--s-border-strong-2)' }}
                 >
                   −
                 </button>
-                <span className="tabular min-w-[44px] text-center font-mono text-[17px] font-semibold text-slate-100">
+                <span className="tabular min-w-[44px] text-center font-mono text-lg font-semibold text-slate-100">
                   {formatHoursRu(plan)} ч
                 </span>
                 <button
                   type="button"
                   onClick={() => setPlan((v) => v + 0.5)}
-                  className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
+                  className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
                   style={{ border: '1px solid var(--s-border-strong-2)' }}
                 >
                   +
@@ -147,7 +147,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           <button
             type="button"
             onClick={onClose}
-            className="h-12 flex-1 rounded-[15px] text-[14.5px] font-medium text-slate-300"
+            className="h-12 flex-1 rounded-[15px] text-sm font-medium text-slate-300"
             style={{ border: '1px solid var(--s-border-strong-2)' }}
           >
             Отмена
@@ -156,7 +156,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             type="button"
             onClick={() => create(true)}
             disabled={!canCreate}
-            className="h-12 flex-[2] rounded-[15px] text-[14.5px] font-semibold"
+            className="h-12 flex-[2] rounded-[15px] text-sm font-semibold"
             style={{
               background: canCreate ? 'var(--s-accent)' : '#232329',
               color: canCreate ? 'var(--s-on-accent)' : '#6e6e77',

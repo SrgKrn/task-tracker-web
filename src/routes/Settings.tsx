@@ -53,8 +53,8 @@ function NavCard({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[14.5px] font-medium leading-[1.3] text-slate-100">{title}</span>
-        <span className="block text-[11px] leading-[1.4] text-slate-500">{hint}</span>
+        <span className="block text-sm font-medium leading-[1.3] text-slate-100">{title}</span>
+        <span className="block text-2xs leading-[1.4] text-slate-500">{hint}</span>
       </span>
       <span className="shrink-0 text-slate-600">→</span>
     </Link>
@@ -84,6 +84,7 @@ function StatusEditor() {
             <span className="flex-1 text-sm text-slate-100">{s.label}</span>
             <button
               type="button"
+              className="-my-2.5 py-2.5 pl-3"
               onClick={() =>
                 setStatusFinal.mutate(
                   { id: s.id, isFinal: !s.is_final },
@@ -123,14 +124,14 @@ function BudgetForm() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-[14.5px] font-medium text-slate-100">Общий план часов</span>
-        <span className="text-[11px] leading-[1.5] text-slate-500">
+        <span className="text-sm font-medium text-slate-100">Общий план часов</span>
+        <span className="text-2xs leading-[1.5] text-slate-500">
           Норма дня для кольца на «Сегодня» и сравнение с фактом в сводке. Приоритет у дневной цели.
         </span>
       </div>
       <div className="flex gap-[9px]">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-[10.5px] uppercase tracking-[.12em] text-slate-500">В день</span>
+          <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">В день</span>
           <input
             type="number"
             min="0"
@@ -141,7 +142,7 @@ function BudgetForm() {
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-[10.5px] uppercase tracking-[.12em] text-slate-500">В месяц</span>
+          <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">В месяц</span>
           <input
             type="number"
             min="0"
@@ -250,8 +251,8 @@ function ExportSection() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-[14.5px] font-medium text-slate-100">Экспорт отчёта</span>
-        <span className="text-[11px] leading-[1.5] text-slate-500">
+        <span className="text-sm font-medium text-slate-100">Экспорт отчёта</span>
+        <span className="text-2xs leading-[1.5] text-slate-500">
           Задачи и время за период — в Excel или PDF.
         </span>
       </div>
@@ -298,7 +299,7 @@ export function Settings() {
 
   return (
     <div className="safe-top mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-2 lg:mx-0 lg:max-w-2xl">
-      <h1 className="mb-2 text-[26px] font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
+      <h1 className="mb-2 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
 
       <NavCard
         to="/sections"
@@ -339,7 +340,7 @@ export function Settings() {
           />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-slate-100">{session?.user.email}</span>
-            <span className="block font-mono text-[11px] text-slate-500">синхронизация включена</span>
+            <span className="block font-mono text-2xs text-slate-500">синхронизация включена</span>
           </span>
         </div>
         <button

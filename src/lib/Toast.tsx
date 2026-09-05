@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`toast-pop flex max-w-[88vw] items-center gap-2.5 rounded-full px-3.5 py-2 text-[12px] leading-tight backdrop-blur-sm ${
+            className={`toast-pop flex max-w-[88vw] items-center gap-2.5 rounded-full px-3.5 py-2 text-xs leading-tight backdrop-blur-sm ${
               t.action ? 'pointer-events-auto' : ''
             }`}
             style={

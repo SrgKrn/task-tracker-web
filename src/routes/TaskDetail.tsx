@@ -89,20 +89,25 @@ export function TaskDetail() {
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:h-screen lg:max-w-none lg:w-full">
       <div className="safe-top flex items-center justify-between px-5 pt-3.5">
-        <button type="button" onClick={() => navigate('/tasks')} className="flex items-center gap-2 text-[13px] text-slate-400">
-          <span className="text-[15px]">←</span>Назад
+        {/* -my-2.5 гасит вертикальный паддинг в вёрстке: он нужен только пальцу */}
+        <button
+          type="button"
+          onClick={() => navigate('/tasks')}
+          className="-my-2.5 flex items-center gap-2 py-2.5 text-sm text-slate-400"
+        >
+          <span className="text-base">←</span>Назад
         </button>
-        <div className="flex gap-3.5 text-[13px]">
+        <div className="-my-2.5 flex gap-3.5 text-sm">
           <button
             type="button"
             onClick={() =>
               duplicateTask.mutate(task, { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) })
             }
-            className="text-slate-400"
+            className="py-2.5 text-slate-400"
           >
             Дублировать
           </button>
-          <button type="button" onClick={() => setConfirmingDelete(true)} className="text-red-400">
+          <button type="button" onClick={() => setConfirmingDelete(true)} className="py-2.5 text-red-400">
             Удалить
           </button>
         </div>
@@ -115,7 +120,7 @@ export function TaskDetail() {
       >
         <div className="flex items-center gap-2">
           {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
-          <span className="truncate font-mono text-[11.5px] text-slate-500">
+          <span className="truncate font-mono text-xs text-slate-500">
             {[project?.name, section?.name].filter(Boolean).join(' · ')}
           </span>
         </div>
@@ -128,7 +133,7 @@ export function TaskDetail() {
         </h1>
 
         {original && (
-          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-[11.5px] text-slate-500">
+          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-xs text-slate-500">
             Копия задачи «<span className="text-sky-600">{original.name}</span>»
           </Link>
         )}
@@ -138,12 +143,12 @@ export function TaskDetail() {
             <span className="flex flex-col items-center gap-px">
               <span
                 className={`tabular font-mono font-semibold ${
-                  isRunning ? 'text-[22px] text-sky-600' : 'text-2xl text-slate-50'
+                  isRunning ? 'text-xl text-sky-600' : 'text-2xl text-slate-50'
                 }`}
               >
                 {isRunning && activeTimer ? formatClock(activeTimer.started_at) : `${formatHoursRu(fact)} ч`}
               </span>
-              <span className="font-mono text-[9.5px] uppercase tracking-[.14em] text-slate-500">
+              <span className="font-mono text-2xs uppercase tracking-[.14em] text-slate-500">
                 {isRunning ? 'идёт учёт' : 'факт'}
               </span>
             </span>
@@ -152,9 +157,9 @@ export function TaskDetail() {
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             <div className="flex flex-col gap-px">
               <FieldLabel>Факт / план</FieldLabel>
-              <span className="tabular font-mono text-[19px] font-semibold leading-[1.1] text-slate-50">
+              <span className="tabular font-mono text-lg font-semibold leading-[1.1] text-slate-50">
                 {formatHoursRu(fact)}{' '}
-                <span className="text-sm text-[#6e6e77]">/ {formatHoursRu(task.planned_hours)} ч</span>
+                <span className="text-sm text-[#83838c]">/ {formatHoursRu(task.planned_hours)} ч</span>
               </span>
             </div>
             <TimerButton
@@ -172,7 +177,7 @@ export function TaskDetail() {
         <div className="flex flex-col gap-1.5">
           <FieldLabel>Факт (правка)</FieldLabel>
           <div
-            className="flex h-10 items-center justify-between rounded-xl px-3"
+            className="flex h-[52px] items-center justify-between rounded-xl py-1.5 pr-1.5 pl-3"
             style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
           >
             <span className="tabular font-mono text-sm font-medium text-slate-100">
@@ -180,25 +185,23 @@ export function TaskDetail() {
             </span>
             {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
                 иначе накрутила бы несколько правок от одного и того же исходного значения */}
-            <span className="flex gap-3 text-[13px] text-slate-600">
-              <button
-                type="button"
-                onClick={() => adjustFact(-0.5)}
-                disabled={adjustFactHours.isPending}
-                className="disabled:opacity-40"
-                aria-label="Убавить полчаса"
-              >
-                −
-              </button>
-              <button
-                type="button"
-                onClick={() => adjustFact(0.5)}
-                disabled={adjustFactHours.isPending}
-                className="disabled:opacity-40"
-                aria-label="Прибавить полчаса"
-              >
-                +
-              </button>
+            <span className="flex gap-1.5">
+              {[
+                { delta: -0.5, glyph: '−', label: 'Убавить полчаса' },
+                { delta: 0.5, glyph: '+', label: 'Прибавить полчаса' },
+              ].map(({ delta, glyph, label }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => adjustFact(delta)}
+                  disabled={adjustFactHours.isPending}
+                  aria-label={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
+                  style={{ border: '1px solid var(--s-border-strong-2)' }}
+                >
+                  {glyph}
+                </button>
+              ))}
             </span>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { TaskList } from './TaskList'
 
 function TaskWorkspaceEmpty() {
   return (
-    <div className="hidden text-center text-[13px] text-slate-600 lg:block">
+    <div className="hidden text-center text-sm text-slate-600 lg:block">
       <p>Выберите задачу слева</p>
     </div>
   )

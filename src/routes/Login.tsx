@@ -50,7 +50,7 @@ export function Login() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-[46px] rounded-[14px] px-3.5 text-[15px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
           style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
         <input
@@ -60,17 +60,17 @@ export function Login() {
           placeholder="Пароль"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="h-[46px] rounded-[14px] px-3.5 text-[15px] text-slate-100 outline-none placeholder:text-[#6e6e77]"
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
           style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
 
-        {error && <p className="text-[13px] text-red-400">{error}</p>}
-        {info && <p className="text-[13px] text-emerald-400">{info}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        {info && <p className="text-sm text-emerald-400">{info}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="h-12 rounded-[15px] text-[14.5px] font-semibold disabled:opacity-50"
+          className="h-12 rounded-[15px] text-sm font-semibold disabled:opacity-50"
           style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           {mode === 'signin' ? 'Войти' : 'Создать аккаунт'}
@@ -79,7 +79,7 @@ export function Login() {
         <button
           type="button"
           onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-          className="text-[13px] text-slate-400"
+          className="text-sm text-slate-400"
         >
           {mode === 'signin' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
         </button>
