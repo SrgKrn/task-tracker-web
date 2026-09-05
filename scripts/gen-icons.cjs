@@ -57,31 +57,45 @@ const BG = [21, 21, 26] // #15151a graphite
 const BRASS = [232, 163, 61] // #e8a33d
 
 /**
- * Знак Semternity: кольцо с одной точкой сверху («подвижное подобие вечности»)
- * плюс внутреннее кольцо. Никаких стрелок часов.
+ * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
+ *
+ * Раньше кольцо было сплошным, а точка сидела на ободе и сливалась с ним в нашлёпку —
+ * читалось как дефект, а не как знак. Теперь в кольце настоящий разрыв, точка стоит
+ * в нём отдельно: то же «подвижное подобие вечности», но видно замысел.
+ *
+ * `scale` сжимает знак к центру для maskable-версии: Android обрезает иконку по
+ * своей маске, и полнокадровый знак терял края.
  */
-function hitsMark(x, y, size) {
+function hitsMark(x, y, size, scale) {
   const cx = size / 2
   const cy = size / 2
-  const r = size * 0.28
-  const sw = size * 0.062
-  const dotR = size * 0.062
-  const innerR = r * 0.5
-  const innerSw = size * 0.022
+  const r = size * 0.28 * scale
+  const sw = size * 0.068 * scale
+  const dotR = size * 0.056 * scale
+  const innerR = r * 0.46
+  const innerSw = size * 0.024 * scale
 
-  const distFromCenter = Math.hypot(x - cx, y - cy)
+  const dx = x - cx
+  const dy = y - cy
+  const dist = Math.hypot(dx, dy)
 
-  // внешнее кольцо
-  if (Math.abs(distFromCenter - r) <= sw / 2) return true
-  // внутреннее кольцо
-  if (Math.abs(distFromCenter - innerR) <= innerSw / 2) return true
-  // точка сверху по центру, сидит на ободе
-  if (Math.hypot(x - cx, y - (cy - r)) <= dotR) return true
+  // внешнее кольцо с разрывом сверху: угол считаем от «12 часов» по часовой стрелке
+  if (Math.abs(dist - r) <= sw / 2) {
+    const deg = (Math.atan2(dx, -dy) * 180) / Math.PI // 0 сверху, +90 справа
+    const GAP = 30 // половина разрыва в градусах
+    if (Math.abs(deg) > GAP) return true
+  }
+
+  // внутреннее кольцо — тонкий отголосок внешнего
+  if (Math.abs(dist - innerR) <= innerSw / 2) return true
+
+  // точка в разрыве, ровно на окружности обода
+  if (Math.hypot(dx, dy + r) <= dotR) return true
 
   return false
 }
 
-function renderIcon(size) {
+function renderIcon(size, { scale = 1 } = {}) {
   const SS = 4 // supersample factor for antialiasing
   const rgb = Buffer.alloc(size * size * 3)
   for (let y = 0; y < size; y++) {
@@ -91,7 +105,7 @@ function renderIcon(size) {
         for (let sx = 0; sx < SS; sx++) {
           const px = x + (sx + 0.5) / SS
           const py = y + (sy + 0.5) / SS
-          if (hitsMark(px, py, size)) hits++
+          if (hitsMark(px, py, size, scale)) hits++
         }
       }
       const alpha = hits / (SS * SS)
@@ -106,8 +120,14 @@ function renderIcon(size) {
 
 const outDir = path.join(__dirname, '..', 'public')
 
+// PNG-фавиконки нужны отдельно от SVG: ярлык на рабочем столе Windows и часть
+// браузеров SVG-фавиконку не растеризуют и подставляют свою заглушку.
+fs.writeFileSync(path.join(outDir, 'favicon-32.png'), renderIcon(32))
+fs.writeFileSync(path.join(outDir, 'favicon-48.png'), renderIcon(48))
 fs.writeFileSync(path.join(outDir, 'icon-192.png'), renderIcon(192))
 fs.writeFileSync(path.join(outDir, 'icon-512.png'), renderIcon(512))
 fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), renderIcon(180))
+// maskable: знак ужат до 72% кадра, чтобы пережить круглую/скруглённую маску Android
+fs.writeFileSync(path.join(outDir, 'icon-maskable-512.png'), renderIcon(512, { scale: 0.72 }))
 
 console.log('Semternity mark icons written to public/')

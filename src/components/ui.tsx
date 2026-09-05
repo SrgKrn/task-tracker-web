@@ -1,22 +1,30 @@
 import type { ReactNode } from 'react'
 
-/** Знак Semternity: незамкнутое кольцо с одной движущейся точкой. */
+/**
+ * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
+ * Раньше кольцо было сплошным, а точка лежала на ободе и слипалась с ним в нашлёпку —
+ * рисуем дугой с разрывом, чтобы читался замысел, а не дефект.
+ */
 export function Logo({ size = 22, color = 'var(--s-accent)' }: { size?: number; color?: string }) {
-  const dot = Math.max(4, Math.round(size * 0.22))
   return (
-    <span
-      className="relative block shrink-0 rounded-full"
-      style={{ width: size, height: size, border: `${size > 30 ? 2 : 1.5}px solid ${color}` }}
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      className="shrink-0"
+      aria-hidden="true"
+      focusable="false"
     >
-      <span
-        className="absolute rounded-full"
-        style={{ width: dot, height: dot, top: -dot / 2, left: '50%', marginLeft: -dot / 2, background: color }}
+      <path
+        d="M11.4 7.9a9 9 0 1 0 9.2 0"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
       />
-      <span
-        className="absolute rounded-full"
-        style={{ inset: size * 0.23, border: `1px solid rgba(232,163,61,.35)` }}
-      />
-    </span>
+      <circle cx="16" cy="16" r="4.1" stroke={color} strokeWidth={0.8} opacity={0.45} />
+      <circle cx="16" cy="7" r="1.8" fill={color} />
+    </svg>
   )
 }
 

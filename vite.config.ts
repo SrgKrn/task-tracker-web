@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.png'],
+      includeAssets: ['apple-touch-icon.png', 'favicon.svg', 'favicon-32.png', 'favicon-48.png'],
       workbox: {
         // Excel/PDF export pulls in ~2MB of libraries (exceljs, jsPDF + an embedded Cyrillic
         // font) that are already code-split via dynamic import() — exclude them from the
@@ -25,10 +25,16 @@ export default defineConfig({
         background_color: '#0d0d0f',
         display: 'standalone',
         start_url: '/',
+        lang: 'ru',
+        // пути абсолютные: относительные резолвятся от адреса манифеста и ломаются,
+        // если приложение когда-нибудь переедет в подкаталог
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          // отдельный файл со знаком, ужатым до 72% кадра: Android режет иконку
+          // по своей маске, и у полнокадрового знака срезало края
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
