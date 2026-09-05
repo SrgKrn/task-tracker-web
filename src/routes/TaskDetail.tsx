@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ArrowLeft } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
@@ -95,7 +96,7 @@ export function TaskDetail() {
           onClick={() => navigate('/tasks')}
           className="-my-2.5 flex items-center gap-2 py-2.5 text-sm text-slate-400"
         >
-          <span className="text-base">←</span>Назад
+          <ArrowLeft size={15} />Назад
         </button>
         <div className="-my-2.5 flex gap-3.5 text-sm">
           <button
@@ -172,7 +173,9 @@ export function TaskDetail() {
         </div>
       </div>
 
-      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+      {/* на десктопе форма упирается в предел ширины: поле на шесть символов,
+          растянутое на пол-экрана, выглядит как ошибка вёрстки */}
+      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:max-w-[560px] lg:flex-1 lg:overflow-y-auto">
         {/* быстрая правка факта — шаг 0,5 ч */}
         <div className="flex flex-col gap-1.5">
           <FieldLabel>Факт (правка)</FieldLabel>

@@ -4,6 +4,7 @@ import { useAddComment, useComments } from '../lib/queries/comments'
 import { useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
 import type { Comment, TimeEntry } from '../lib/types'
+import { ArrowUp } from './Icon'
 
 type TimelineRow =
   | { kind: 'timer'; at: string; entry: TimeEntry }
@@ -106,7 +107,7 @@ export function CommentBar({ taskId }: { taskId: string }) {
         className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-lg"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
-        ↑
+        <ArrowUp size={16} className="mx-auto" />
       </button>
     </div>
   )

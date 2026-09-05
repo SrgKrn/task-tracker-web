@@ -93,6 +93,12 @@
   --s-on-accent: #121212;
   /* было #6e6e77 — 3.79:1 на фоне приложения, ниже нормы для текста */
   --s-tab-idle: #83838c;
+
+  /* единые токены движения — раньше длительность выбиралась по месту */
+  --dur-fast: 120ms; /* отклик на касание и наведение */
+  --dur-base: 180ms; /* сдвиги и раскрытия */
+  --dur-slow: 300ms; /* заливка колец */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 html,
@@ -149,6 +155,42 @@ input[type="number"] {
   border-radius: 4px;
 }
 
+/*
+ * Отклик на действие. До этого во всём приложении было пять hover-состояний,
+ * ни одного состояния нажатия и два перехода: интерфейс никак не отвечал на
+ * прикосновение, и до ответа сервера казалось, что нажатие не засчиталось.
+ * Осветление яркостью работает поверх любых фонов — а их тут задают инлайн-стили,
+ * поэтому классовый подход покрыл бы не всё.
+ */
+button:not(:disabled),
+a[href],
+label:has(input),
+[role="tab"] {
+  cursor: pointer;
+  transition:
+    filter var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+button:not(:disabled):active,
+a[href]:active,
+label:has(input):active {
+  filter: brightness(1.22);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover,
+  a[href]:hover,
+  label:has(input):hover {
+    filter: brightness(1.12);
+  }
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 @keyframes toast-pop {
   from {
     opacity: 0;
@@ -181,6 +223,12 @@ input[type="number"] {
   .toast-pop,
   .skeleton {
     animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
 

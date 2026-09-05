@@ -62,6 +62,52 @@ export function Chip({ active = false, onClick, children, className = '' }: Chip
   )
 }
 
+/**
+ * Сегментированный переключатель для взаимоисключающего выбора. Отдельный вид от чипов:
+ * чипы — это множественный фильтр, и раньше ряды «Разделы / Проекты / Все» и ряды фильтров
+ * выглядели одинаково, хотя работают по-разному.
+ */
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  className = '',
+}: {
+  value: T
+  options: { value: T; label: string }[]
+  onChange: (value: T) => void
+  className?: string
+}) {
+  return (
+    <div
+      className={`flex shrink-0 gap-0.5 rounded-[11px] p-0.5 ${className}`}
+      style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
+      role="tablist"
+    >
+      {options.map((o) => {
+        const active = o.value === value
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.value)}
+            className="min-h-8 rounded-[9px] px-2.5 text-xs"
+            style={{
+              background: active ? 'var(--s-accent)' : 'transparent',
+              color: active ? 'var(--s-on-accent)' : '#8f8f98',
+              fontWeight: active ? 500 : 400,
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export type TagTone = 'neutral' | 'accent' | 'success' | 'danger'
 
 const TAG_TONE: Record<TagTone, string> = {
@@ -105,7 +151,7 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
       >
         <span className="h-[14px] w-[14px] rounded-full" style={{ background: 'var(--s-on-accent)' }} />
       </span>
-      {label && <span className="max-w-[52px] text-left text-2xs text-[#8f8f98]">{label}</span>}
+      {label && <span className="whitespace-nowrap text-left text-2xs text-[#8f8f98]">{label}</span>}
     </button>
   )
 }

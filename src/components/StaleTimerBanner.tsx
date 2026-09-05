@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useActiveTimer } from '../lib/queries/timer'
+import { Close } from './Icon'
 
 const STALE_AFTER_MS = 2 * 60 * 60 * 1000
 
@@ -60,7 +61,7 @@ export function StaleTimerBanner() {
     >
       <span>Таймер идёт уже {hours} ч — забыли остановить?</span>
       <button onClick={() => setDismissedFor(activeTimer.started_at)} className="shrink-0 text-slate-400">
-        ✕
+        <Close size={15} />
       </button>
     </div>
   )

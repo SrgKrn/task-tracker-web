@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Close } from './Icon'
 
 interface Item {
   id: string
@@ -84,7 +85,7 @@ export function PicklistAdmin<T extends Item>({
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
       <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-        <span className="text-base">←</span>Ещё
+        <ArrowLeft size={15} />Ещё
       </button>
       <h1 className="mb-4 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
 
@@ -132,7 +133,7 @@ export function PicklistAdmin<T extends Item>({
                   className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
                   aria-label="Переместить выше"
                 >
-                  ▲
+                  <ChevronUp size={14} />
                 </button>
                 <button
                   onClick={() => move(index, 1)}
@@ -140,7 +141,7 @@ export function PicklistAdmin<T extends Item>({
                   className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
                   aria-label="Переместить ниже"
                 >
-                  ▼
+                  <ChevronDown size={14} />
                 </button>
               </div>
 
@@ -169,7 +170,7 @@ export function PicklistAdmin<T extends Item>({
                   className="hit-44 shrink-0 px-1 text-slate-400 active:text-sky-600"
                   aria-label="Открыть задачи"
                 >
-                  →
+                  <ArrowRight size={15} className="mx-auto" />
                 </button>
               )}
 
@@ -199,7 +200,7 @@ export function PicklistAdmin<T extends Item>({
                 className="hit-44 shrink-0 px-1 text-red-400 active:text-red-500"
                 aria-label="Удалить"
               >
-                ✕
+                <Close size={15} className="mx-auto" />
               </button>
             </li>
           )

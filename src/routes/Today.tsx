@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Ring } from '../components/Ring'
+import { ArrowRight } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
 import { EmptyState, Logo, Overline, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -137,36 +138,55 @@ export function Today() {
         </div>
       </div>
 
-      {/* недельный ритм */}
-      <div>
-        <div className="flex h-[34px] items-end gap-[5px] px-5 pb-1">
+      {/*
+        Недельный ритм. Раньше полоса была 34px высотой с минимумом 12%: при факте
+        1,6 / 3,5 / 3 ч столбики отличались на несколько пикселей и читались как семь
+        одинаковых чёрточек. Стало выше, с подписанными значениями — иначе узнать
+        «сколько было во вторник» было нельзя вообще ничем.
+      */}
+      <div className="px-5">
+        <div className="flex h-14 items-end gap-1.5">
           {week.days.map((day) => {
             const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
             const isToday = day === today
-            const isPast = day < today
-            const height = Math.max(fact > 0 ? 12 : 6, Math.min(100, (fact / maxDayValue) * 100))
+            const isFuture = day > today
+            const height = fact > 0 ? Math.max(10, Math.min(100, (fact / maxDayValue) * 100)) : 3
             return (
               <span
                 key={day}
                 className="flex-1 rounded-[3px]"
+                title={`${formatHoursRu(fact)} ч`}
                 style={{
                   height: `${height}%`,
                   background: isToday
                     ? 'var(--s-accent)'
-                    : isPast
-                      ? '#26262c'
-                      : fact > 0
-                        ? 'rgba(232,163,61,.18)'
-                        : '#1c1c22',
+                    : fact > 0
+                      ? '#3a3a44'
+                      : isFuture
+                        ? '#1c1c22'
+                        : '#232329',
                 }}
               />
             )
           })}
         </div>
-        <div className="flex justify-between px-5 pt-1.5 font-mono text-2xs text-slate-600">
-          {WEEKDAYS.map((d) => (
-            <span key={d}>{d}</span>
-          ))}
+        <div className="flex gap-1.5 pt-1.5">
+          {week.days.map((day, i) => {
+            const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
+            const isToday = day === today
+            return (
+              <span key={day} className="flex flex-1 flex-col items-center gap-px">
+                <span className={`font-mono text-2xs ${isToday ? 'text-sky-600' : 'text-slate-600'}`}>
+                  {WEEKDAYS[i]}
+                </span>
+                <span
+                  className={`tabular font-mono text-2xs ${isToday ? 'text-sky-600' : 'text-slate-500'}`}
+                >
+                  {fact > 0 ? formatHoursRu(fact) : '—'}
+                </span>
+              </span>
+            )
+          })}
         </div>
       </div>
 
@@ -175,7 +195,7 @@ export function Today() {
         <div className="flex items-baseline justify-between">
           <Overline>На сегодня</Overline>
           <Link to="/tasks" className="-my-3.5 py-3.5 pl-3 text-xs text-sky-600">
-            Все задачи →
+            <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
           </Link>
         </div>
 
@@ -241,6 +261,8 @@ export function Today() {
                     <span className="tabular font-mono text-2xs font-medium text-red-400">{pct}%</span>
                   </Ring>
 
+                  {/* мета в одну строку с обрезкой: раньше она переносилась, наезжала на
+                      «Перенести» и уводила кольцо от центра карточки */}
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
                     <p
                       title={task.name}
@@ -248,9 +270,11 @@ export function Today() {
                     >
                       {task.name}
                     </p>
-                    <span className="font-mono text-xs text-red-400">
-                      {category ? `${category} · ` : ''}срок прошёл {task.end_date?.slice(8, 10)}.
-                      {task.end_date?.slice(5, 7)}
+                    {/* срок идёт первым: именно он объясняет, почему задача в этом блоке,
+                        и при обрезке должен уцелеть, а не название проекта */}
+                    <span className="block truncate font-mono text-xs text-red-400">
+                      срок {task.end_date?.slice(8, 10)}.{task.end_date?.slice(5, 7)}
+                      {category ? ` · ${category}` : ''}
                     </span>
                   </Link>
 

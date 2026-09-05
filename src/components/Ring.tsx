@@ -45,10 +45,24 @@ export function Ring({
   ariaLabel,
   children,
 }: RingProps) {
-  const deg = Math.max(0, Math.min(pct, 100)) * 3.6
   const fill = color ?? STATE_COLOR[state]
   const trackColor = track ?? (size >= 100 ? 'var(--s-ring-track-lg)' : 'var(--s-ring-track)')
   const inset = Math.max(4, Math.round(size * 0.12 * 10) / 10)
+
+  /*
+   * Переработка идёт вторым витком. Раньше заливка обрезалась на 100%, и 133% выглядели
+   * ровно как 233% — кольцо переставало работать именно там, где сообщает главное.
+   * Первый виток остаётся латунным (план выполнен), поверх него терракотой ложится
+   * превышение. Второй виток тоже упирается в полный круг: 200% и больше — сплошной.
+   */
+  const overflow = !color && pct > 100 ? Math.min(pct - 100, 100) : 0
+  const deg = Math.max(0, Math.min(pct, 100)) * 3.6
+  const overflowDeg = overflow * 3.6
+
+  const background =
+    overflow > 0
+      ? `conic-gradient(var(--s-danger) 0deg ${overflowDeg}deg, var(--s-accent) ${overflowDeg}deg 360deg)`
+      : `conic-gradient(${fill} 0deg ${deg}deg, ${trackColor} ${deg}deg 360deg)`
 
   const body = (
     <>
@@ -76,8 +90,8 @@ export function Ring({
   const style = {
     width: size,
     height: size,
-    background: `conic-gradient(${fill} 0deg ${deg}deg, ${trackColor} ${deg}deg 360deg)`,
-    transition: 'background 300ms ease-out',
+    background,
+    transition: 'background var(--dur-slow) var(--ease-out)',
   }
 
   if (!onClick) {

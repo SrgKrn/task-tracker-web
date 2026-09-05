@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toDateString, todayStr } from '../lib/period'
+import { ChevronDown, ChevronLeft, ChevronRight } from './Icon'
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 const MONTHS = [
@@ -104,7 +105,7 @@ export function DatePicker({
         }}
       >
         <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
-        <span className="shrink-0 text-2xs text-slate-600">▾</span>
+        <ChevronDown size={14} className="text-slate-600" />
       </button>
 
       {open && (
@@ -124,7 +125,7 @@ export function DatePicker({
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Предыдущий месяц"
             >
-              ‹
+              <ChevronLeft size={16} className="mx-auto" />
             </button>
             <span className="text-sm font-medium text-slate-100">
               {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
@@ -136,7 +137,7 @@ export function DatePicker({
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Следующий месяц"
             >
-              ›
+              <ChevronRight size={16} className="mx-auto" />
             </button>
           </div>
 

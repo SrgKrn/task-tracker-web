@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { TaskListItem } from '../components/TaskListItem'
+import { ArrowLeft } from '../components/Icon'
 import { EmptyState } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
@@ -32,7 +33,7 @@ export function ProjectDetail() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2">
       <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-        <span className="text-base">←</span>Назад
+        <ArrowLeft size={15} />Назад
       </button>
       <h1 className="mb-4 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">
         {project.name}

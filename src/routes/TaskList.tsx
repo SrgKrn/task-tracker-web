@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
-import { Chip, EmptyState, Overline, Switch, TaskRowSkeleton } from '../components/ui'
+import { SortArrows } from '../components/Icon'
+import { Chip, EmptyState, Overline, Segmented, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod } from '../lib/period'
 import { useProjects } from '../lib/queries/projects'
@@ -160,7 +161,7 @@ export function TaskList() {
             color: sortByDue ? 'var(--s-accent)' : '#8f8f98',
           }}
         >
-          ⇅
+          <SortArrows size={16} className="mx-auto" />
         </button>
       </div>
 
@@ -290,17 +291,15 @@ export function TaskList() {
       )}
 
       <div className="flex items-center justify-between gap-2.5 px-5 pb-2.5">
-        <div className="flex gap-2">
-          <Chip active={groupBy === 'section'} onClick={() => setGroupBy('section')}>
-            Разделы
-          </Chip>
-          <Chip active={groupBy === 'project'} onClick={() => setGroupBy('project')}>
-            Проекты
-          </Chip>
-          <Chip active={groupBy === 'none'} onClick={() => setGroupBy('none')}>
-            Все
-          </Chip>
-        </div>
+        <Segmented
+          value={groupBy}
+          onChange={setGroupBy}
+          options={[
+            { value: 'none', label: 'Все' },
+            { value: 'section', label: 'Разделы' },
+            { value: 'project', label: 'Проекты' },
+          ]}
+        />
         <Switch on={hideCompleted} onChange={setHideCompleted} label="скрыть готовые" />
       </div>
 

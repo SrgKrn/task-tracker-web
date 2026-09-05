@@ -5,6 +5,7 @@ import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask } from '../lib/queries/tasks'
+import { ArrowLeft } from '../components/Icon'
 
 const empty: TaskFormValues = {
   name: '',
@@ -28,7 +29,7 @@ export function NewTask() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-6 lg:mx-0 lg:w-full lg:max-w-none">
       <button type="button" onClick={() => navigate('/tasks')} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-        <span className="text-base">←</span>Назад
+        <ArrowLeft size={15} />Назад
       </button>
       <h1 className="mb-4 text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">
         Новая задача

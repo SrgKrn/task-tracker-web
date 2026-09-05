@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
+import { ArrowRight } from '../components/Icon'
 import { Overline, Tag, fieldClass } from '../components/ui'
 import { buildReportData } from '../lib/report'
 import { describeError, useToast } from '../lib/Toast'
@@ -56,7 +57,7 @@ function NavCard({
         <span className="block text-sm font-medium leading-[1.3] text-slate-100">{title}</span>
         <span className="block text-2xs leading-[1.4] text-slate-500">{hint}</span>
       </span>
-      <span className="shrink-0 text-slate-600">→</span>
+      <ArrowRight size={16} className="text-slate-600" />
     </Link>
   )
 }

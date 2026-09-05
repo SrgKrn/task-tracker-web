@@ -229,7 +229,7 @@ export function TaskForm({
 
       <button
         type="submit"
-        className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold"
+        className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold lg:w-auto lg:self-start lg:px-8"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         {submitLabel}

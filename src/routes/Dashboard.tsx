@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { DatePicker } from '../components/DatePicker'
 import { Ring } from '../components/Ring'
-import { Chip, EmptyState, FieldLabel, Overline } from '../components/ui'
+import { Chip, EmptyState, FieldLabel, Overline, Segmented } from '../components/ui'
 import {
   daysBetweenInclusive,
   daysInCalendarMonth,
   overlapsPeriod,
   PERIOD_PRESETS,
   rangeForPreset,
+  toDateString,
   todayStr,
   type PeriodPreset,
 } from '../lib/period'
@@ -105,6 +106,27 @@ export function Dashboard() {
       .sort((a, b) => b.factHours - a.factHours)
   }, [groupBy, projects, sections, tasks, factByTask, from, to])
 
+  /* «13,3 ч» само по себе не отвечает на вопрос «это много или мало» —
+     сравниваем с предыдущим отрезком той же длины */
+  const prevRange = useMemo(() => {
+    const days = daysBetweenInclusive(from, to)
+    const end = new Date(`${from}T00:00:00`)
+    end.setDate(end.getDate() - 1)
+    const start = new Date(end)
+    start.setDate(start.getDate() - (days - 1))
+    return { from: toDateString(start), to: toDateString(end) }
+  }, [from, to])
+
+  const { data: prevEntries = [] } = useTimeEntriesInRange(
+    `${prevRange.from}T00:00:00`,
+    `${prevRange.to}T23:59:59.999`,
+  )
+  const prevFactHours = useMemo(
+    () => prevEntries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
+    [prevEntries],
+  )
+  const deltaHours = totalFactHours - prevFactHours
+
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
       <div className="safe-top flex flex-col gap-3 px-5 pt-3.5 pb-3">
@@ -114,7 +136,9 @@ export function Dashboard() {
           </Overline>
           <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* прокрутка, а не перенос: на узком экране «Свой диапазон» уезжал на вторую
+            строку и ряд выглядел сломанным */}
+        <div className="sc -mx-5 flex gap-2 overflow-x-auto px-5">
           {PERIOD_PRESETS.map((p) => (
             <Chip key={p.key} active={preset === p.key} onClick={() => setPreset(p.key)}>
               {p.label}
@@ -170,13 +194,23 @@ export function Dashboard() {
               {formatHoursRu(totalFactHours)}{' '}
               <span className="text-sm text-[#83838c]">/ {formatHoursRu(totalPlanHours)} ч</span>
             </span>
+            {prevFactHours > 0 && (
+              <span className="tabular font-mono text-2xs text-slate-500">
+                {deltaHours >= 0 ? '+' : '−'}
+                {formatHoursRu(Math.abs(deltaHours))} ч к прошлому периоду
+              </span>
+            )}
           </div>
-          <div className="flex flex-col gap-px">
-            <FieldLabel>Задач закрыто</FieldLabel>
-            <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
-              {closedCount}
-            </span>
-          </div>
+          {/* пока история переходов не накопилась, метрика структурно нулевая —
+              не занимаем ею место и не оправдываемся сноской на четыре строки */}
+          {closedCount > 0 && (
+            <div className="flex flex-col gap-px">
+              <FieldLabel>Задач закрыто</FieldLabel>
+              <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
+                {closedCount}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -221,13 +255,15 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="flex gap-2 px-5 pt-3.5 pb-2.5">
-        <Chip active={groupBy === 'project'} onClick={() => setGroupBy('project')}>
-          По проектам
-        </Chip>
-        <Chip active={groupBy === 'section'} onClick={() => setGroupBy('section')}>
-          По разделам
-        </Chip>
+      <div className="flex px-5 pt-3.5 pb-2.5">
+        <Segmented
+          value={groupBy}
+          onChange={setGroupBy}
+          options={[
+            { value: 'project', label: 'По проектам' },
+            { value: 'section', label: 'По разделам' },
+          ]}
+        />
       </div>
 
       <div className="flex flex-col gap-[9px] px-5 pb-2 lg:grid lg:grid-cols-2 lg:gap-3">
@@ -260,9 +296,10 @@ export function Dashboard() {
                 >
                   {row.name}
                 </p>
-                <span className="font-mono text-2xs leading-[1.4] text-slate-500">
-                  {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч ·{' '}
-                  {over ? 'переработка' : `${row.counted} задач`}
+                {/* счётчик задач больше не вытесняется словом «переработка»: о ней
+                    уже говорят терракотовое кольцо и процент больше ста */}
+                <span className="block truncate font-mono text-2xs leading-[1.4] text-slate-500">
+                  {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч · {row.counted} задач
                 </span>
               </div>
             </div>
@@ -270,11 +307,6 @@ export function Dashboard() {
         })}
         {rows.length === 0 && <EmptyState>За этот период нет плана или трекинга.</EmptyState>}
       </div>
-
-      <p className="px-5 pb-2 font-mono text-2xs leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
-        «Задач закрыто» считается по фактическим переходам в финальный статус за период — история ведётся
-        с 5 сентября 2026, более ранние закрытия в метрику не попадают.
-      </p>
     </div>
   )
 }

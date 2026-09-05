@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { Tag } from './ui'
+import { Check } from './Icon'
 import { tap } from '../lib/haptics'
 import type { ActiveTimer, Project, Section, Status, Task } from '../lib/types'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
@@ -62,12 +63,11 @@ export function TaskListItem({
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
   const cardBg = isRunning ? 'var(--s-surface-active)' : 'var(--s-surface)'
 
-  // просрочка не должна вытеснять проект/раздел — это тоже важная информация в краткой
-  // строке; сигнал «просрочено» подаём цветом текста и добавкой, а не заменой категории
+  // мета держится в одну строку: раньше приписка «просрочено» переносила её на вторую
+  // и строка становилась на треть выше соседних. Состояние показываем тегом справа —
+  // там для него есть отдельное место, и оно не спорит с проектом за ширину.
   const category = project?.name ?? section?.name ?? ''
-  const meta = `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч${category ? ` · ${category}` : ''}${
-    done ? ' · закрыто' : overdue ? ' · просрочено' : ''
-  }`
+  const meta = `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч${category ? ` · ${category}` : ''}`
 
   function onTouchStart(e: React.TouchEvent) {
     if (!swipeable) return
@@ -159,7 +159,7 @@ export function TaskListItem({
           {isRunning ? (
             <StopGlyph />
           ) : done ? (
-            <span className="font-mono text-xs font-medium text-emerald-400">✓</span>
+            <Check size={14} className="text-emerald-400" />
           ) : (
             <PlayGlyph />
           )}
@@ -186,7 +186,7 @@ export function TaskListItem({
           </p>
           <span
             title={meta}
-            className={`font-mono text-2xs leading-[1.4] ${
+            className={`block truncate font-mono text-2xs leading-[1.4] ${
               overdue && !done ? 'text-red-400' : done ? 'text-slate-600' : 'text-slate-500'
             }`}
           >
@@ -198,7 +198,9 @@ export function TaskListItem({
           <span className="tabular shrink-0 font-mono text-sm font-semibold text-sky-600">
             {formatClock(activeTimer.started_at)}
           </span>
-        ) : done ? null : status ? (
+        ) : done ? null : overdue ? (
+          <Tag tone="danger">просрочено</Tag>
+        ) : status ? (
           <Tag>{status.label}</Tag>
         ) : null}
       </div>
