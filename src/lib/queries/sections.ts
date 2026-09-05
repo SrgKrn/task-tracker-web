@@ -8,3 +8,4 @@ export const useCreateSection = sections.useCreate
 export const useUpdateSection = sections.useUpdate
 export const useDeleteSection = sections.useDelete
 export const useReorderSections = sections.useReorder
+export const useSetSectionArchived = sections.useSetArchived

@@ -59,7 +59,8 @@
   --s-ring-track: #2b2b32;
   --s-ring-track-lg: #212127;
   --s-accent: #e8a33d;
-  --s-accent-muted: rgba(232, 163, 61, 0.5);
+  /* на кольце 32px половинная прозрачность плохо отделялась от трека — подняли до 0.62 */
+  --s-accent-muted: rgba(232, 163, 61, 0.62);
   --s-accent-ghost: rgba(232, 163, 61, 0.14);
   --s-accent-dim: #c98a2e;
   --s-timer-bg: #17130c;
@@ -95,6 +96,41 @@ input[type="number"] {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+@keyframes toast-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+
+.toast-pop {
+  animation: toast-pop 180ms ease-out;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* края внутренней прокрутки не должны обрубать контент — растворяем их.
+   @utility, а не обычный класс: нужен вариант lg: (фейд только в десктопной колонке) */
+@utility sc-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-pop,
+  .skeleton {
+    animation: none;
+  }
 }
 
 /* скрытый скроллбар для внутренних прокручиваемых областей */

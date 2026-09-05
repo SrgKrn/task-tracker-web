@@ -20,6 +20,9 @@ interface PicklistAdminProps<T extends Item> {
   /** optional "this item marks something done" flag, e.g. statuses.is_final */
   finalOf?: (item: T) => boolean
   onToggleFinal?: (item: T, value: boolean) => void
+  /** optional archive flag: a soft alternative to deleting something tasks still reference */
+  archivedOf?: (item: T) => boolean
+  onToggleArchived?: (item: T, value: boolean) => void
   /** when provided, adds a "view tasks in this bucket" affordance per row */
   onOpen?: (item: T) => void
 }
@@ -36,6 +39,8 @@ export function PicklistAdmin<T extends Item>({
   onReorder,
   finalOf,
   onToggleFinal,
+  archivedOf,
+  onToggleArchived,
   onOpen,
 }: PicklistAdminProps<T>) {
   const navigate = useNavigate()
@@ -43,6 +48,10 @@ export function PicklistAdmin<T extends Item>({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [deletingItem, setDeletingItem] = useState<T | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+
+  const archivedCount = archivedOf ? items.filter(archivedOf).length : 0
+  const visibleItems = archivedOf && !showArchived ? items.filter((i) => !archivedOf(i)) : items
 
   function handleCreate() {
     const name = newName.trim()
@@ -96,78 +105,106 @@ export function PicklistAdmin<T extends Item>({
         </button>
       </div>
 
+      {archivedOf && archivedCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowArchived((v) => !v)}
+          className="mb-3 text-[12.5px] text-slate-500"
+        >
+          {showArchived ? 'Скрыть архив' : `Показать архив (${archivedCount})`}
+        </button>
+      )}
+
       <ul className="space-y-2">
-        {items.map((item, index) => (
-          <li
-            key={item.id}
-            className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5 lg:hover:bg-[var(--s-surface-active)]"
-          >
-            <div className="flex flex-col text-[11px] leading-none lg:flex-row lg:gap-1">
-              <button
-                onClick={() => move(index, -1)}
-                disabled={index === 0}
-                className="text-slate-500 disabled:opacity-20"
-                aria-label="Переместить выше"
-              >
-                ▲
-              </button>
-              <button
-                onClick={() => move(index, 1)}
-                disabled={index === items.length - 1}
-                className="text-slate-500 disabled:opacity-20"
-                aria-label="Переместить ниже"
-              >
-                ▼
-              </button>
-            </div>
-
-            {editingId === item.id ? (
-              <input
-                autoFocus
-                value={editingValue}
-                onChange={(e) => setEditingValue(e.target.value)}
-                onBlur={commitEdit}
-                onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                className="min-w-0 flex-1 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100 outline-none"
-              />
-            ) : (
-              <button onClick={() => startEdit(item)} className="min-w-0 flex-1 truncate text-left text-sm text-slate-100">
-                {labelOf(item)}
-              </button>
-            )}
-
-            {onOpen && (
-              <button
-                onClick={() => onOpen(item)}
-                className="shrink-0 text-slate-400 active:text-sky-600"
-                aria-label="Открыть задачи"
-              >
-                →
-              </button>
-            )}
-
-            {finalOf && onToggleFinal && (
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={finalOf(item)}
-                  onChange={(e) => onToggleFinal(item, e.target.checked)}
-                  className="accent-sky-600"
-                />
-                Финальный
-              </label>
-            )}
-
-            <button
-              onClick={() => setDeletingItem(item)}
-              className="text-red-400 active:text-red-500"
-              aria-label="Удалить"
+        {visibleItems.map((item) => {
+          const index = items.indexOf(item)
+          const archived = archivedOf?.(item) ?? false
+          return (
+            <li
+              key={item.id}
+              className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5 lg:hover:bg-[var(--s-surface-active)]"
+              style={archived ? { opacity: 0.55 } : undefined}
             >
-              ✕
-            </button>
-          </li>
-        ))}
-        {items.length === 0 && (
+              <div className="flex flex-col text-[11px] leading-none lg:flex-row lg:gap-1">
+                <button
+                  onClick={() => move(index, -1)}
+                  disabled={index === 0}
+                  className="text-slate-500 disabled:opacity-20"
+                  aria-label="Переместить выше"
+                >
+                  ▲
+                </button>
+                <button
+                  onClick={() => move(index, 1)}
+                  disabled={index === items.length - 1}
+                  className="text-slate-500 disabled:opacity-20"
+                  aria-label="Переместить ниже"
+                >
+                  ▼
+                </button>
+              </div>
+
+              {editingId === item.id ? (
+                <input
+                  autoFocus
+                  value={editingValue}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
+                  className="min-w-0 flex-1 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100 outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => startEdit(item)}
+                  title={labelOf(item)}
+                  className="min-w-0 flex-1 truncate text-left text-sm text-slate-100"
+                >
+                  {labelOf(item)}
+                </button>
+              )}
+
+              {onOpen && (
+                <button
+                  onClick={() => onOpen(item)}
+                  className="shrink-0 text-slate-400 active:text-sky-600"
+                  aria-label="Открыть задачи"
+                >
+                  →
+                </button>
+              )}
+
+              {finalOf && onToggleFinal && (
+                <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={finalOf(item)}
+                    onChange={(e) => onToggleFinal(item, e.target.checked)}
+                    className="accent-sky-600"
+                  />
+                  Финальный
+                </label>
+              )}
+
+              {archivedOf && onToggleArchived && (
+                <button
+                  onClick={() => onToggleArchived(item, !archived)}
+                  className="shrink-0 text-[11.5px] text-slate-500 active:text-sky-600"
+                >
+                  {archived ? 'Вернуть' : 'В архив'}
+                </button>
+              )}
+
+              <button
+                onClick={() => setDeletingItem(item)}
+                className="text-red-400 active:text-red-500"
+                aria-label="Удалить"
+              >
+                ✕
+              </button>
+            </li>
+          )
+        })}
+        {visibleItems.length === 0 && (
           <li className="py-4 text-center text-[13px] text-slate-600">
             {loading ? 'Загрузка…' : 'Пока пусто.'}
           </li>

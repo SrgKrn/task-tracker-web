@@ -80,5 +80,17 @@ export function createPicklistQueries<T extends Orderable>(table: string, nameCo
     })
   }
 
-  return { useList, useCreate, useUpdate, useDelete, useReorder }
+  /** Мягкая альтернатива удалению для справочников, на которые ссылаются задачи. */
+  function useSetArchived() {
+    const qc = useQueryClient()
+    return useMutation({
+      mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+        const { error } = await supabase.from(table).update({ archived }).eq('id', id)
+        if (error) throw error
+      },
+      onSuccess: () => qc.invalidateQueries({ queryKey }),
+    })
+  }
+
+  return { useList, useCreate, useUpdate, useDelete, useReorder, useSetArchived }
 }

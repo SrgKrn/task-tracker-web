@@ -1,15 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Ring } from '../components/Ring'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
-import { Logo, Overline } from '../components/ui'
+import { EmptyState, Logo, Overline, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
+import { tap } from '../lib/haptics'
 import { currentWeekRange, formatTodayLabel, todayStr } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
-import { useTasks, useUpdateTask } from '../lib/queries/tasks'
+import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { elapsedHours, formatHoursRu, useTicker } from '../lib/time'
@@ -22,7 +24,7 @@ export function Today() {
   const today = todayStr()
   const week = useMemo(() => currentWeekRange(), [])
 
-  const { data: tasks = [] } = useTasks()
+  const { data: tasks = [], isLoading } = useTasks()
   const { data: statuses = [] } = useStatuses()
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
@@ -33,9 +35,13 @@ export function Today() {
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const updateTask = useUpdateTask()
-  const { showError } = useToast()
+  const duplicateTask = useDuplicateTask()
+  const deleteTask = useDeleteTask()
+  const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   useTicker(!!activeTimer)
+
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -173,25 +179,39 @@ export function Today() {
           </Link>
         </div>
 
-        {todayTasks.map((task) => (
-          <TaskListItem
-            key={task.id}
-            task={task}
-            status={task.status_id ? statusById.get(task.status_id) : undefined}
-            project={projectById.get(task.project_id)}
-            section={sectionById.get(task.section_id)}
-            activeTimer={activeTimer}
-            onStartTimer={() => startTimer.mutate(task.id, { onError })}
-            onStopTimer={() => stopTimer.mutate(undefined, { onError })}
-          />
-        ))}
-        {todayTasks.length === 0 && (
-          <p className="py-6 text-center text-[13px] text-slate-600">
+        {isLoading && (
+          <div className="flex flex-col gap-[9px]">
+            {[0, 1, 2].map((i) => (
+              <TaskRowSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {!isLoading &&
+          todayTasks.map((task) => (
+            <TaskListItem
+              key={task.id}
+              task={task}
+              status={task.status_id ? statusById.get(task.status_id) : undefined}
+              project={projectById.get(task.project_id)}
+              section={sectionById.get(task.section_id)}
+              activeTimer={activeTimer}
+              onStartTimer={() => startTimer.mutate(task.id, { onError })}
+              onStopTimer={() => stopTimer.mutate(undefined, { onError })}
+              onDuplicate={() =>
+                duplicateTask.mutate(task, { onError, onSuccess: () => showSuccess('Копия создана') })
+              }
+              onDelete={() => setDeletingTask(task)}
+            />
+          ))}
+
+        {!isLoading && todayTasks.length === 0 && (
+          <EmptyState>
             На сегодня ничего не запланировано.{' '}
             <Link to="/tasks" className="text-sky-600">
               Выбрать задачу
             </Link>
-          </p>
+          </EmptyState>
         )}
 
         {overdueTasks.length > 0 && (
@@ -199,6 +219,7 @@ export function Today() {
             <Overline>Требует внимания</Overline>
             {overdueTasks.map((task) => {
               const pct = task.planned_hours > 0 ? Math.round((task.fact_hours / task.planned_hours) * 100) : 0
+              const category = projectById.get(task.project_id)?.name ?? sectionById.get(task.section_id)?.name ?? ''
               return (
                 <div
                   key={task.id}
@@ -211,16 +232,25 @@ export function Today() {
                     state="over"
                     track="#33231e"
                     centerBg="#161112"
-                    onClick={() => startTimer.mutate(task.id, { onError })}
+                    onClick={() => {
+                      tap()
+                      startTimer.mutate(task.id, { onError })
+                    }}
                     ariaLabel="Начать учёт"
                   >
                     <span className="tabular font-mono text-[10px] font-medium text-red-400">{pct}%</span>
                   </Ring>
 
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-                    <p className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100">{task.name}</p>
+                    <p
+                      title={task.name}
+                      className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100"
+                    >
+                      {task.name}
+                    </p>
                     <span className="font-mono text-[11.5px] text-red-400">
-                      срок прошёл {task.end_date?.slice(8, 10)}.{task.end_date?.slice(5, 7)}
+                      {category ? `${category} · ` : ''}срок прошёл {task.end_date?.slice(8, 10)}.
+                      {task.end_date?.slice(5, 7)}
                     </span>
                   </Link>
 
@@ -239,6 +269,17 @@ export function Today() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deletingTask !== null}
+        title={`Удалить «${deletingTask?.name ?? ''}»?`}
+        description="Вместе с задачей удалится вся история трекинга по ней."
+        onCancel={() => setDeletingTask(null)}
+        onConfirm={() => {
+          if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })
+          setDeletingTask(null)
+        }}
+      />
     </div>
   )
 }

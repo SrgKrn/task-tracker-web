@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Chip, FieldLabel } from './ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -11,8 +11,11 @@ import { formatHoursRu } from '../lib/time'
 /** Быстрое создание задачи: название, раздел, проект, план — и сразу старт учёта. */
 export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
-  const { data: sections = [] } = useSections()
-  const { data: projects = [] } = useProjects()
+  const { data: allSections = [] } = useSections()
+  const { data: allProjects = [] } = useProjects()
+  // новые задачи в архивные разделы/проекты не заводим
+  const sections = useMemo(() => allSections.filter((s) => !s.archived), [allSections])
+  const projects = useMemo(() => allProjects.filter((p) => !p.archived), [allProjects])
   const createTask = useCreateTask()
   const startTimer = useStartTimer()
   const { showError } = useToast()

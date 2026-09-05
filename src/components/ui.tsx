@@ -113,3 +113,55 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
 /** Единый стиль поля ввода из макета. */
 export const fieldClass =
   'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-[13.5px] text-slate-100 outline-none focus:border-sky-600'
+
+/** Заглушка-плейсхолдер на время первой загрузки — вместо пустого экрана. */
+export function Skeleton({ className = '', rounded = '15px' }: { className?: string; rounded?: string }) {
+  return (
+    <span
+      className={`skeleton block ${className}`}
+      style={{ borderRadius: rounded, background: 'var(--s-surface)' }}
+      aria-hidden
+    />
+  )
+}
+
+/** Строка-заглушка под карточку задачи (кольцо + две строки текста). */
+export function TaskRowSkeleton() {
+  return (
+    <div
+      className="flex items-center gap-3 rounded-[15px] px-[13px] py-[11px]"
+      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+    >
+      <Skeleton className="h-8 w-8 shrink-0" rounded="999px" />
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Skeleton className="h-[13px] w-3/5" rounded="6px" />
+        <Skeleton className="h-[10px] w-2/5" rounded="6px" />
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Пустое состояние: знак кольца вместо голого текста — экран не выглядит сломанным.
+ */
+export function EmptyState({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2.5 py-8 text-center">
+      <span
+        className="relative block h-9 w-9 rounded-full"
+        style={{ border: '1.5px dashed var(--s-border-strong-2)' }}
+      >
+        <span
+          className="absolute h-1.5 w-1.5 rounded-full"
+          style={{
+            top: -3,
+            left: '50%',
+            marginLeft: -3,
+            background: 'var(--s-border-strong-2)',
+          }}
+        />
+      </span>
+      <p className="max-w-[260px] text-[13px] leading-[1.5] text-slate-600">{children}</p>
+    </div>
+  )
+}

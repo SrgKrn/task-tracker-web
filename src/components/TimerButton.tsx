@@ -1,3 +1,4 @@
+import { tap } from '../lib/haptics'
 import type { ActiveTimer } from '../lib/types'
 
 interface TimerButtonProps {
@@ -14,7 +15,11 @@ export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButto
   return (
     <button
       type="button"
-      onClick={isRunning ? onStop : onStart}
+      onClick={() => {
+        tap()
+        if (isRunning) onStop()
+        else onStart()
+      }}
       className="flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] text-sm font-semibold"
       style={{
         background: isRunning ? 'var(--s-accent)' : 'transparent',

@@ -16,7 +16,7 @@ export function TaskWorkspace() {
   return (
     <div className="lg:flex lg:items-start">
       <div
-        className={`${hasDetail ? 'hidden lg:block' : 'block'} sc lg:sticky lg:top-0 lg:max-h-screen lg:w-[380px] lg:shrink-0 lg:overflow-y-auto`}
+        className={`${hasDetail ? 'hidden lg:block' : 'block'} sc lg:sc-fade lg:sticky lg:top-0 lg:max-h-screen lg:w-[380px] lg:shrink-0 lg:overflow-y-auto`}
       >
         <TaskList />
       </div>

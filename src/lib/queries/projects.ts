@@ -8,3 +8,4 @@ export const useCreateProject = projects.useCreate
 export const useUpdateProject = projects.useUpdate
 export const useDeleteProject = projects.useDelete
 export const useReorderProjects = projects.useReorder
+export const useSetProjectArchived = projects.useSetArchived

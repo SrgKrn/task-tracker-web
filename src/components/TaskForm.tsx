@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { DatePicker } from './DatePicker'
 import { Chip, FieldLabel, fieldClass } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useCreateProject } from '../lib/queries/projects'
@@ -52,6 +53,17 @@ export function TaskForm({
   function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
   }
+
+  // архивные справочники не предлагаем, но уже выбранный оставляем — иначе у старой
+  // задачи молча слетела бы привязка к проекту/разделу
+  const pickableProjects = useMemo(
+    () => projects.filter((p) => !p.archived || p.id === values.project_id),
+    [projects, values.project_id],
+  )
+  const pickableSections = useMemo(
+    () => sections.filter((s) => !s.archived || s.id === values.section_id),
+    [sections, values.section_id],
+  )
 
   function setPlanned(h: number, m: number) {
     setPlannedH(h)
@@ -134,21 +146,15 @@ export function TaskForm({
       <div className="flex gap-[9px]">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <FieldLabel>Срок с</FieldLabel>
-          <input
-            type="date"
-            value={values.start_date ?? ''}
-            onChange={(e) => set('start_date', e.target.value || null)}
-            className={`${fieldClass} min-w-0`}
+          <DatePicker
+            value={values.start_date}
+            onChange={(v) => set('start_date', v)}
+            ariaLabel="Срок с"
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <FieldLabel>Срок до</FieldLabel>
-          <input
-            type="date"
-            value={values.end_date ?? ''}
-            onChange={(e) => set('end_date', e.target.value || null)}
-            className={`${fieldClass} min-w-0`}
-          />
+          <DatePicker value={values.end_date} onChange={(v) => set('end_date', v)} ariaLabel="Срок до" />
         </div>
       </div>
 
@@ -164,9 +170,10 @@ export function TaskForm({
             <option value="" disabled>
               Выберите проект
             </option>
-            {projects.map((p) => (
+            {pickableProjects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
+                {p.archived ? ' (в архиве)' : ''}
               </option>
             ))}
             <option value={NEW_OPTION}>+ Новый проект…</option>
@@ -183,9 +190,10 @@ export function TaskForm({
             <option value="" disabled>
               Выберите раздел
             </option>
-            {sections.map((s) => (
+            {pickableSections.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
+                {s.archived ? ' (в архиве)' : ''}
               </option>
             ))}
             <option value={NEW_OPTION}>+ Новый раздел…</option>

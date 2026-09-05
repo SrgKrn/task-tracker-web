@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
-import { Chip, Overline, Switch } from '../components/ui'
+import { Chip, EmptyState, Overline, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod } from '../lib/period'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
-import { useTasks } from '../lib/queries/tasks'
+import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatHoursRu, useTicker } from '../lib/time'
 import type { Task } from '../lib/types'
@@ -31,9 +33,13 @@ export function TaskList() {
   const { data: activeTimer } = useActiveTimer()
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
-  const { showError } = useToast()
+  const duplicateTask = useDuplicateTask()
+  const deleteTask = useDeleteTask()
+  const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   useTicker(!!activeTimer)
+
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
   const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const [search, setSearch] = useState('')
@@ -117,6 +123,19 @@ export function TaskList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupBy, sorted, sections, projects, liveHours])
 
+  /** сколько задач за каждым чипом фильтра — видно ещё до его нажатия */
+  const countsBySection = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of tasks) map.set(t.section_id, (map.get(t.section_id) ?? 0) + 1)
+    return map
+  }, [tasks])
+
+  const countsByProject = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of tasks) map.set(t.project_id, (map.get(t.project_id) ?? 0) + 1)
+    return map
+  }, [tasks])
+
   const activeCount = tasks.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
   const totalFact = formatHoursRu(tasks.reduce((a, t) => a + factOf(t), 0))
   const totalPlan = formatHoursRu(tasks.reduce((a, t) => a + t.planned_hours, 0))
@@ -182,20 +201,20 @@ export function TaskList() {
               Задачи, чей срок пересекается с периодом
             </span>
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={periodFrom}
-                onChange={(e) => setPeriodFrom(e.target.value)}
-                className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
-                style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+              <DatePicker
+                small
+                className="flex-1"
+                ariaLabel="Период с"
+                value={periodFrom || null}
+                onChange={(v) => setPeriodFrom(v ?? '')}
               />
               <span className="font-mono text-xs text-slate-600">—</span>
-              <input
-                type="date"
-                value={periodTo}
-                onChange={(e) => setPeriodTo(e.target.value)}
-                className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
-                style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+              <DatePicker
+                small
+                className="flex-1"
+                ariaLabel="Период до"
+                value={periodTo || null}
+                onChange={(v) => setPeriodTo(v ?? '')}
               />
               {(periodFrom || periodTo) && (
                 <button
@@ -231,6 +250,9 @@ export function TaskList() {
                     }
                   >
                     {s.name}
+                    <span className="tabular ml-1.5 font-mono text-[10.5px] opacity-60">
+                      {countsBySection.get(s.id) ?? 0}
+                    </span>
                   </Chip>
                 ))}
               </div>
@@ -256,6 +278,9 @@ export function TaskList() {
                     }
                   >
                     {p.name}
+                    <span className="tabular ml-1.5 font-mono text-[10.5px] opacity-60">
+                      {countsByProject.get(p.id) ?? 0}
+                    </span>
                   </Chip>
                 ))}
               </div>
@@ -281,7 +306,11 @@ export function TaskList() {
 
       <div className="flex flex-col gap-4 px-5 pb-2">
         {isLoading ? (
-          <p className="text-[13px] text-slate-600">Загрузка…</p>
+          <div className="flex flex-col gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <TaskRowSkeleton key={i} />
+            ))}
+          </div>
         ) : (
           <>
             {groups.map((group) => (
@@ -300,12 +329,19 @@ export function TaskList() {
                     activeTimer={activeTimer}
                     onStartTimer={() => startTimer.mutate(task.id, { onError })}
                     onStopTimer={() => stopTimer.mutate(undefined, { onError })}
+                    onDuplicate={() =>
+                      duplicateTask.mutate(task, {
+                        onError,
+                        onSuccess: () => showSuccess('Копия создана'),
+                      })
+                    }
+                    onDelete={() => setDeletingTask(task)}
                   />
                 ))}
               </div>
             ))}
             {groups.length === 0 && (
-              <p className="my-6 text-center text-[13px] leading-[1.5] text-slate-600">
+              <EmptyState>
                 {tasks.length === 0 ? (
                   <>
                     Задач пока нет.{' '}
@@ -316,11 +352,22 @@ export function TaskList() {
                 ) : (
                   'Ничего не нашлось. Измените запрос или сбросьте фильтры.'
                 )}
-              </p>
+              </EmptyState>
             )}
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deletingTask !== null}
+        title={`Удалить «${deletingTask?.name ?? ''}»?`}
+        description="Вместе с задачей удалится вся история трекинга по ней."
+        onCancel={() => setDeletingTask(null)}
+        onConfirm={() => {
+          if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })
+          setDeletingTask(null)
+        }}
+      />
     </div>
   )
 }

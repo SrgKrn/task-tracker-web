@@ -36,6 +36,7 @@ export interface NewTaskInput {
   start_date: string | null
   end_date: string | null
   is_daily?: boolean
+  duplicated_from?: string | null
 }
 
 export function useCreateTask() {
@@ -74,6 +75,8 @@ export function useUpdateTask() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['tasks', variables.id] })
+      // смена статуса пишет событие триггером — сводка должна пересчитать «задач закрыто»
+      qc.invalidateQueries({ queryKey: ['task_status_events_closed'] })
     },
   })
 }
@@ -84,6 +87,33 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+}
+
+/**
+ * Копия задачи со ссылкой на оригинал: план и привязки переносятся, факт и история — нет.
+ * Живёт здесь, а не в карточке, потому что дублировать можно и свайпом из списка.
+ */
+export function useDuplicateTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (task: Task) => {
+      const input: NewTaskInput = {
+        name: `${task.name} (копия)`,
+        project_id: task.project_id,
+        section_id: task.section_id,
+        status_id: task.status_id,
+        planned_hours: task.planned_hours,
+        start_date: task.start_date,
+        end_date: task.end_date,
+        is_daily: task.is_daily,
+        duplicated_from: task.id,
+      }
+      const { data, error } = await supabase.from('tasks').insert(input).select().single()
+      if (error) throw error
+      return data as Task
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   })

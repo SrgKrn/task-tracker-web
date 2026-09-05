@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { DatePicker } from '../components/DatePicker'
 import { Overline, Tag, fieldClass } from '../components/ui'
 import { buildReportData } from '../lib/report'
 import { describeError, useToast } from '../lib/Toast'
@@ -171,11 +172,53 @@ function BudgetForm() {
   )
 }
 
+const EXPORT_RANGE_KEY = 'semternity.exportRange'
+
+/** последний диапазон экспорта — локальная привычка устройства, синхронизировать нечего */
+function loadExportRange(): { from: string; to: string } {
+  try {
+    const raw = localStorage.getItem(EXPORT_RANGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as { from?: unknown; to?: unknown }
+      if (typeof parsed.from === 'string' && typeof parsed.to === 'string') {
+        return { from: parsed.from, to: parsed.to }
+      }
+    }
+  } catch {
+    // приватный режим или испорченное значение — просто берём период по умолчанию
+  }
+  return { from: firstOfMonthStr(), to: todayStr() }
+}
+
 function ExportSection() {
-  const [from, setFrom] = useState(firstOfMonthStr())
-  const [to, setTo] = useState(todayStr())
+  const [range, setRange] = useState(loadExportRange)
+  const { from, to } = range
   const [generating, setGenerating] = useState<'excel' | 'pdf' | null>(null)
   const { showError } = useToast()
+
+  function setFrom(value: string) {
+    setRange((prev) => {
+      const next = { ...prev, from: value }
+      try {
+        localStorage.setItem(EXPORT_RANGE_KEY, JSON.stringify(next))
+      } catch {
+        // не смогли запомнить — не повод ломать экспорт
+      }
+      return next
+    })
+  }
+
+  function setTo(value: string) {
+    setRange((prev) => {
+      const next = { ...prev, to: value }
+      try {
+        localStorage.setItem(EXPORT_RANGE_KEY, JSON.stringify(next))
+      } catch {
+        // не смогли запомнить — не повод ломать экспорт
+      }
+      return next
+    })
+  }
 
   const { data: tasks = [] } = useTasks()
   const { data: projects = [] } = useProjects()
@@ -201,10 +244,6 @@ function ExportSection() {
     }
   }
 
-  const dateClass =
-    'h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none'
-  const dateStyle = { background: '#0f0f13', border: '1px solid var(--s-border-strong)' }
-
   return (
     <div
       className="flex flex-col gap-3 rounded-2xl p-3.5"
@@ -217,9 +256,21 @@ function ExportSection() {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={dateClass} style={dateStyle} />
+        <DatePicker
+          small
+          className="flex-1"
+          ariaLabel="Отчёт с"
+          value={from}
+          onChange={(v) => setFrom(v ?? todayStr())}
+        />
         <span className="font-mono text-xs text-slate-600">—</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={dateClass} style={dateStyle} />
+        <DatePicker
+          small
+          className="flex-1"
+          ariaLabel="Отчёт до"
+          value={to}
+          onChange={(v) => setTo(v ?? todayStr())}
+        />
       </div>
       <div className="flex gap-[9px]">
         {(['excel', 'pdf'] as const).map((format) => (
@@ -253,13 +304,13 @@ export function Settings() {
         to="/sections"
         icon={SectionIcon}
         title="Разделы"
-        hint={`Категории для аналитики план/факт · ${sections.length}`}
+        hint={`Категории для аналитики план/факт · ${sections.filter((s) => !s.archived).length}`}
       />
       <NavCard
         to="/projects"
         icon={ProjectIcon}
         title="Проекты"
-        hint={`Клиенты или направления работы · ${projects.length}`}
+        hint={`Клиенты или направления работы · ${projects.filter((p) => !p.archived).length}`}
       />
       <NavCard
         to="/statuses"

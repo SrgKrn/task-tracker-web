@@ -19,16 +19,13 @@ export function ProtectedLayout() {
       <DesktopSidebar onCreate={() => setSheetOpen(true)} />
 
       <div className="min-w-0 flex-1">
-        <StaleTimerBanner />
-        <div className="pb-[104px] lg:pb-0">
-          <Outlet />
-        </div>
-      </div>
-
-      {/* док таймера прижат ко дну над таб-баром — на десктопе таб-бара нет, поэтому просто внизу */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[92px] z-30 flex justify-center lg:bottom-4 lg:left-60">
-        <div className="pointer-events-auto w-full max-w-lg">
+        {/* статус трекинга — наверху и всегда на виду при прокрутке, а не внизу у таб-бара */}
+        <div className="sticky top-0 z-40">
+          <StaleTimerBanner />
           <ActiveTimerBar />
+        </div>
+        <div className="pb-24 lg:pb-0">
+          <Outlet />
         </div>
       </div>
 

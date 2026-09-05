@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { TaskListItem } from '../components/TaskListItem'
+import { EmptyState } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
@@ -50,9 +51,7 @@ export function SectionDetail() {
             onStopTimer={() => stopTimer.mutate(undefined, { onError })}
           />
         ))}
-        {sectionTasks.length === 0 && (
-          <p className="my-6 text-center text-[13px] text-slate-600">В этом разделе пока нет задач.</p>
-        )}
+        {sectionTasks.length === 0 && <EmptyState>В этом разделе пока нет задач.</EmptyState>}
       </div>
     </div>
   )

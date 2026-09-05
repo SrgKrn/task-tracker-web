@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { DatePicker } from '../components/DatePicker'
 import { Ring } from '../components/Ring'
-import { Chip, FieldLabel, Overline } from '../components/ui'
+import { Chip, EmptyState, FieldLabel, Overline } from '../components/ui'
 import {
   daysBetweenInclusive,
   daysInCalendarMonth,
@@ -10,10 +11,9 @@ import {
   todayStr,
   type PeriodPreset,
 } from '../lib/period'
-import { useTimeEntriesInRange } from '../lib/queries/dashboard'
+import { useClosedTaskCount, useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
-import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { formatHoursRu } from '../lib/time'
@@ -36,11 +36,9 @@ export function Dashboard() {
   const { data: tasks = [] } = useTasks()
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
-  const { data: statuses = [] } = useStatuses()
   const { data: userSettings } = useUserSettings()
   const { data: entries = [] } = useTimeEntriesInRange(`${from}T00:00:00`, `${to}T23:59:59.999`)
-
-  const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
+  const { data: closedCount = 0 } = useClosedTaskCount(`${from}T00:00:00`, `${to}T23:59:59.999`)
 
   const factByTask = useMemo(() => {
     const map = new Map<string, number>()
@@ -68,15 +66,6 @@ export function Dashboard() {
     }
     return sum
   }, [tasks, factByTask])
-
-  const closedCount = useMemo(
-    () =>
-      tasks.filter((t) => {
-        if (!t.status_id || !statusById.get(t.status_id)?.is_final) return false
-        return t.updated_at >= `${from}T00:00:00` && t.updated_at <= `${to}T23:59:59.999`
-      }).length,
-    [tasks, statusById, from, to],
-  )
 
   const daysInPeriod = daysBetweenInclusive(from, to)
   const dailyTarget = userSettings?.planned_hours_per_day ?? null
@@ -137,20 +126,20 @@ export function Dashboard() {
         </div>
         {preset === 'custom' && (
           <div className="flex items-center gap-2 lg:max-w-xs">
-            <input
-              type="date"
+            <DatePicker
+              small
+              className="flex-1"
+              ariaLabel="Начало периода"
               value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
-              style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+              onChange={(v) => setCustomFrom(v ?? todayStr())}
             />
             <span className="font-mono text-xs text-slate-600">—</span>
-            <input
-              type="date"
+            <DatePicker
+              small
+              className="flex-1"
+              ariaLabel="Конец периода"
               value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="h-[34px] min-w-0 flex-1 rounded-[10px] px-2.5 font-mono text-[12.5px] text-slate-300 outline-none"
-              style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+              onChange={(v) => setCustomTo(v ?? todayStr())}
             />
           </div>
         )}
@@ -265,7 +254,12 @@ export function Dashboard() {
                 </span>
               </Ring>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100">{row.name}</p>
+                <p
+                  title={row.name}
+                  className="truncate text-[14.5px] font-medium leading-[1.3] text-slate-100"
+                >
+                  {row.name}
+                </p>
                 <span className="font-mono text-[11px] leading-[1.4] text-slate-500">
                   {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч ·{' '}
                   {over ? 'переработка' : `${row.counted} задач`}
@@ -274,13 +268,12 @@ export function Dashboard() {
             </div>
           )
         })}
-        {rows.length === 0 && (
-          <p className="my-6 text-center text-[13px] text-slate-600">За этот период нет плана или трекинга.</p>
-        )}
+        {rows.length === 0 && <EmptyState>За этот период нет плана или трекинга.</EmptyState>}
       </div>
 
       <p className="px-5 pb-2 font-mono text-[10.5px] leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
-        «Задач закрыто» считается по дате последнего изменения задачи, а не по истории смены статусов.
+        «Задач закрыто» считается по фактическим переходам в финальный статус за период — история ведётся
+        с 5 сентября 2026, более ранние закрытия в метрику не попадают.
       </p>
     </div>
   )

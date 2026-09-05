@@ -6,6 +6,7 @@ import {
   useDeleteSection,
   useReorderSections,
   useSections,
+  useSetSectionArchived,
   useUpdateSection,
 } from '../lib/queries/sections'
 
@@ -16,6 +17,7 @@ export function SectionsAdmin() {
   const updateSection = useUpdateSection()
   const deleteSection = useDeleteSection()
   const reorderSections = useReorderSections()
+  const setArchived = useSetSectionArchived()
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
 
@@ -30,6 +32,8 @@ export function SectionsAdmin() {
       onUpdate={(id, name) => updateSection.mutate({ id, name }, { onError })}
       onDelete={(id) => deleteSection.mutate(id, { onError })}
       onReorder={(items) => reorderSections.mutate(items, { onError })}
+      archivedOf={(s) => s.archived}
+      onToggleArchived={(s, archived) => setArchived.mutate({ id: s.id, archived }, { onError })}
       onOpen={(s) => navigate(`/sections/${s.id}`)}
     />
   )

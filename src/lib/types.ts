@@ -3,6 +3,8 @@ export interface Section {
   user_id: string
   name: string
   sort_order: number
+  /** в архиве — не предлагается при создании задач, но история по нему сохраняется */
+  archived: boolean
   created_at: string
   updated_at: string
 }
@@ -12,6 +14,8 @@ export interface Project {
   user_id: string
   name: string
   sort_order: number
+  /** в архиве — не предлагается при создании задач, но история по нему сохраняется */
+  archived: boolean
   created_at: string
   updated_at: string
 }
@@ -39,8 +43,20 @@ export interface Task {
   end_date: string | null
   /** ежедневная (рутинная) задача — всегда попадает в «Сегодня» */
   is_daily: boolean
+  /** id задачи-оригинала, если эта создана кнопкой «Дублировать» */
+  duplicated_from: string | null
   created_at: string
   updated_at: string
+}
+
+/** Запись о переходе задачи в статус — пишется триггером при смене status_id. */
+export interface TaskStatusEvent {
+  id: string
+  user_id: string
+  task_id: string
+  status_id: string | null
+  is_final: boolean
+  created_at: string
 }
 
 export interface TimeEntry {

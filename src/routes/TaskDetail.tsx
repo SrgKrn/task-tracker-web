@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
@@ -10,7 +10,7 @@ import { describeError, useToast } from '../lib/Toast'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
-import { useCreateTask, useDeleteTask, useTask, useUpdateTask } from '../lib/queries/tasks'
+import { useDeleteTask, useDuplicateTask, useTask, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 
@@ -21,6 +21,7 @@ export function TaskDetail() {
   const onError = (error: unknown) => showError(describeError(error))
 
   const { data: task, isFetched } = useTask(id)
+  const { data: original } = useTask(task?.duplicated_from ?? undefined)
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
@@ -28,7 +29,7 @@ export function TaskDetail() {
 
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
-  const createTask = useCreateTask()
+  const duplicateTask = useDuplicateTask()
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
@@ -64,11 +65,24 @@ export function TaskDetail() {
 
   function adjustFact(delta: number) {
     if (!task) return
-    const next = Math.max(0, Math.round((task.fact_hours + delta) * 2) / 2)
-    if (next === task.fact_hours) return
+    const from = task.fact_hours
+    const next = Math.max(0, Math.round((from + delta) * 2) / 2)
+    if (next === from) return
     adjustFactHours.mutate(
-      { taskId: task.id, currentFactHours: task.fact_hours, newFactHours: next },
-      { onError },
+      { taskId: task.id, currentFactHours: from, newFactHours: next },
+      {
+        onError,
+        onSuccess: () =>
+          // правка факта пишется отдельной записью в историю — откат тоже должен быть виден
+          showSuccess(`Факт: ${formatHoursRu(next)} ч`, {
+            label: 'Отменить',
+            onAction: () =>
+              adjustFactHours.mutate(
+                { taskId: task.id, currentFactHours: next, newFactHours: from },
+                { onError },
+              ),
+          }),
+      },
     )
   }
 
@@ -82,19 +96,7 @@ export function TaskDetail() {
           <button
             type="button"
             onClick={() =>
-              createTask.mutate(
-                {
-                  name: `${task.name} (копия)`,
-                  project_id: task.project_id,
-                  section_id: task.section_id,
-                  status_id: task.status_id,
-                  planned_hours: task.planned_hours,
-                  start_date: task.start_date,
-                  end_date: task.end_date,
-                  is_daily: task.is_daily,
-                },
-                { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) },
-              )
+              duplicateTask.mutate(task, { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) })
             }
             className="text-slate-400"
           >
@@ -118,11 +120,18 @@ export function TaskDetail() {
           </span>
         </div>
         <h1
+          title={task.name}
           className="text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
           style={{ textWrap: 'pretty' }}
         >
           {task.name}
         </h1>
+
+        {original && (
+          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-[11.5px] text-slate-500">
+            Копия задачи «<span className="text-sky-600">{original.name}</span>»
+          </Link>
+        )}
 
         <div className="flex items-center gap-[18px] pt-0.5">
           <Ring size={112} pct={done ? 100 : pct} state={ringState} centerBg="var(--s-bg)" marker={isRunning}>
@@ -169,11 +178,25 @@ export function TaskDetail() {
             <span className="tabular font-mono text-sm font-medium text-slate-100">
               {formatHoursRu(task.fact_hours)} ч
             </span>
+            {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
+                иначе накрутила бы несколько правок от одного и того же исходного значения */}
             <span className="flex gap-3 text-[13px] text-slate-600">
-              <button type="button" onClick={() => adjustFact(-0.5)} aria-label="Убавить полчаса">
+              <button
+                type="button"
+                onClick={() => adjustFact(-0.5)}
+                disabled={adjustFactHours.isPending}
+                className="disabled:opacity-40"
+                aria-label="Убавить полчаса"
+              >
                 −
               </button>
-              <button type="button" onClick={() => adjustFact(0.5)} aria-label="Прибавить полчаса">
+              <button
+                type="button"
+                onClick={() => adjustFact(0.5)}
+                disabled={adjustFactHours.isPending}
+                className="disabled:opacity-40"
+                aria-label="Прибавить полчаса"
+              >
                 +
               </button>
             </span>
