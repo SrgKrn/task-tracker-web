@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
+import { DurationSheet } from '../components/DurationSheet'
+import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
 import { ArrowLeft } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
@@ -15,7 +17,7 @@ import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTask, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
+import { elapsedHours, formatClock, formatHoursMinutes, formatHoursRu, useTicker } from '../lib/time'
 
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -38,6 +40,10 @@ export function TaskDetail() {
   const adjustFactHours = useAdjustFactHours()
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [editingFact, setEditingFact] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
   // день, к которому относится ручная правка. По умолчанию сегодня — быстрый случай
   // остаётся в один тап; но исправление старых часов больше не бьёт по сегодняшнему дню
   const [adjustDate, setAdjustDate] = useState(todayStr)
@@ -69,24 +75,33 @@ export function TaskDetail() {
     is_daily: task.is_daily,
   }
 
-  function adjustFact(delta: number) {
+  function commitRename() {
+    setRenaming(false)
+    if (!task) return
+    const next = draftName.trim()
+    if (!next || next === task.name) return
+    updateTask.mutate({ id: task.id, fields: { name: next } }, { onError })
+  }
+
+  /** записывает новое значение факта; шаг кнопок ±15 мин, окно задаёт точное число */
+  function setFact(next: number) {
     if (!task) return
     const from = task.fact_hours
-    const next = Math.max(0, Math.round((from + delta) * 2) / 2)
-    if (next === from) return
+    const target = Math.max(0, next)
+    if (Math.abs(target - from) < 1 / 120) return // меньше полуминуты — не пишем запись
     adjustFactHours.mutate(
-      { taskId: task.id, currentFactHours: from, newFactHours: next, effectiveDate: adjustDate },
+      { taskId: task.id, currentFactHours: from, newFactHours: target, effectiveDate: adjustDate },
       {
         onError,
         onSuccess: () =>
           // правка факта пишется отдельной записью в историю — откат тоже должен быть виден
-          showSuccess(`Факт: ${formatHoursRu(next)} ч`, {
+          showSuccess(`Факт: ${formatHoursMinutes(target)}`, {
             label: 'Отменить',
             onAction: () =>
               adjustFactHours.mutate(
                 {
                   taskId: task.id,
-                  currentFactHours: next,
+                  currentFactHours: target,
                   newFactHours: from,
                   effectiveDate: adjustDate,
                 },
@@ -109,13 +124,7 @@ export function TaskDetail() {
           <ArrowLeft size={15} />Назад
         </button>
         <div className="-my-2.5 flex gap-3.5 text-sm">
-          <button
-            type="button"
-            onClick={() =>
-              duplicateTask.mutate(task, { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) })
-            }
-            className="py-2.5 text-slate-400"
-          >
+          <button type="button" onClick={() => setDuplicating(true)} className="py-2.5 text-slate-400">
             Дублировать
           </button>
           <button type="button" onClick={() => setConfirmingDelete(true)} className="py-2.5 text-red-400">
@@ -135,13 +144,41 @@ export function TaskDetail() {
             {[project?.name, section?.name].filter(Boolean).join(' · ')}
           </span>
         </div>
-        <h1
-          title={task.name}
-          className="text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
-          style={{ textWrap: 'pretty' }}
-        >
-          {task.name}
-        </h1>
+        {/* название правится прямо в заголовке: форма ниже идёт в режиме compact,
+            и поля имени в ней нет — переименовать задачу было нечем */}
+        {renaming ? (
+          <textarea
+            autoFocus
+            rows={2}
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                e.currentTarget.blur()
+              }
+              if (e.key === 'Escape') {
+                setRenaming(false)
+                setDraftName(task.name)
+              }
+            }}
+            className="resize-none rounded-xl px-3 py-2 text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-accent)' }}
+          />
+        ) : (
+          <h1
+            title="Нажмите, чтобы переименовать"
+            onClick={() => {
+              setDraftName(task.name)
+              setRenaming(true)
+            }}
+            className="cursor-text text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+            style={{ textWrap: 'pretty' }}
+          >
+            {task.name}
+          </h1>
+        )}
 
         {original && (
           <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-xs text-slate-500">
@@ -193,20 +230,26 @@ export function TaskDetail() {
             className="flex h-[52px] items-center justify-between rounded-xl py-1.5 pr-1.5 pl-3"
             style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
           >
-            <span className="tabular font-mono text-sm font-medium text-slate-100">
-              {formatHoursRu(task.fact_hours)} ч
-            </span>
+            {/* по цифре можно ударить и ввести точное значение: набирать «3 ч 40 мин»
+                шагами по 15 минут — дюжина нажатий */}
+            <button
+              type="button"
+              onClick={() => setEditingFact(true)}
+              className="tabular -my-2 rounded-lg py-2 font-mono text-sm font-medium text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
+            >
+              {formatHoursMinutes(task.fact_hours)}
+            </button>
             {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
                 иначе накрутила бы несколько правок от одного и того же исходного значения */}
             <span className="flex gap-1.5">
               {[
-                { delta: -0.5, glyph: '−', label: 'Убавить полчаса' },
-                { delta: 0.5, glyph: '+', label: 'Прибавить полчаса' },
+                { delta: -0.25, glyph: '−', label: 'Убавить 15 минут' },
+                { delta: 0.25, glyph: '+', label: 'Прибавить 15 минут' },
               ].map(({ delta, glyph, label }) => (
                 <button
                   key={label}
                   type="button"
-                  onClick={() => adjustFact(delta)}
+                  onClick={() => setFact(Math.round((task.fact_hours + delta) * 4) / 4)}
                   disabled={adjustFactHours.isPending}
                   aria-label={label}
                   className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
@@ -269,6 +312,30 @@ export function TaskDetail() {
       </div>
 
       <CommentBar taskId={task.id} />
+
+      <DuplicateTaskSheet
+        open={duplicating}
+        task={task}
+        onCancel={() => setDuplicating(false)}
+        onSubmit={(overrides) => {
+          setDuplicating(false)
+          duplicateTask.mutate(
+            { task, overrides },
+            { onError, onSuccess: (row) => navigate(`/tasks/${row.id}`) },
+          )
+        }}
+      />
+
+      <DurationSheet
+        open={editingFact}
+        title="Фактически затрачено"
+        hours={task.fact_hours}
+        onCancel={() => setEditingFact(false)}
+        onSubmit={(value) => {
+          setEditingFact(false)
+          setFact(value)
+        }}
+      />
 
       <ConfirmDialog
         open={confirmingDelete}

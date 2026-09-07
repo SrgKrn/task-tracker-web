@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
@@ -112,6 +112,98 @@ export function Segmented<T extends string>({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Лист снизу на телефоне, окно по центру на десктопе. Раньше эта разметка
+ * дублировалась в каждом диалоге — теперь один каркас на всех.
+ */
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+}) {
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
+      style={{ background: 'rgba(5,5,7,.62)' }}
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="flex w-full flex-col gap-3.5 px-5 pt-[18px] pb-[30px] lg:max-w-md lg:rounded-[28px] lg:pb-6"
+        style={{
+          background: 'var(--s-surface-2)',
+          borderTop: '1px solid var(--s-border-strong)',
+          borderRadius: '28px 28px 44px 44px',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="mx-auto h-1 w-[38px] rounded-full" style={{ background: 'var(--s-border-strong-2)' }} />
+        <h3 className="text-lg font-semibold leading-[1.2] text-slate-100">{title}</h3>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** Пара кнопок в подвале листа: отмена слева, главное действие справа и шире. */
+export function SheetActions({
+  onCancel,
+  onConfirm,
+  confirmLabel,
+  confirmDisabled = false,
+  cancelLabel = 'Отмена',
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+  confirmLabel: string
+  confirmDisabled?: boolean
+  cancelLabel?: string
+}) {
+  return (
+    <div className="mt-0.5 flex gap-[9px]">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="h-12 flex-1 rounded-[15px] text-sm font-medium text-slate-300"
+        style={{ border: '1px solid var(--s-border-strong-2)' }}
+      >
+        {cancelLabel}
+      </button>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={confirmDisabled}
+        className="h-12 flex-[2] rounded-[15px] text-sm font-semibold"
+        style={{
+          background: confirmDisabled ? '#232329' : 'var(--s-accent)',
+          color: confirmDisabled ? '#83838c' : 'var(--s-on-accent)',
+        }}
+      >
+        {confirmLabel}
+      </button>
     </div>
   )
 }

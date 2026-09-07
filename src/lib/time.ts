@@ -49,3 +49,17 @@ export function formatHours(hours: number): string {
 export function formatHoursRu(hours: number): string {
   return String(Math.round(hours * 10) / 10).replace('.', ',')
 }
+
+/**
+ * Часы и минуты словами: «1 ч 45 мин», «45 мин», «2 ч».
+ * Нужно там, где значение правят четвертями часа — один знак после запятой
+ * округляет 0,25 до «0,3» и получается неправда.
+ */
+export function formatHoursMinutes(hours: number): string {
+  const total = Math.max(0, Math.round(hours * 60))
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h === 0) return `${m} мин`
+  if (m === 0) return `${h} ч`
+  return `${h} ч ${m} мин`
+}

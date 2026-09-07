@@ -96,18 +96,25 @@ export function useDeleteTask() {
  * Копия задачи со ссылкой на оригинал: план и привязки переносятся, факт и история — нет.
  * Живёт здесь, а не в карточке, потому что дублировать можно и свайпом из списка.
  */
+/** что можно переопределить у копии, не трогая остальные поля оригинала */
+export interface DuplicateOverrides {
+  name?: string
+  start_date?: string | null
+  end_date?: string | null
+}
+
 export function useDuplicateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (task: Task) => {
+    mutationFn: async ({ task, overrides }: { task: Task; overrides?: DuplicateOverrides }) => {
       const input: NewTaskInput = {
-        name: `${task.name} (копия)`,
+        name: overrides?.name?.trim() || `${task.name} (копия)`,
         project_id: task.project_id,
         section_id: task.section_id,
         status_id: task.status_id,
         planned_hours: task.planned_hours,
-        start_date: task.start_date,
-        end_date: task.end_date,
+        start_date: overrides?.start_date !== undefined ? overrides.start_date : task.start_date,
+        end_date: overrides?.end_date !== undefined ? overrides.end_date : task.end_date,
         is_daily: task.is_daily,
         duplicated_from: task.id,
       }

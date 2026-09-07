@@ -219,7 +219,7 @@ export function Today() {
               onStartTimer={() => startTimer.mutate(task.id, { onError })}
               onStopTimer={() => stopTimer.mutate(undefined, { onError })}
               onDuplicate={() =>
-                duplicateTask.mutate(task, { onError, onSuccess: () => showSuccess('Копия создана') })
+                duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })
               }
               onDelete={() => setDeletingTask(task)}
             />

@@ -329,7 +329,7 @@ export function TaskList() {
                     onStartTimer={() => startTimer.mutate(task.id, { onError })}
                     onStopTimer={() => stopTimer.mutate(undefined, { onError })}
                     onDuplicate={() =>
-                      duplicateTask.mutate(task, {
+                      duplicateTask.mutate({ task }, {
                         onError,
                         onSuccess: () => showSuccess('Копия создана'),
                       })
