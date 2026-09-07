@@ -75,12 +75,31 @@ export function TaskDetail() {
     is_daily: task.is_daily,
   }
 
-  function commitRename() {
+  /**
+   * Значение берём из самого поля, а не из состояния: если правку и уход с поля
+   * разделяет меньше одного рендера (быстрый тап по кнопке, автозаполнение),
+   * состояние ещё не обновилось, и сохранилось бы старое имя.
+   */
+  function commitRename(value: string) {
     setRenaming(false)
     if (!task) return
-    const next = draftName.trim()
-    if (!next || next === task.name) return
-    updateTask.mutate({ id: task.id, fields: { name: next } }, { onError })
+    const previous = task.name
+    const next = value.trim()
+    if (!next || next === previous) return
+    updateTask.mutate(
+      { id: task.id, fields: { name: next } },
+      {
+        onError,
+        // переименование сохраняется по уходу с поля — без подтверждения непонятно,
+        // записалось оно или нет
+        onSuccess: () =>
+          showSuccess('Название изменено', {
+            label: 'Вернуть',
+            onAction: () =>
+              updateTask.mutate({ id: task.id, fields: { name: previous } }, { onError }),
+          }),
+      },
+    )
   }
 
   /** записывает новое значение факта; шаг кнопок ±15 мин, окно задаёт точное число */
@@ -152,7 +171,7 @@ export function TaskDetail() {
             rows={2}
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            onBlur={commitRename}
+            onBlur={(e) => commitRename(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()

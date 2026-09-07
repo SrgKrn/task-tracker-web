@@ -98,6 +98,14 @@ export function TaskForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!values.name.trim() || !values.project_id || !values.section_id) return
+    // В компактном режиме поля имени тут нет — им владеет заголовок карточки.
+    // Если всё равно отправить своё values.name, форма затрёт свежее переименование
+    // тем значением, с которым она смонтировалась.
+    if (compact) {
+      const { name: _ownedByHeader, ...rest } = values
+      onSubmit({ ...rest, name: initial.name })
+      return
+    }
     onSubmit(values)
   }
 
