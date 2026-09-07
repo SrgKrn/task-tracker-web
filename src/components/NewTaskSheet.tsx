@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Chip, FieldLabel } from './ui'
+import { ChipPicker } from './ChipPicker'
+import { FieldLabel } from './ui'
 import { describeError, useToast } from '../lib/Toast'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useCreateProject, useProjects } from '../lib/queries/projects'
+import { useCreateSection, useSections } from '../lib/queries/sections'
 import { useCreateTask } from '../lib/queries/tasks'
 import { useStartTimer } from '../lib/queries/timer'
-import { formatHoursRu } from '../lib/time'
+import { formatHoursMinutes } from '../lib/time'
 
 /** Быстрое создание задачи: название, раздел, проект, план — и сразу старт учёта. */
 export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -17,6 +18,8 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   const sections = useMemo(() => allSections.filter((s) => !s.archived), [allSections])
   const projects = useMemo(() => allProjects.filter((p) => !p.archived), [allProjects])
   const createTask = useCreateTask()
+  const createSection = useCreateSection()
+  const createProject = useCreateProject()
   const startTimer = useStartTimer()
   const { showError } = useToast()
 
@@ -25,26 +28,31 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [sectionId, setSectionId] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
 
+  // сброс только на открытии листа. Если завязать эффект ещё и на списки, то
+  // создание раздела прямо отсюда обновляло бы список и тут же сбрасывало выбор
+  // обратно на первый элемент — свежесозданный выбрать было бы невозможно
   useEffect(() => {
     if (!open) return
     setTitle('')
     setPlan(1)
-    setSectionId(sections[0]?.id ?? null)
-    setProjectId(projects[0]?.id ?? null)
-  }, [open, sections, projects])
+    setSectionId(null)
+    setProjectId(null)
+  }, [open])
 
   if (!open) return null
 
-  const canCreate = !!title.trim() && !!sectionId && !!projectId
-  const missingRefs = sections.length === 0 || projects.length === 0
+  // пока пользователь не выбрал сам, подставляем первый доступный
+  const effectiveSectionId = sectionId ?? sections[0]?.id ?? null
+  const effectiveProjectId = projectId ?? projects[0]?.id ?? null
+  const canCreate = !!title.trim() && !!effectiveSectionId && !!effectiveProjectId
 
   function create(andStart: boolean) {
-    if (!canCreate || !sectionId || !projectId) return
+    if (!canCreate || !effectiveSectionId || !effectiveProjectId) return
     createTask.mutate(
       {
         name: title.trim(),
-        project_id: projectId,
-        section_id: sectionId,
+        project_id: effectiveProjectId,
+        section_id: effectiveSectionId,
         status_id: null,
         planned_hours: plan,
         start_date: null,
@@ -88,60 +96,60 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
         />
 
-        {missingRefs ? (
-          <p className="text-sm leading-[1.5] text-slate-600">
-            Сначала создайте хотя бы один раздел и проект в «Ещё» — задача не может существовать без них.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel>Раздел</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {sections.map((s) => (
-                  <Chip key={s.id} active={sectionId === s.id} onClick={() => setSectionId(s.id)}>
-                    {s.name}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+        {/* раздел и проект заводятся прямо здесь: раньше при пустом справочнике
+            лист просто отказывался работать и отправлял в «Ещё» */}
+        <ChipPicker
+          label="Раздел"
+          items={sections}
+          value={effectiveSectionId}
+          onChange={setSectionId}
+          placeholder="Название раздела"
+          onCreate={(name, onCreated) =>
+            createSection.mutate(name, {
+              onError: (e) => showError(describeError(e)),
+              onSuccess: (row) => onCreated(row.id),
+            })
+          }
+        />
 
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel>Проект</FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {projects.map((p) => (
-                  <Chip key={p.id} active={projectId === p.id} onClick={() => setProjectId(p.id)}>
-                    {p.name}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+        <ChipPicker
+          label="Проект"
+          items={projects}
+          value={effectiveProjectId}
+          onChange={setProjectId}
+          placeholder="Название проекта"
+          onCreate={(name, onCreated) =>
+            createProject.mutate(name, {
+              onError: (e) => showError(describeError(e)),
+              onSuccess: (row) => onCreated(row.id),
+            })
+          }
+        />
 
-            <div className="flex items-center justify-between gap-3">
-              <FieldLabel>План, часов</FieldLabel>
-              <div className="flex items-center gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => setPlan((v) => Math.max(0.5, v - 0.5))}
-                  className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
-                  style={{ border: '1px solid var(--s-border-strong-2)' }}
-                >
-                  −
-                </button>
-                <span className="tabular min-w-[44px] text-center font-mono text-lg font-semibold text-slate-100">
-                  {formatHoursRu(plan)} ч
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setPlan((v) => v + 0.5)}
-                  className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
-                  style={{ border: '1px solid var(--s-border-strong-2)' }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+        <div className="flex items-center justify-between gap-3">
+          <FieldLabel>План, часов</FieldLabel>
+          <div className="flex items-center gap-3.5">
+            <button
+              type="button"
+              onClick={() => setPlan((v) => Math.max(0.25, v - 0.25))}
+              className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
+              style={{ border: '1px solid var(--s-border-strong-2)' }}
+            >
+              −
+            </button>
+            <span className="tabular min-w-[76px] text-center font-mono text-lg font-semibold text-slate-100">
+              {formatHoursMinutes(plan)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPlan((v) => v + 0.25)}
+              className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
+              style={{ border: '1px solid var(--s-border-strong-2)' }}
+            >
+              +
+            </button>
+          </div>
+        </div>
 
         <div className="mt-0.5 flex gap-[9px]">
           <button

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DatePicker } from './DatePicker'
-import { Chip, FieldLabel, fieldClass } from './ui'
+import { ChipPicker } from './ChipPicker'
+import { FieldLabel, fieldClass } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useCreateProject } from '../lib/queries/projects'
 import { useCreateSection } from '../lib/queries/sections'
@@ -28,8 +29,6 @@ interface TaskFormProps {
   compact?: boolean
   onSubmit: (values: TaskFormValues) => void
 }
-
-const NEW_OPTION = '__new__'
 
 export function TaskForm({
   initial,
@@ -71,30 +70,6 @@ export function TaskForm({
     set('planned_hours', h + m / 60)
   }
 
-  function handleProjectChange(value: string) {
-    if (value !== NEW_OPTION) return set('project_id', value)
-    const name = window.prompt('Название нового проекта')?.trim()
-    if (!name) return
-    createProject.mutate(name, { onError, onSuccess: (row) => set('project_id', row.id) })
-  }
-
-  function handleSectionChange(value: string) {
-    if (value !== NEW_OPTION) return set('section_id', value)
-    const name = window.prompt('Название нового раздела')?.trim()
-    if (!name) return
-    createSection.mutate(name, { onError, onSuccess: (row) => set('section_id', row.id) })
-  }
-
-  function handleStatusChange(id: string | null) {
-    set('status_id', id)
-  }
-
-  function handleNewStatus() {
-    const name = window.prompt('Название нового статуса (например: 25%, В работе, Готово)')?.trim()
-    if (!name) return
-    createStatus.mutate(name, { onError, onSuccess: (row) => set('status_id', row.id) })
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!values.name.trim() || !values.project_id || !values.section_id) return
@@ -108,8 +83,6 @@ export function TaskForm({
     }
     onSubmit(values)
   }
-
-  const selectClass = `${fieldClass} appearance-none pr-8`
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -166,63 +139,48 @@ export function TaskForm({
         </div>
       </div>
 
-      <div className="flex gap-[9px]">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <FieldLabel>Проект</FieldLabel>
-          <select
-            value={values.project_id}
-            onChange={(e) => handleProjectChange(e.target.value)}
-            className={selectClass}
-            required
-          >
-            <option value="" disabled>
-              Выберите проект
-            </option>
-            {pickableProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-                {p.archived ? ' (в архиве)' : ''}
-              </option>
-            ))}
-            <option value={NEW_OPTION}>+ Новый проект…</option>
-          </select>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <FieldLabel>Раздел</FieldLabel>
-          <select
-            value={values.section_id}
-            onChange={(e) => handleSectionChange(e.target.value)}
-            className={selectClass}
-            required
-          >
-            <option value="" disabled>
-              Выберите раздел
-            </option>
-            {pickableSections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.archived ? ' (в архиве)' : ''}
-              </option>
-            ))}
-            <option value={NEW_OPTION}>+ Новый раздел…</option>
-          </select>
-        </div>
+      {/* чипы вместо нативных select: те открывали системное колесо на iOS, а новый
+          проект заводился через window.prompt — окно браузера посреди своего интерфейса */}
+      <div className="flex flex-col gap-3">
+        <ChipPicker
+          label="Проект"
+          items={pickableProjects.map((p) => ({
+            id: p.id,
+            name: p.archived ? `${p.name} (в архиве)` : p.name,
+          }))}
+          value={values.project_id || null}
+          onChange={(id) => id && set('project_id', id)}
+          placeholder="Название проекта"
+          onCreate={(name, onCreated) =>
+            createProject.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
+          }
+        />
+        <ChipPicker
+          label="Раздел"
+          items={pickableSections.map((s) => ({
+            id: s.id,
+            name: s.archived ? `${s.name} (в архиве)` : s.name,
+          }))}
+          value={values.section_id || null}
+          onChange={(id) => id && set('section_id', id)}
+          placeholder="Название раздела"
+          onCreate={(name, onCreated) =>
+            createSection.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
+          }
+        />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <FieldLabel>Статус</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          <Chip active={values.status_id === null} onClick={() => handleStatusChange(null)}>
-            Без статуса
-          </Chip>
-          {statuses.map((s) => (
-            <Chip key={s.id} active={values.status_id === s.id} onClick={() => handleStatusChange(s.id)}>
-              {s.label}
-            </Chip>
-          ))}
-          <Chip onClick={handleNewStatus}>+ Новый…</Chip>
-        </div>
-      </div>
+      <ChipPicker
+        label="Статус"
+        items={statuses.map((s) => ({ id: s.id, name: s.label }))}
+        value={values.status_id}
+        onChange={(id) => set('status_id', id)}
+        placeholder="Название статуса"
+        noneLabel="Без статуса"
+        onCreate={(name, onCreated) =>
+          createStatus.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
+        }
+      />
 
       {/* вся строка — цель нажатия: голый чекбокс был 13×13 */}
       <label className="-my-1 flex min-h-11 items-center gap-2.5 text-sm text-slate-400">
