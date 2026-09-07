@@ -31,7 +31,7 @@ export function Today() {
   const { data: sections = [] } = useSections()
   const { data: activeTimer } = useActiveTimer()
   const { data: userSettings } = useUserSettings()
-  const { data: weekEntries = [] } = useTimeEntriesInRange(`${week.from}T00:00:00`, `${week.to}T23:59:59.999`)
+  const { data: weekEntries = [] } = useTimeEntriesInRange(week.from, week.to)
 
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
@@ -52,14 +52,14 @@ export function Today() {
   const factByDay = useMemo(() => {
     const map = new Map<string, number>()
     for (const e of weekEntries) {
-      const day = e.created_at.slice(0, 10)
+      const day = e.effective_date
       map.set(day, (map.get(day) ?? 0) + e.duration_minutes / 60)
     }
     return map
   }, [weekEntries])
 
   const trackedTodayTaskIds = useMemo(
-    () => new Set(weekEntries.filter((e) => e.created_at.slice(0, 10) === today).map((e) => e.task_id)),
+    () => new Set(weekEntries.filter((e) => e.effective_date === today).map((e) => e.task_id)),
     [weekEntries, today],
   )
 

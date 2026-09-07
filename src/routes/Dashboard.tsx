@@ -38,7 +38,7 @@ export function Dashboard() {
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: userSettings } = useUserSettings()
-  const { data: entries = [] } = useTimeEntriesInRange(`${from}T00:00:00`, `${to}T23:59:59.999`)
+  const { data: entries = [] } = useTimeEntriesInRange(from, to)
   const { data: closedCount = 0 } = useClosedTaskCount(`${from}T00:00:00`, `${to}T23:59:59.999`)
 
   const factByTask = useMemo(() => {
@@ -117,10 +117,7 @@ export function Dashboard() {
     return { from: toDateString(start), to: toDateString(end) }
   }, [from, to])
 
-  const { data: prevEntries = [] } = useTimeEntriesInRange(
-    `${prevRange.from}T00:00:00`,
-    `${prevRange.to}T23:59:59.999`,
-  )
+  const { data: prevEntries = [] } = useTimeEntriesInRange(prevRange.from, prevRange.to)
   const prevFactHours = useMemo(
     () => prevEntries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
     [prevEntries],

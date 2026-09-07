@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toDateString } from '../period'
 import { supabase } from '../supabaseClient'
 import type { ActiveTimer, TimeEntry } from '../types'
 
@@ -43,6 +44,9 @@ async function stopRunningTimer(current: ActiveTimer) {
     started_at: current.started_at,
     ended_at: endedAt.toISOString(),
     duration_minutes: durationMinutes,
+    // сеанс относится к дню, когда его начали, в местном времени: смена, начатая
+    // в 23:40 и остановленная в 00:20, целиком принадлежит вчерашнему дню
+    effective_date: toDateString(startedAt),
   })
   if (insertError) throw insertError
 
@@ -103,10 +107,13 @@ export function useAdjustFactHours() {
       taskId,
       currentFactHours,
       newFactHours,
+      effectiveDate,
     }: {
       taskId: string
       currentFactHours: number
       newFactHours: number
+      /** день, к которому относится правка; по умолчанию — сегодня */
+      effectiveDate?: string
     }) => {
       const deltaMinutes = Math.round((newFactHours - currentFactHours) * 60)
       if (deltaMinutes === 0) return
@@ -115,6 +122,7 @@ export function useAdjustFactHours() {
         entry_type: 'manual_adjustment',
         duration_minutes: deltaMinutes,
         note: 'Manual correction',
+        effective_date: effectiveDate ?? toDateString(new Date()),
       })
       if (error) throw error
     },

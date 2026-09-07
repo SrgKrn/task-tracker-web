@@ -68,6 +68,12 @@ export interface TimeEntry {
   ended_at: string | null
   duration_minutes: number
   note: string | null
+  /**
+   * День, к которому относится запись (в местном времени), а не день сохранения.
+   * По нему считаются кольцо «Сегодня» и сводка: правка старой задачи не должна
+   * вычитаться из сегодняшнего дня, а работа после полуночи — уезжать во вчера.
+   */
+  effective_date: string
   created_at: string
 }
 

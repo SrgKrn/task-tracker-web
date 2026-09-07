@@ -2,16 +2,22 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import type { TaskStatusEvent, TimeEntry } from '../types'
 
-/** time_entries logged (created_at) within [fromISO, toISO) — the "fact" side of the dashboard. */
-export function useTimeEntriesInRange(fromISO: string, toISO: string) {
+/**
+ * Записи за период [from, to] по дню, к которому они относятся (effective_date),
+ * а не по моменту сохранения. Раньше фильтр шёл по created_at в UTC: работа после
+ * полуночи уезжала во вчера, а правка старой задачи попадала в сегодняшний день.
+ *
+ * Границы — местные даты вида YYYY-MM-DD, включительно с обеих сторон.
+ */
+export function useTimeEntriesInRange(from: string, to: string) {
   return useQuery({
-    queryKey: ['time_entries_range', fromISO, toISO],
+    queryKey: ['time_entries_range', from, to],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('time_entries')
         .select('*')
-        .gte('created_at', fromISO)
-        .lt('created_at', toISO)
+        .gte('effective_date', from)
+        .lte('effective_date', to)
       if (error) throw error
       return data as TimeEntry[]
     },

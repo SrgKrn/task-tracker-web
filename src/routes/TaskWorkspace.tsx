@@ -21,15 +21,12 @@ function TaskWorkspaceEmpty() {
   const week = useMemo(() => currentWeekRange(), [])
   const { data: tasks = [] } = useTasks()
   const { data: userSettings } = useUserSettings()
-  const { data: entries = [] } = useTimeEntriesInRange(
-    `${week.from}T00:00:00`,
-    `${week.to}T23:59:59.999`,
-  )
+  const { data: entries = [] } = useTimeEntriesInRange(week.from, week.to)
 
   const dayFact = useMemo(
     () =>
       entries
-        .filter((e) => e.created_at.slice(0, 10) === today)
+        .filter((e) => e.effective_date === today)
         .reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
     [entries, today],
   )

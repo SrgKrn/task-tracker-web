@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DatePicker } from '../components/DatePicker'
 import { ArrowLeft } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
@@ -8,6 +9,7 @@ import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
 import { FieldLabel, Tag } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
+import { todayStr } from '../lib/period'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
@@ -36,6 +38,9 @@ export function TaskDetail() {
   const adjustFactHours = useAdjustFactHours()
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // день, к которому относится ручная правка. По умолчанию сегодня — быстрый случай
+  // остаётся в один тап; но исправление старых часов больше не бьёт по сегодняшнему дню
+  const [adjustDate, setAdjustDate] = useState(todayStr)
   const isRunning = activeTimer?.task_id === id
   useTicker(isRunning)
 
@@ -70,7 +75,7 @@ export function TaskDetail() {
     const next = Math.max(0, Math.round((from + delta) * 2) / 2)
     if (next === from) return
     adjustFactHours.mutate(
-      { taskId: task.id, currentFactHours: from, newFactHours: next },
+      { taskId: task.id, currentFactHours: from, newFactHours: next, effectiveDate: adjustDate },
       {
         onError,
         onSuccess: () =>
@@ -79,7 +84,12 @@ export function TaskDetail() {
             label: 'Отменить',
             onAction: () =>
               adjustFactHours.mutate(
-                { taskId: task.id, currentFactHours: next, newFactHours: from },
+                {
+                  taskId: task.id,
+                  currentFactHours: next,
+                  newFactHours: from,
+                  effectiveDate: adjustDate,
+                },
                 { onError },
               ),
           }),
@@ -206,6 +216,28 @@ export function TaskDetail() {
                 </button>
               ))}
             </span>
+          </div>
+
+          {/* за какой день засчитать правку: без этого исправление старых часов
+              вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-2xs text-slate-500">Засчитать в день</span>
+            <DatePicker
+              small
+              className="w-[128px]"
+              ariaLabel="День, к которому относится правка"
+              value={adjustDate}
+              onChange={(v) => setAdjustDate(v ?? todayStr())}
+            />
+            {adjustDate !== todayStr() && (
+              <button
+                type="button"
+                onClick={() => setAdjustDate(todayStr())}
+                className="shrink-0 text-2xs text-sky-600"
+              >
+                Сегодня
+              </button>
+            )}
           </div>
         </div>
 

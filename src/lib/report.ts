@@ -75,24 +75,21 @@ export function buildReportData(
   const entryRows: ReportEntryRow[] = entries
     .map((e) => {
       const task = taskById.get(e.task_id)
+      // день работы, а не момент сохранения: правка, сделанная сегодня за прошлую
+      // неделю, должна стоять в отчёте той неделей
+      const [y, m, d] = e.effective_date.split('-')
       return {
-        dateTime: new Date(e.created_at).toLocaleString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        dateTime: `${d}.${m}.${y}`,
         task: task?.name ?? '',
         project: task ? (projectById.get(task.project_id)?.name ?? '') : '',
         section: task ? (sectionById.get(task.section_id)?.name ?? '') : '',
         durationHours: e.duration_minutes / 60,
         type: e.entry_type === 'timer' ? 'Трекинг' : 'Ручная правка',
-        _createdAt: e.created_at,
+        _sortKey: `${e.effective_date} ${e.created_at}`,
       }
     })
-    .sort((a, b) => a._createdAt.localeCompare(b._createdAt))
-    .map(({ _createdAt: _unused, ...rest }) => rest)
+    .sort((a, b) => a._sortKey.localeCompare(b._sortKey))
+    .map(({ _sortKey: _unused, ...rest }) => rest)
 
   const totalFactHours = entries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60
   const totalPlanHours = relevantTasks

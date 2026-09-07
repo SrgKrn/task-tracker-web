@@ -226,7 +226,7 @@ function ExportSection() {
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
-  const { data: entries = [] } = useTimeEntriesInRange(`${from}T00:00:00`, `${to}T23:59:59.999`)
+  const { data: entries = [] } = useTimeEntriesInRange(from, to)
 
   async function handleExport(format: 'excel' | 'pdf') {
     setGenerating(format)

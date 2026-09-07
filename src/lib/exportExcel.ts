@@ -53,7 +53,7 @@ export async function exportExcel(data: ReportData) {
 
   const entriesSheet = workbook.addWorksheet('Время')
   entriesSheet.columns = [
-    { header: 'Дата и время', key: 'dateTime', width: 18 },
+    { header: 'Дата', key: 'dateTime', width: 14 },
     { header: 'Задача', key: 'task', width: 32 },
     { header: 'Проект', key: 'project', width: 20 },
     { header: 'Раздел', key: 'section', width: 20 },

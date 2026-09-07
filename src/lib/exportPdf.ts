@@ -55,7 +55,7 @@ export async function exportPdf(data: ReportData) {
 
   autoTable(doc, {
     startY: 22,
-    head: [['Дата и время', 'Задача', 'Проект', 'Раздел', 'Часы', 'Тип']],
+    head: [['Дата', 'Задача', 'Проект', 'Раздел', 'Часы', 'Тип']],
     body: data.entries.map((e) => [e.dateTime, e.task, e.project, e.section, e.durationHours.toFixed(2), e.type]),
     styles: { font: FONT_NAME, fontSize: 8 },
     headStyles: { font: FONT_NAME, fontStyle: 'normal' },
