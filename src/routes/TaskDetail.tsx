@@ -242,9 +242,19 @@ export function TaskDetail() {
       {/* на десктопе форма упирается в предел ширины: поле на шесть символов,
           растянутое на пол-экрана, выглядит как ошибка вёрстки */}
       <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:max-w-[560px] lg:flex-1 lg:overflow-y-auto">
-        {/* быстрая правка факта — шаг 0,5 ч */}
-        <div className="flex flex-col gap-1.5">
-          <FieldLabel>Факт (правка)</FieldLabel>
+        {/*
+          Правка факта сохраняется мгновенно, а поля ниже — только по кнопке.
+          Раньше это был один сплошной список, и понять, где какое правило, было
+          невозможно. Обводим мгновенную часть в карточку и подписываем.
+        */}
+        <div
+          className="flex flex-col gap-2.5 rounded-2xl p-3"
+          style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
+        >
+          <span className="flex items-baseline justify-between gap-2">
+            <FieldLabel>Факт (правка)</FieldLabel>
+            <span className="font-mono text-2xs text-slate-600">сохраняется сразу</span>
+          </span>
           <div
             className="flex h-[52px] items-center justify-between rounded-xl py-1.5 pr-1.5 pl-3"
             style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
@@ -282,7 +292,7 @@ export function TaskDetail() {
 
           {/* за какой день засчитать правку: без этого исправление старых часов
               вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pb-0.5">
             <span className="shrink-0 text-2xs text-slate-500">Засчитать в день</span>
             <DatePicker
               small

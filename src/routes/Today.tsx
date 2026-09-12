@@ -15,7 +15,7 @@ import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
-import { elapsedHours, formatHoursRu, useTicker } from '../lib/time'
+import { TASKS, elapsedHours, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import type { Task } from '../lib/types'
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
@@ -80,11 +80,6 @@ export function Today() {
     [tasks, activeTimer, trackedTodayTaskIds, today],
   )
 
-  const dayPlan = useMemo(
-    () => todayTasks.reduce((sum, t) => sum + t.planned_hours, 0),
-    [todayTasks],
-  )
-
   const overdueTasks = useMemo(
     () => tasks.filter((t) => isOverdue(t, t.status_id ? statusById.get(t.status_id) : undefined)),
     [tasks, statusById],
@@ -122,17 +117,29 @@ export function Today() {
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Overline>{formatTodayLabel()}</Overline>
           <h1 className="text-2xl font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
+          {/*
+            Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
+            полных планов всех задач дня. Задача на 12 часов, растянутая на три недели,
+            целиком падала в сегодняшний план, и в восьмичасовом дне выходило «план 27 ч».
+            Показываем то, что действительно относится к сегодняшнему дню.
+          */}
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--s-accent)' }} />
-              <span className="font-mono text-xs text-[#b6b6be]">факт {formatHoursRu(dayFact)} ч</span>
+              <span className="font-mono text-xs text-[#b6b6be]">
+                {dayFact >= dayNorm
+                  ? 'норма дня выполнена'
+                  : `осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+              </span>
             </span>
             <span className="flex items-center gap-2">
               <span
                 className="h-[7px] w-[7px] shrink-0 rounded-full"
                 style={{ background: 'rgba(232,163,61,.35)' }}
               />
-              <span className="font-mono text-xs text-[#8a8a92]">план {formatHoursRu(dayPlan)} ч</span>
+              <span className="font-mono text-xs text-[#8a8a92]">
+                {todayTasks.length > 0 ? `${plural(todayTasks.length, TASKS)} на день` : 'задач на день нет'}
+              </span>
             </span>
           </div>
         </div>

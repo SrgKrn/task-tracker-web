@@ -12,7 +12,7 @@ import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { elapsedHours, formatHoursRu, useTicker } from '../lib/time'
+import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
 import type { Task } from '../lib/types'
 
 type GroupBy = 'section' | 'project' | 'none'
@@ -146,7 +146,7 @@ export function TaskList() {
       <div className="safe-top flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
         <div className="flex flex-col gap-0.5">
           <Overline className="tracking-[.14em]">
-            {activeCount} активных · {totalFact} / {totalPlan} ч
+            {plural(activeCount, ACTIVE_TASKS)} · {totalFact} / {totalPlan} ч
           </Overline>
           <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
         </div>

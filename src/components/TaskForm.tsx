@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
 import { DatePicker } from './DatePicker'
 import { ChipPicker } from './ChipPicker'
+import { DurationSheet } from './DurationSheet'
+import { ChevronDown } from './Icon'
+import { PickerField } from './PickerField'
 import { FieldLabel, fieldClass } from './ui'
+import { formatHoursMinutes } from '../lib/time'
 import { describeError, useToast } from '../lib/Toast'
 import { useCreateProject } from '../lib/queries/projects'
 import { useCreateSection } from '../lib/queries/sections'
@@ -40,8 +44,7 @@ export function TaskForm({
   onSubmit,
 }: TaskFormProps) {
   const [values, setValues] = useState<TaskFormValues>(initial)
-  const [plannedH, setPlannedH] = useState(Math.floor(initial.planned_hours))
-  const [plannedM, setPlannedM] = useState(Math.round((initial.planned_hours % 1) * 60))
+  const [editingPlan, setEditingPlan] = useState(false)
 
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
@@ -63,12 +66,6 @@ export function TaskForm({
     () => sections.filter((s) => !s.archived || s.id === values.section_id),
     [sections, values.section_id],
   )
-
-  function setPlanned(h: number, m: number) {
-    setPlannedH(h)
-    setPlannedM(m)
-    set('planned_hours', h + m / 60)
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -99,30 +96,33 @@ export function TaskForm({
         </div>
       )}
 
-      <div className="flex gap-[9px]">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <FieldLabel>План</FieldLabel>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min="0"
-              value={plannedH}
-              onChange={(e) => setPlanned(Math.max(0, Number(e.target.value)), plannedM)}
-              className={`${fieldClass} tabular min-w-0 font-mono`}
-            />
-            <span className="shrink-0 font-mono text-2xs text-slate-500">ч</span>
-            <input
-              type="number"
-              min="0"
-              max="59"
-              value={plannedM}
-              onChange={(e) => setPlanned(plannedH, Math.min(59, Math.max(0, Number(e.target.value))))}
-              className={`${fieldClass} tabular min-w-0 font-mono`}
-            />
-            <span className="shrink-0 font-mono text-2xs text-slate-500">мин</span>
-          </div>
-        </div>
+      {/* тот же ввод длительности, что у факта и у плана в листе создания:
+          раньше здесь одиноко оставались два голых числовых поля */}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <FieldLabel>План</FieldLabel>
+        <button
+          type="button"
+          onClick={() => setEditingPlan(true)}
+          className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left"
+          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+        >
+          <span className="tabular font-mono text-sm text-slate-100">
+            {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
+          </span>
+          <ChevronDown size={14} className="text-slate-600" />
+        </button>
       </div>
+
+      <DurationSheet
+        open={editingPlan}
+        title="Плановое время"
+        hours={values.planned_hours}
+        onCancel={() => setEditingPlan(false)}
+        onSubmit={(value) => {
+          setEditingPlan(false)
+          set('planned_hours', value)
+        }}
+      />
 
       <div className="flex gap-[9px]">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -139,10 +139,10 @@ export function TaskForm({
         </div>
       </div>
 
-      {/* чипы вместо нативных select: те открывали системное колесо на iOS, а новый
-          проект заводился через window.prompt — окно браузера посреди своего интерфейса */}
-      <div className="flex flex-col gap-3">
-        <ChipPicker
+      {/* компактные строки с поиском, а не ряды чипов: на тринадцати проектах чипы
+          занимали пятую часть экрана и форму приходилось прокручивать целиком */}
+      <div className="flex gap-[9px]">
+        <PickerField
           label="Проект"
           items={pickableProjects.map((p) => ({
             id: p.id,
@@ -155,7 +155,7 @@ export function TaskForm({
             createProject.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
           }
         />
-        <ChipPicker
+        <PickerField
           label="Раздел"
           items={pickableSections.map((s) => ({
             id: s.id,
@@ -170,6 +170,7 @@ export function TaskForm({
         />
       </div>
 
+      {/* статусов обычно единицы — их держим чипами, выбор виден без лишнего касания */}
       <ChipPicker
         label="Статус"
         items={statuses.map((s) => ({ id: s.id, name: s.label }))}

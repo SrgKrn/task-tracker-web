@@ -63,3 +63,19 @@ export function formatHoursMinutes(hours: number): string {
   if (m === 0) return `${h} ч`
   return `${h} ч ${m} мин`
 }
+
+/**
+ * Русские числительные: 1 задача, 2 задачи, 5 задач.
+ * Формы передаются в порядке [одна, две, пять].
+ */
+export function plural(n: number, forms: [string, string, string]): string {
+  const abs = Math.abs(n) % 100
+  const last = abs % 10
+  if (abs > 10 && abs < 20) return `${n} ${forms[2]}`
+  if (last > 1 && last < 5) return `${n} ${forms[1]}`
+  if (last === 1) return `${n} ${forms[0]}`
+  return `${n} ${forms[2]}`
+}
+
+export const TASKS: [string, string, string] = ['задача', 'задачи', 'задач']
+export const ACTIVE_TASKS: [string, string, string] = ['активная', 'активные', 'активных']

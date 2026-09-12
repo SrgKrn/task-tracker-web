@@ -17,7 +17,7 @@ import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
-import { formatHoursRu } from '../lib/time'
+import { TASKS, formatHoursRu, plural } from '../lib/time'
 
 type GroupBy = 'project' | 'section'
 type PresetKey = PeriodPreset['key'] | 'custom'
@@ -265,7 +265,10 @@ export function Dashboard() {
 
       <div className="flex flex-col gap-[9px] px-5 pb-2 lg:grid lg:grid-cols-2 lg:gap-3">
         {rows.map((row) => {
-          const pct = row.planHours > 0 ? Math.round((row.factHours / row.planHours) * 100) : row.factHours > 0 ? 100 : 0
+          // процента от нулевого плана не существует: раньше проект без плана
+          // показывал ровно «100%», что просто неправда
+          const hasPlan = row.planHours > 0
+          const pct = hasPlan ? Math.round((row.factHours / row.planHours) * 100) : 0
           const over = pct > 100
           return (
             <div
@@ -283,7 +286,7 @@ export function Dashboard() {
                     over ? 'text-red-400' : pct >= 50 ? 'text-sky-600' : 'text-slate-400'
                   }`}
                 >
-                  {pct}%
+                  {hasPlan ? `${pct}%` : '—'}
                 </span>
               </Ring>
               <div className="min-w-0 flex-1">
@@ -296,7 +299,10 @@ export function Dashboard() {
                 {/* счётчик задач больше не вытесняется словом «переработка»: о ней
                     уже говорят терракотовое кольцо и процент больше ста */}
                 <span className="block truncate font-mono text-2xs leading-[1.4] text-slate-500">
-                  {formatHoursRu(row.factHours)} / {formatHoursRu(row.planHours)} ч · {row.counted} задач
+                  {hasPlan
+                    ? `${formatHoursRu(row.factHours)} / ${formatHoursRu(row.planHours)} ч`
+                    : `${formatHoursRu(row.factHours)} ч · без плана`}{' · '}
+                  {plural(row.counted, TASKS)}
                 </span>
               </div>
             </div>

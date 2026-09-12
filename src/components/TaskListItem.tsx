@@ -56,7 +56,8 @@ export function TaskListItem({
   const done = !!status?.is_final
   // факт активной задачи растёт на лету — считаем от started_at, а не накоплением тиков
   const fact = isRunning && activeTimer ? task.fact_hours + elapsedHours(activeTimer.started_at) : task.fact_hours
-  const pct = task.planned_hours > 0 ? (fact / task.planned_hours) * 100 : 0
+  const hasPlan = task.planned_hours > 0
+  const pct = hasPlan ? (fact / task.planned_hours) * 100 : 0
   const over = pct > 100 && !done
   const overdue = isOverdue(task, status)
 
@@ -67,7 +68,11 @@ export function TaskListItem({
   // и строка становилась на треть выше соседних. Состояние показываем тегом справа —
   // там для него есть отдельное место, и оно не спорит с проектом за ширину.
   const category = project?.name ?? section?.name ?? ''
-  const meta = `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч${category ? ` · ${category}` : ''}`
+  // «1,8 / 0 ч» выглядело как ошибка: у задачи без плана нет знаменателя
+  const hours = hasPlan
+    ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
+    : `${formatHoursRu(fact)} ч · без плана`
+  const meta = `${hours}${category ? ` · ${category}` : ''}`
 
   function onTouchStart(e: React.TouchEvent) {
     if (!swipeable) return
@@ -176,11 +181,19 @@ export function TaskListItem({
             }
           }}
         >
+          {/* две строки вместо одной: тег статуса справа оставлял имени ~190px,
+              и половина названий обрывалась на середине прямо на главном экране */}
           <p
             title={task.name}
-            className={`truncate text-sm leading-[1.3] ${
+            className={`text-sm leading-[1.3] ${
               done ? 'font-normal text-[#8a8a92] line-through' : 'font-medium text-slate-100'
             }`}
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
           >
             {task.name}
           </p>
