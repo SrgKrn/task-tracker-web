@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChipPicker } from './ChipPicker'
+import { DurationSheet } from './DurationSheet'
 import { FieldLabel } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useCreateProject, useProjects } from '../lib/queries/projects'
@@ -27,6 +28,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [plan, setPlan] = useState(1)
   const [sectionId, setSectionId] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
+  const [editingPlan, setEditingPlan] = useState(false)
 
   // сброс только на открытии листа. Если завязать эффект ещё и на списки, то
   // создание раздела прямо отсюда обновляло бы список и тут же сбрасывало выбор
@@ -37,6 +39,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
     setPlan(1)
     setSectionId(null)
     setProjectId(null)
+    setEditingPlan(false)
   }, [open])
 
   if (!open) return null
@@ -127,22 +130,29 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
         />
 
         <div className="flex items-center justify-between gap-3">
-          <FieldLabel>План, часов</FieldLabel>
+          <FieldLabel>План</FieldLabel>
           <div className="flex items-center gap-3.5">
             <button
               type="button"
               onClick={() => setPlan((v) => Math.max(0.25, v - 0.25))}
+              aria-label="Убавить 15 минут"
               className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
               style={{ border: '1px solid var(--s-border-strong-2)' }}
             >
               −
             </button>
-            <span className="tabular min-w-[76px] text-center font-mono text-lg font-semibold text-slate-100">
+            {/* по цифре открывается ввод: шагами по 15 минут набирать «3 ч 40 мин» долго */}
+            <button
+              type="button"
+              onClick={() => setEditingPlan(true)}
+              className="tabular min-w-[92px] rounded-lg py-1 text-center font-mono text-lg font-semibold text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
+            >
               {formatHoursMinutes(plan)}
-            </span>
+            </button>
             <button
               type="button"
               onClick={() => setPlan((v) => v + 0.25)}
+              aria-label="Прибавить 15 минут"
               className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
               style={{ border: '1px solid var(--s-border-strong-2)' }}
             >
@@ -173,6 +183,19 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             Создать и начать
           </button>
         </div>
+
+        {/* внутри содержимого листа, а не рядом: клик по подложке этого окна не должен
+            всплыть до подложки листа и закрыть заодно и его */}
+        <DurationSheet
+          open={editingPlan}
+          title="Плановое время"
+          hours={plan}
+          onCancel={() => setEditingPlan(false)}
+          onSubmit={(value) => {
+            setEditingPlan(false)
+            setPlan(Math.max(0.25, value))
+          }}
+        />
       </div>
     </div>
   )
