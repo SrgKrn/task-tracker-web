@@ -37,6 +37,8 @@ export interface NewTaskInput {
   end_date: string | null
   is_daily?: boolean
   duplicated_from?: string | null
+  /** спринт, в который кладётся подзадача; проект и раздел база возьмёт у него */
+  parent_id?: string | null
 }
 
 export function useCreateTask() {
@@ -62,6 +64,7 @@ export type TaskFieldsInput = Partial<
     | 'start_date'
     | 'end_date'
     | 'is_daily'
+    | 'parent_id'
   >
 >
 
@@ -117,10 +120,66 @@ export function useDuplicateTask() {
         end_date: overrides?.end_date !== undefined ? overrides.end_date : task.end_date,
         is_daily: task.is_daily,
         duplicated_from: task.id,
+        // копия подзадачи остаётся в том же спринте, а не выпадает в список отдельной задачей
+        parent_id: task.parent_id,
       }
       const { data, error } = await supabase.from('tasks').insert(input).select().single()
       if (error) throw error
       return data as Task
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+}
+
+export interface NextSprintInput {
+  from: Task
+  name: string
+  planned_hours: number
+  start_date: string | null
+  end_date: string | null
+  status_id: string | null
+  /** незакрытые подзадачи, которые едут в новый спринт — с остатком плана, без факта */
+  carry: { name: string; planned_hours: number }[]
+}
+
+/**
+ * «Спринт 6 → Спринт 7»: новый спринт на следующий период с незакрытыми подзадачами.
+ * Старый спринт не трогаем — его часы, закрытые подзадачи и история остаются в нём.
+ */
+export function useCreateNextSprint() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: NextSprintInput) => {
+      const head: NewTaskInput = {
+        name: input.name.trim(),
+        project_id: input.from.project_id,
+        section_id: input.from.section_id,
+        status_id: input.status_id,
+        planned_hours: input.planned_hours,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        is_daily: input.from.is_daily,
+        duplicated_from: input.from.id,
+      }
+      const { data, error } = await supabase.from('tasks').insert(head).select().single()
+      if (error) throw error
+      const sprint = data as Task
+
+      if (input.carry.length > 0) {
+        const rows: NewTaskInput[] = input.carry.map((c) => ({
+          name: c.name,
+          project_id: sprint.project_id,
+          section_id: sprint.section_id,
+          status_id: null,
+          planned_hours: c.planned_hours,
+          start_date: null,
+          end_date: null,
+          parent_id: sprint.id,
+        }))
+        const { error: childError } = await supabase.from('tasks').insert(rows)
+        if (childError) throw childError
+      }
+      return sprint
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   })

@@ -18,6 +18,7 @@ import { useSections } from '../lib/queries/sections'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { TASKS, formatHoursRu, plural } from '../lib/time'
+import { headIdOf } from '../lib/tree'
 
 type GroupBy = 'project' | 'section'
 type PresetKey = PeriodPreset['key'] | 'custom'
@@ -41,11 +42,22 @@ export function Dashboard() {
   const { data: entries = [] } = useTimeEntriesInRange(from, to)
   const { data: closedCount = 0 } = useClosedTaskCount(`${from}T00:00:00`, `${to}T23:59:59.999`)
 
+  /*
+   * Всё считается по головным задачам. План подзадач — раскладка плана спринта, и сложи мы
+   * их вместе, план удвоился бы. Минуты подзадачи засчитываются её спринту: переработка
+   * — это факт спринта сверх его плана, а не часы отдельной строки сверх её раскладки.
+   */
+  const heads = useMemo(() => tasks.filter((t) => !t.parent_id), [tasks])
+
   const factByTask = useMemo(() => {
+    const headOf = new Map(tasks.map((t) => [t.id, headIdOf(t)]))
     const map = new Map<string, number>()
-    for (const e of entries) map.set(e.task_id, (map.get(e.task_id) ?? 0) + e.duration_minutes)
+    for (const e of entries) {
+      const head = headOf.get(e.task_id) ?? e.task_id
+      map.set(head, (map.get(head) ?? 0) + e.duration_minutes)
+    }
     return map
-  }, [entries])
+  }, [entries, tasks])
 
   const totalFactHours = useMemo(
     () => entries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
@@ -53,20 +65,20 @@ export function Dashboard() {
   )
 
   const totalPlanHours = useMemo(
-    () => tasks.filter((t) => overlapsPeriod(t, from, to)).reduce((sum, t) => sum + t.planned_hours, 0),
-    [tasks, from, to],
+    () => heads.filter((t) => overlapsPeriod(t, from, to)).reduce((sum, t) => sum + t.planned_hours, 0),
+    [heads, from, to],
   )
 
   const totalOverHours = useMemo(() => {
     let sum = 0
-    for (const t of tasks) {
+    for (const t of heads) {
       const minutes = factByTask.get(t.id)
       if (!minutes) continue
       const factH = minutes / 60
       if (t.planned_hours > 0 && factH > t.planned_hours) sum += factH - t.planned_hours
     }
     return sum
-  }, [tasks, factByTask])
+  }, [heads, factByTask])
 
   const daysInPeriod = daysBetweenInclusive(from, to)
   const dailyTarget = userSettings?.planned_hours_per_day ?? null
@@ -85,7 +97,7 @@ export function Dashboard() {
     const key = groupBy === 'project' ? 'project_id' : 'section_id'
     return buckets
       .map((bucket) => {
-        const bucketTasks = tasks.filter((t) => t[key as 'project_id' | 'section_id'] === bucket.id)
+        const bucketTasks = heads.filter((t) => t[key as 'project_id' | 'section_id'] === bucket.id)
         const planHours = bucketTasks
           .filter((t) => overlapsPeriod(t, from, to))
           .reduce((sum, t) => sum + t.planned_hours, 0)
@@ -104,7 +116,7 @@ export function Dashboard() {
       })
       .filter((r) => r.planHours > 0 || r.factHours > 0)
       .sort((a, b) => b.factHours - a.factHours)
-  }, [groupBy, projects, sections, tasks, factByTask, from, to])
+  }, [groupBy, projects, sections, heads, factByTask, from, to])
 
   /* «13,3 ч» само по себе не отвечает на вопрос «это много или мало» —
      сравниваем с предыдущим отрезком той же длины */

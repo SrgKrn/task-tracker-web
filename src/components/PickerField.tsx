@@ -12,8 +12,8 @@ interface PickerFieldProps {
   items: PickerOption[]
   value: string | null
   onChange: (id: string | null) => void
-  /** создаёт запись и отдаёт её id, чтобы сразу её и выбрать */
-  onCreate: (name: string, onCreated: (id: string) => void) => void
+  /** создаёт запись и отдаёт её id, чтобы сразу её и выбрать; без него создавать нельзя */
+  onCreate?: (name: string, onCreated: (id: string) => void) => void
   placeholder: string
   /** подпись варианта «ничего не выбрано»; без неё выбор обязателен */
   noneLabel?: string
@@ -56,7 +56,7 @@ export function PickerField({
 
   function create() {
     const name = draft.trim() || query.trim()
-    if (!name) return
+    if (!name || !onCreate) return
     onCreate(name, (id) => {
       onChange(id)
       close()
@@ -130,7 +130,7 @@ export function PickerField({
           )}
         </div>
 
-        {creating ? (
+        {!onCreate ? null : creating ? (
           <div className="flex items-center gap-2">
             <input
               autoFocus

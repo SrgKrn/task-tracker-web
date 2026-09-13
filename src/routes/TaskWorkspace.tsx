@@ -36,7 +36,7 @@ function TaskWorkspaceEmpty() {
   )
 
   const dayNorm = userSettings?.planned_hours_per_day ?? DEFAULT_DAY_NORM
-  const openCount = tasks.length
+  const openCount = tasks.filter((t) => !t.parent_id).length
 
   return (
     <div className="hidden flex-col items-center gap-5 lg:flex">

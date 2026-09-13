@@ -3,7 +3,7 @@ import { DatePicker } from './DatePicker'
 import { ChipPicker } from './ChipPicker'
 import { DurationSheet } from './DurationSheet'
 import { ChevronDown } from './Icon'
-import { PickerField } from './PickerField'
+import { PickerField, type PickerOption } from './PickerField'
 import { FieldLabel, fieldClass } from './ui'
 import { formatHoursMinutes } from '../lib/time'
 import { describeError, useToast } from '../lib/Toast'
@@ -21,6 +21,8 @@ export interface TaskFormValues {
   start_date: string | null
   end_date: string | null
   is_daily: boolean
+  /** спринт подзадачи; у головной задачи — null */
+  parent_id?: string | null
 }
 
 interface TaskFormProps {
@@ -31,6 +33,11 @@ interface TaskFormProps {
   submitLabel: string
   /** карточка редактирует существующую задачу — название и статус живут в её шапке */
   compact?: boolean
+  /**
+   * Форма подзадачи: вместо проекта и раздела — выбор спринта. Проект и раздел подзадача
+   * всё равно берёт у спринта (это держит база), и показывать их на выбор было бы враньём.
+   */
+  sprints?: PickerOption[]
   onSubmit: (values: TaskFormValues) => void
 }
 
@@ -41,6 +48,7 @@ export function TaskForm({
   statuses,
   submitLabel,
   compact = false,
+  sprints,
   onSubmit,
 }: TaskFormProps) {
   const [values, setValues] = useState<TaskFormValues>(initial)
@@ -141,34 +149,44 @@ export function TaskForm({
 
       {/* компактные строки с поиском, а не ряды чипов: на тринадцати проектах чипы
           занимали пятую часть экрана и форму приходилось прокручивать целиком */}
-      <div className="flex gap-[9px]">
+      {sprints ? (
         <PickerField
-          label="Проект"
-          items={pickableProjects.map((p) => ({
-            id: p.id,
-            name: p.archived ? `${p.name} (в архиве)` : p.name,
-          }))}
-          value={values.project_id || null}
-          onChange={(id) => id && set('project_id', id)}
-          placeholder="Название проекта"
-          onCreate={(name, onCreated) =>
-            createProject.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
-          }
+          label="Спринт"
+          items={sprints}
+          value={values.parent_id ?? null}
+          onChange={(id) => id && set('parent_id', id)}
+          placeholder="Спринт"
         />
-        <PickerField
-          label="Раздел"
-          items={pickableSections.map((s) => ({
-            id: s.id,
-            name: s.archived ? `${s.name} (в архиве)` : s.name,
-          }))}
-          value={values.section_id || null}
-          onChange={(id) => id && set('section_id', id)}
-          placeholder="Название раздела"
-          onCreate={(name, onCreated) =>
-            createSection.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
-          }
-        />
-      </div>
+      ) : (
+        <div className="flex gap-[9px]">
+          <PickerField
+            label="Проект"
+            items={pickableProjects.map((p) => ({
+              id: p.id,
+              name: p.archived ? `${p.name} (в архиве)` : p.name,
+            }))}
+            value={values.project_id || null}
+            onChange={(id) => id && set('project_id', id)}
+            placeholder="Название проекта"
+            onCreate={(name, onCreated) =>
+              createProject.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
+            }
+          />
+          <PickerField
+            label="Раздел"
+            items={pickableSections.map((s) => ({
+              id: s.id,
+              name: s.archived ? `${s.name} (в архиве)` : s.name,
+            }))}
+            value={values.section_id || null}
+            onChange={(id) => id && set('section_id', id)}
+            placeholder="Название раздела"
+            onCreate={(name, onCreated) =>
+              createSection.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
+            }
+          />
+        </div>
+      )}
 
       {/* статусов обычно единицы — их держим чипами, выбор виден без лишнего касания */}
       <ChipPicker

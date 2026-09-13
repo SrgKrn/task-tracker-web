@@ -45,12 +45,20 @@ export function buildReportData(
   const sectionById = new Map(sections.map((s) => [s.id, s]))
   const statusById = new Map(statuses.map((s) => [s.id, s]))
 
+  const taskById = new Map(tasks.map((t) => [t.id, t]))
+
+  // минуты подзадачи идут в строку её спринта; план берём только у спринта — план
+  // подзадач лишь раскладывает его, и сумма удвоила бы итог
   const factMinutesByTask = new Map<string, number>()
   for (const e of entries) {
-    factMinutesByTask.set(e.task_id, (factMinutesByTask.get(e.task_id) ?? 0) + e.duration_minutes)
+    const task = taskById.get(e.task_id)
+    const head = task?.parent_id ?? e.task_id
+    factMinutesByTask.set(head, (factMinutesByTask.get(head) ?? 0) + e.duration_minutes)
   }
 
-  const relevantTasks = tasks.filter((t) => overlapsPeriod(t, from, to) || factMinutesByTask.has(t.id))
+  const relevantTasks = tasks.filter(
+    (t) => !t.parent_id && (overlapsPeriod(t, from, to) || factMinutesByTask.has(t.id)),
+  )
 
   let totalOverHours = 0
   const taskRows: ReportTaskRow[] = relevantTasks.map((t) => {
@@ -71,7 +79,6 @@ export function buildReportData(
   })
   taskRows.sort((a, b) => b.factHoursInRange - a.factHoursInRange)
 
-  const taskById = new Map(tasks.map((t) => [t.id, t]))
   const entryRows: ReportEntryRow[] = entries
     .map((e) => {
       const task = taskById.get(e.task_id)
@@ -80,7 +87,12 @@ export function buildReportData(
       const [y, m, d] = e.effective_date.split('-')
       return {
         dateTime: `${d}.${m}.${y}`,
-        task: task?.name ?? '',
+        // «Спринт 7 / Созвон по интеграции» — иначе в выгрузке строка подзадачи ни к чему не привязана
+        task: task
+          ? task.parent_id
+            ? `${taskById.get(task.parent_id)?.name ?? ''} / ${task.name}`
+            : task.name
+          : '',
         project: task ? (projectById.get(task.project_id)?.name ?? '') : '',
         section: task ? (sectionById.get(task.section_id)?.name ?? '') : '',
         durationHours: e.duration_minutes / 60,

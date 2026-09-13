@@ -17,11 +17,14 @@ export interface DuplicateOverrides {
 export function DuplicateTaskSheet({
   open,
   task,
+  note,
   onCancel,
   onSubmit,
 }: {
   open: boolean
   task: Task | null
+  /** дополнительная оговорка под стандартной — например, что подзадачи не копируются */
+  note?: string
   onCancel: () => void
   onSubmit: (values: DuplicateOverrides) => void
 }) {
@@ -66,6 +69,7 @@ export function DuplicateTaskSheet({
 
       <p className="text-2xs leading-[1.5] text-slate-600">
         Проект, раздел, статус и план часов копируются. Факт и история трекинга — нет.
+        {note && <span className="mt-1 block">{note}</span>}
       </p>
 
       <SheetActions

@@ -16,6 +16,7 @@ import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { TASKS, elapsedHours, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
+import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
@@ -47,6 +48,8 @@ export function Today() {
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
   const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
+  const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
+  const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
 
   /** факт по дням недели — из одного запроса за всю неделю */
   const factByDay = useMemo(() => {
@@ -67,17 +70,24 @@ export function Today() {
   const dayFact = (factByDay.get(today) ?? 0) + liveHours
   const dayNorm = userSettings?.planned_hours_per_day ?? DEFAULT_DAY_NORM
 
+  /*
+   * День — это то, чем занимаются сегодня. Спринт живёт месяц, и по сроку он попадал сюда
+   * каждый день: список не менялся неделями. Спринт с подзадачами уступает место своим
+   * подзадачам — у них короткие сроки. Сам он остаётся, только если учёт идёт или шёл
+   * сегодня прямо по нему. Спринт без подзадач ведёт себя как обычная задача.
+   */
   const todayTasks = useMemo(
     () =>
       tasks.filter((t: Task) => {
         if (t.is_daily) return true
         if (activeTimer?.task_id === t.id) return true
         if (trackedTodayTaskIds.has(t.id)) return true
+        if (childrenOf.has(t.id)) return false
         const startsBy = !t.start_date || t.start_date <= today
         const endsAfter = !t.end_date || t.end_date >= today
         return !!(t.start_date || t.end_date) && startsBy && endsAfter
       }),
-    [tasks, activeTimer, trackedTodayTaskIds, today],
+    [tasks, activeTimer, trackedTodayTaskIds, today, childrenOf],
   )
 
   const overdueTasks = useMemo(
@@ -229,6 +239,9 @@ export function Today() {
                 duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })
               }
               onDelete={() => setDeletingTask(task)}
+              subtasks={childrenOf.get(task.id)}
+              expandable={false}
+              parentName={task.parent_id ? taskById.get(task.parent_id)?.name : undefined}
             />
           ))}
 
@@ -245,8 +258,12 @@ export function Today() {
           <div className="mt-1.5 flex flex-col gap-[9px]">
             <Overline>Требует внимания</Overline>
             {overdueTasks.map((task) => {
-              const pct = task.planned_hours > 0 ? Math.round((task.fact_hours / task.planned_hours) * 100) : 0
-              const category = projectById.get(task.project_id)?.name ?? sectionById.get(task.section_id)?.name ?? ''
+              const fact = rollupFact(task, childrenOf.get(task.id))
+              const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
+              // у подзадачи важнее спринт, чем проект: «Созвон» без спринта ни о чём не говорит
+              const category = task.parent_id
+                ? (taskById.get(task.parent_id)?.name ?? '')
+                : (projectById.get(task.project_id)?.name ?? sectionById.get(task.section_id)?.name ?? '')
               return (
                 <div
                   key={task.id}
@@ -304,7 +321,7 @@ export function Today() {
       <ConfirmDialog
         open={deletingTask !== null}
         title={`Удалить «${deletingTask?.name ?? ''}»?`}
-        description="Вместе с задачей удалится вся история трекинга по ней."
+        description={deleteDescription(deletingTask ? (childrenOf.get(deletingTask.id)?.length ?? 0) : 0)}
         onCancel={() => setDeletingTask(null)}
         onConfirm={() => {
           if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })

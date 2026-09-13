@@ -13,6 +13,7 @@ import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
+import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 import type { Task } from '../lib/types'
 
 type GroupBy = 'section' | 'project' | 'none'
@@ -59,16 +60,36 @@ export function TaskList() {
   const filtersActive =
     !!periodFrom || !!periodTo || selectedSectionIds !== null || selectedProjectIds !== null || hideCompleted
 
+  // в списке только головные задачи; подзадачи живут в раскрывающемся составе спринта
+  const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
+  const heads = useMemo(() => tasks.filter((t) => !t.parent_id), [tasks])
+
   const liveHours = activeTimer ? elapsedHours(activeTimer.started_at) : 0
-  const factOf = (t: Task) => t.fact_hours + (activeTimer?.task_id === t.id ? liveHours : 0)
+  // факт спринта — вместе с подзадачами и с идущей сейчас сессией, где бы она ни шла
+  const factOf = (t: Task) => {
+    const children = childrenOf.get(t.id)
+    return rollupFact(t, children) + (runningWithin(t, children, activeTimer?.task_id) ? liveHours : 0)
+  }
+
+  const query = search.trim().toLowerCase()
+  /** спринты, у которых запрос нашёлся в подзадаче: их состав показываем раскрытым */
+  const matchedInside = useMemo(() => {
+    const ids = new Set<string>()
+    if (!query) return ids
+    for (const [parentId, children] of childrenOf) {
+      if (children.some((c) => c.name.toLowerCase().includes(query))) ids.add(parentId)
+    }
+    return ids
+  }, [childrenOf, query])
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return tasks
+    const q = query
+    return heads
       .filter(
         (t) =>
           !q ||
           t.name.toLowerCase().includes(q) ||
+          matchedInside.has(t.id) ||
           projectById.get(t.project_id)?.name.toLowerCase().includes(q) ||
           sectionById.get(t.section_id)?.name.toLowerCase().includes(q),
       )
@@ -77,8 +98,9 @@ export function TaskList() {
       .filter((t) => selectedSectionIds === null || selectedSectionIds.has(t.section_id))
       .filter((t) => selectedProjectIds === null || selectedProjectIds.has(t.project_id))
   }, [
-    tasks,
-    search,
+    heads,
+    query,
+    matchedInside,
     periodFrom,
     periodTo,
     hideCompleted,
@@ -127,19 +149,20 @@ export function TaskList() {
   /** сколько задач за каждым чипом фильтра — видно ещё до его нажатия */
   const countsBySection = useMemo(() => {
     const map = new Map<string, number>()
-    for (const t of tasks) map.set(t.section_id, (map.get(t.section_id) ?? 0) + 1)
+    for (const t of heads) map.set(t.section_id, (map.get(t.section_id) ?? 0) + 1)
     return map
-  }, [tasks])
+  }, [heads])
 
   const countsByProject = useMemo(() => {
     const map = new Map<string, number>()
-    for (const t of tasks) map.set(t.project_id, (map.get(t.project_id) ?? 0) + 1)
+    for (const t of heads) map.set(t.project_id, (map.get(t.project_id) ?? 0) + 1)
     return map
-  }, [tasks])
+  }, [heads])
 
-  const activeCount = tasks.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
-  const totalFact = formatHoursRu(tasks.reduce((a, t) => a + factOf(t), 0))
-  const totalPlan = formatHoursRu(tasks.reduce((a, t) => a + t.planned_hours, 0))
+  const activeCount = heads.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
+  const totalFact = formatHoursRu(heads.reduce((a, t) => a + factOf(t), 0))
+  // план считаем только по головным: план подзадач — это раскладка плана спринта, а не добавка к нему
+  const totalPlan = formatHoursRu(heads.reduce((a, t) => a + t.planned_hours, 0))
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
@@ -335,6 +358,9 @@ export function TaskList() {
                       })
                     }
                     onDelete={() => setDeletingTask(task)}
+                    subtasks={childrenOf.get(task.id)}
+                    forceExpanded={matchedInside.has(task.id)}
+                    hideDoneSubtasks={hideCompleted}
                   />
                 ))}
               </div>
@@ -360,7 +386,7 @@ export function TaskList() {
       <ConfirmDialog
         open={deletingTask !== null}
         title={`Удалить «${deletingTask?.name ?? ''}»?`}
-        description="Вместе с задачей удалится вся история трекинга по ней."
+        description={deleteDescription(deletingTask ? (childrenOf.get(deletingTask.id)?.length ?? 0) : 0)}
         onCancel={() => setDeletingTask(null)}
         onConfirm={() => {
           if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })

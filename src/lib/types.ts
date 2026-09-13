@@ -45,6 +45,11 @@ export interface Task {
   is_daily: boolean
   /** id задачи-оригинала, если эта создана кнопкой «Дублировать» */
   duplicated_from: string | null
+  /**
+   * id головной задачи (спринта), если это подзадача. Уровней ровно два: у подзадачи
+   * своих подзадач не бывает, а проект и раздел она всегда берёт у спринта — это держит база.
+   */
+  parent_id: string | null
   created_at: string
   updated_at: string
 }

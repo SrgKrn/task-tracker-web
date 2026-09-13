@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { DurationSheet } from '../components/DurationSheet'
 import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
+import { NextSprintSheet } from '../components/NextSprintSheet'
+import { SprintComposition } from '../components/SprintComposition'
 import { ArrowLeft } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
@@ -15,9 +17,17 @@ import { todayStr } from '../lib/period'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useTask, useUpdateTask } from '../lib/queries/tasks'
+import {
+  useCreateNextSprint,
+  useDeleteTask,
+  useDuplicateTask,
+  useTask,
+  useTasks,
+  useUpdateTask,
+} from '../lib/queries/tasks'
 import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursMinutes, formatHoursRu, useTicker } from '../lib/time'
+import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +37,7 @@ export function TaskDetail() {
 
   const { data: task, isFetched } = useTask(id)
   const { data: original } = useTask(task?.duplicated_from ?? undefined)
+  const { data: allTasks = [] } = useTasks()
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
@@ -38,9 +49,15 @@ export function TaskDetail() {
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
+  const createNextSprint = useCreateNextSprint()
+
+  const childrenOf = useMemo(() => childrenByParent(allTasks), [allTasks])
+  const subtasks = (id && childrenOf.get(id)) || []
+  const parent = task?.parent_id ? allTasks.find((t) => t.id === task.parent_id) : undefined
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [nextSprint, setNextSprint] = useState(false)
   const [editingFact, setEditingFact] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draftName, setDraftName] = useState('')
@@ -48,7 +65,15 @@ export function TaskDetail() {
   // остаётся в один тап; но исправление старых часов больше не бьёт по сегодняшнему дню
   const [adjustDate, setAdjustDate] = useState(todayStr)
   const isRunning = activeTimer?.task_id === id
-  useTicker(isRunning)
+  // учёт идёт по подзадаче: кольцо спринта растёт вместе с ней, хотя кнопка здесь «Начать»
+  const runningInside = !!task && !isRunning && runningWithin(task, subtasks, activeTimer?.task_id)
+  useTicker(isRunning || runningInside)
+
+  // спринт → подзадача → спринт: карточка та же, меняется только id, и без этого новая
+  // открывалась прокрученной туда, где остановились в предыдущей
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [id])
 
   // задачу удалили (или ссылка устарела) — возвращаемся к списку, а не показываем пустую карточку
   if (isFetched && !task) return <Navigate to="/tasks" replace />
@@ -58,11 +83,17 @@ export function TaskDetail() {
   const project = projects.find((p) => p.id === task.project_id)
   const section = sections.find((s) => s.id === task.section_id)
 
+  const isSubtask = !!task.parent_id
+  // куда возвращаться: у подзадачи — в её спринт, а не в общий список
+  const backTo = parent ? `/tasks/${parent.id}` : '/tasks'
+
   const done = !!status?.is_final
-  const fact = isRunning && activeTimer ? task.fact_hours + elapsedHours(activeTimer.started_at) : task.fact_hours
+  const live = (isRunning || runningInside) && activeTimer ? elapsedHours(activeTimer.started_at) : 0
+  // факт спринта — вместе с подзадачами
+  const fact = rollupFact(task, subtasks) + live
   const pct = task.planned_hours > 0 ? (fact / task.planned_hours) * 100 : 0
   const over = pct > 100 && !done
-  const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
+  const ringState: RingState = done ? 'done' : over ? 'over' : isRunning || runningInside ? 'running' : 'idle'
 
   const values: TaskFormValues = {
     name: task.name,
@@ -73,7 +104,13 @@ export function TaskDetail() {
     start_date: task.start_date,
     end_date: task.end_date,
     is_daily: task.is_daily,
+    parent_id: task.parent_id,
   }
+
+  // подзадачу можно перенести в другой спринт; спринтом может быть только головная задача
+  const sprintOptions = isSubtask
+    ? allTasks.filter((t) => !t.parent_id && t.id !== task.id).map((t) => ({ id: t.id, name: t.name }))
+    : undefined
 
   /**
    * Значение берём из самого поля, а не из состояния: если правку и уход с поля
@@ -137,12 +174,13 @@ export function TaskDetail() {
         {/* -my-2.5 гасит вертикальный паддинг в вёрстке: он нужен только пальцу */}
         <button
           type="button"
-          onClick={() => navigate('/tasks')}
-          className="-my-2.5 flex items-center gap-2 py-2.5 text-sm text-slate-400"
+          onClick={() => navigate(backTo)}
+          className="-my-2.5 flex min-w-0 items-center gap-2 py-2.5 text-sm text-slate-400"
         >
-          <ArrowLeft size={15} />Назад
+          <ArrowLeft size={15} />
+          <span className="truncate">{parent ? parent.name : 'Назад'}</span>
         </button>
-        <div className="-my-2.5 flex gap-3.5 text-sm">
+        <div className="-my-2.5 flex shrink-0 gap-3.5 pl-3 text-sm">
           <button type="button" onClick={() => setDuplicating(true)} className="py-2.5 text-slate-400">
             Дублировать
           </button>
@@ -201,7 +239,7 @@ export function TaskDetail() {
 
         {original && (
           <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-xs text-slate-500">
-            Копия задачи «<span className="text-sky-600">{original.name}</span>»
+            На основе «<span className="text-sky-600">{original.name}</span>»
           </Link>
         )}
 
@@ -242,6 +280,28 @@ export function TaskDetail() {
       {/* на десктопе форма упирается в предел ширины: поле на шесть символов,
           растянутое на пол-экрана, выглядит как ошибка вёрстки */}
       <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:max-w-[560px] lg:flex-1 lg:overflow-y-auto">
+        {/* у подзадачи своих подзадач не бывает — база держит ровно два уровня */}
+        {!isSubtask && (
+          <SprintComposition
+            task={task}
+            subtasks={subtasks}
+            statuses={statuses}
+            onApplyStatus={(statusId) => {
+              const goingFinal = !!statuses.find((s) => s.id === statusId)?.is_final
+              updateTask.mutate(
+                { id: task.id, fields: { status_id: statusId } },
+                {
+                  onError,
+                  onSuccess: () => {
+                    if (goingFinal && isRunning) stopTimer.mutate(undefined, { onError })
+                  },
+                },
+              )
+            }}
+            onNextSprint={() => setNextSprint(true)}
+          />
+        )}
+
         {/*
           Правка факта сохраняется мгновенно, а поля ниже — только по кнопке.
           Раньше это был один сплошной список, и понять, где какое правило, было
@@ -252,7 +312,8 @@ export function TaskDetail() {
           style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
         >
           <span className="flex items-baseline justify-between gap-2">
-            <FieldLabel>Факт (правка)</FieldLabel>
+            {/* правка пишется в сам спринт: часы подзадач правятся в их карточках */}
+            <FieldLabel>{subtasks.length > 0 ? 'Часы в сам спринт' : 'Факт (правка)'}</FieldLabel>
             <span className="font-mono text-2xs text-slate-600">сохраняется сразу</span>
           </span>
           <div
@@ -320,6 +381,7 @@ export function TaskDetail() {
           statuses={statuses}
           submitLabel="Сохранить"
           compact
+          sprints={sprintOptions}
           onSubmit={(fields) => {
             const goingFinal = !!fields.status_id && statuses.find((s) => s.id === fields.status_id)?.is_final
             updateTask.mutate(
@@ -330,7 +392,8 @@ export function TaskDetail() {
                   // финальный статус останавливает учёт
                   if (goingFinal && isRunning) stopTimer.mutate(undefined, { onError })
                   showSuccess('Сохранено')
-                  navigate('/tasks')
+                  // подзадачу могли перенести в другой спринт — возвращаемся туда, где она теперь
+                  navigate(fields.parent_id ? `/tasks/${fields.parent_id}` : '/tasks')
                 },
               },
             )
@@ -345,6 +408,11 @@ export function TaskDetail() {
       <DuplicateTaskSheet
         open={duplicating}
         task={task}
+        note={
+          subtasks.length > 0
+            ? 'Подзадачи не копируются — чтобы перенести незакрытые, есть «Следующий спринт».'
+            : undefined
+        }
         onCancel={() => setDuplicating(false)}
         onSubmit={(overrides) => {
           setDuplicating(false)
@@ -354,6 +422,33 @@ export function TaskDetail() {
           )
         }}
       />
+
+      {!isSubtask && (
+        <NextSprintSheet
+          open={nextSprint}
+          task={task}
+          subtasks={subtasks}
+          statuses={statuses}
+          onCancel={() => setNextSprint(false)}
+          onSubmit={(values) => {
+            setNextSprint(false)
+            createNextSprint.mutate(
+              { from: task, ...values },
+              {
+                onError,
+                onSuccess: (row) => {
+                  showSuccess(
+                    values.carry.length > 0
+                      ? `Спринт создан, перенесено подзадач: ${values.carry.length}`
+                      : 'Спринт создан',
+                  )
+                  navigate(`/tasks/${row.id}`)
+                },
+              },
+            )
+          }}
+        />
+      )}
 
       <DurationSheet
         open={editingFact}
@@ -369,11 +464,11 @@ export function TaskDetail() {
       <ConfirmDialog
         open={confirmingDelete}
         title="Удалить задачу?"
-        description="Вместе с ней удалится вся история трекинга по ней."
+        description={deleteDescription(subtasks.length)}
         onCancel={() => setConfirmingDelete(false)}
         onConfirm={() => {
           setConfirmingDelete(false)
-          deleteTask.mutate(task.id, { onSuccess: () => navigate('/tasks'), onError })
+          deleteTask.mutate(task.id, { onSuccess: () => navigate(backTo), onError })
         }}
       />
     </div>

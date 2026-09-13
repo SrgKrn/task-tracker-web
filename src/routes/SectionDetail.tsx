@@ -9,6 +9,7 @@ import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
+import { childrenByParent } from '../lib/tree'
 
 export function SectionDetail() {
   const { id } = useParams<{ id: string }>()
@@ -26,7 +27,9 @@ export function SectionDetail() {
   const section = sections.find((s) => s.id === id)
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  const sectionTasks = useMemo(() => tasks.filter((t) => t.section_id === id), [tasks, id])
+  const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
+  // подзадачи показываются в составе своих спринтов, а не отдельными строками
+  const sectionTasks = useMemo(() => tasks.filter((t) => t.section_id === id && !t.parent_id), [tasks, id])
 
   if (!section) return null
 
@@ -50,6 +53,7 @@ export function SectionDetail() {
             activeTimer={activeTimer}
             onStartTimer={() => startTimer.mutate(task.id, { onError })}
             onStopTimer={() => stopTimer.mutate(undefined, { onError })}
+            subtasks={childrenOf.get(task.id)}
           />
         ))}
         {sectionTasks.length === 0 && <EmptyState>В этом разделе пока нет задач.</EmptyState>}

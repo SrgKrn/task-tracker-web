@@ -15,6 +15,7 @@ import { formatClock, sessionHourPct, useTicker } from '../lib/time'
 export function ActiveTimerBar() {
   const { data: activeTimer } = useActiveTimer()
   const { data: task } = useTask(activeTimer?.task_id)
+  const { data: parent } = useTask(task?.parent_id ?? undefined)
   const { data: projects = [] } = useProjects()
   const location = useLocation()
   const stopTimer = useStopTimer()
@@ -47,8 +48,9 @@ export function ActiveTimerBar() {
       </Ring>
 
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-        <span className="block font-mono text-2xs uppercase tracking-[.12em] text-sky-700">
-          Идёт учёт{project ? ` · ${project.name}` : ''}
+        {/* в одну строку: название спринта длиннее проекта и переносом раздувало док вдвое */}
+        <span className="block truncate font-mono text-2xs uppercase tracking-[.12em] text-sky-700">
+          Идёт учёт{parent ? ` · ${parent.name}` : project ? ` · ${project.name}` : ''}
         </span>
         <span className="block truncate text-sm font-medium text-slate-100">{task.name}</span>
       </Link>
