@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
 import { Tag } from './ui'
-import { Check, ChevronDown } from './Icon'
+import { Check, ChevronDown, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
@@ -64,10 +64,9 @@ export function TaskListItem({
   useTicker(isRunning)
 
   const hasSubtasks = !!subtasks && subtasks.length > 0
-  // состав, который можно раскрыть здесь; null — строка обычной задачи
-  const composition = expandable && subtasks && subtasks.length > 0 ? subtasks : null
   const [storedOpen, setOpen] = useExpanded(task.id)
-  const open = !!composition && (storedOpen || forceExpanded)
+  // пустой спринт раскрыли нажатием — сразу даём поле ввода: раскрывать там больше нечего
+  const [startAdding, setStartAdding] = useState(false)
 
   // запустили учёт по подзадаче — спринт раскрывается сам, чтобы было видно, что тикает.
   // Один раз на подзадачу: свёрнутый после этого спринт так и остаётся свёрнутым
@@ -87,6 +86,14 @@ export function TaskListItem({
   const axisLocked = useRef<'x' | 'y' | null>(null)
 
   const done = !!status?.is_final
+  /*
+   * Полоса состава у спринта в списке. Раньше она появлялась только при уже существующих
+   * подзадачах — и первую подзадачу из списка добавить было нечем: у всех спринтов их ноль,
+   * и найти вход можно было только внутри карточки. Теперь полоса есть у каждого
+   * незакрытого спринта; у закрытого без подзадач раскладывать уже нечего.
+   */
+  const showComposition = expandable && !task.parent_id && (hasSubtasks || !done)
+  const open = showComposition && (storedOpen || forceExpanded)
   // факт активной задачи растёт на лету — считаем от started_at, а не накоплением тиков
   const live = isRunning && activeTimer ? elapsedHours(activeTimer.started_at) : 0
   const fact = rollupFact(task, subtasks) + live
@@ -260,10 +267,10 @@ export function TaskListItem({
             ) : null}
           </div>
 
-          {composition && (
+          {showComposition && (
             <CompositionToggle
               taskId={task.id}
-              subtasks={composition}
+              subtasks={subtasks ?? []}
               runningTaskId={runningTaskId}
               open={open}
               onToggle={() => {
@@ -272,6 +279,7 @@ export function TaskListItem({
                   return
                 }
                 tap()
+                setStartAdding(!open && !hasSubtasks)
                 setOpen(!open)
               }}
             />
@@ -279,11 +287,12 @@ export function TaskListItem({
         </div>
       </div>
 
-      {open && composition && (
+      {open && (
         <SubtaskList
           id={`subtasks-${task.id}`}
           parent={task}
-          subtasks={composition}
+          subtasks={subtasks ?? []}
+          startAdding={startAdding}
           hideDone={hideDoneSubtasks}
           nested
         />
@@ -314,6 +323,29 @@ function CompositionToggle({
   const finalIds = new Set(statuses.filter((s) => s.is_final).map((s) => s.id))
   const isDone = (t: Task) => !!t.status_id && finalIds.has(t.status_id)
   const doneCount = subtasks.filter(isDone).length
+
+  if (subtasks.length === 0) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`subtasks-${taskId}`}
+        className={`-mb-[11px] mt-2 ml-11 flex h-10 items-center gap-2 text-left ${
+          open ? 'text-sky-600' : 'text-slate-500'
+        }`}
+        style={{ borderTop: '1px solid var(--s-hairline)' }}
+      >
+        <Plus size={14} />
+        <span className="font-mono text-2xs uppercase tracking-[.12em]">Подзадача</span>
+        {open && (
+          <span className="ml-auto flex" style={{ transform: 'rotate(180deg)' }}>
+            <ChevronDown size={14} />
+          </span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <button

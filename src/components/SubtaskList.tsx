@@ -19,13 +19,22 @@ interface SubtaskListProps {
   /** в списке задач состав висит под строкой спринта с отступом; в карточке — во всю ширину */
   nested?: boolean
   id?: string
+  /** открыть сразу с полем ввода — когда пустой спринт раскрыли, чтобы добавить первую */
+  startAdding?: boolean
 }
 
 /**
  * Состав спринта: запуск учёта, закрытие и добавление подзадач прямо на месте —
  * без захода в карточку каждой. Правка часов, сроков и комментарии остаются в карточке.
  */
-export function SubtaskList({ parent, subtasks, hideDone = false, nested = false, id }: SubtaskListProps) {
+export function SubtaskList({
+  parent,
+  subtasks,
+  hideDone = false,
+  nested = false,
+  id,
+  startAdding = false,
+}: SubtaskListProps) {
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
   const startTimer = useStartTimer()
@@ -94,7 +103,7 @@ export function SubtaskList({ parent, subtasks, hideDone = false, nested = false
         <span className="px-1 font-mono text-2xs text-slate-600">скрыто готовых: {hiddenCount}</span>
       )}
 
-      <AddSubtask parent={parent} />
+      <AddSubtask parent={parent} startOpen={startAdding} />
     </div>
   )
 }
@@ -208,10 +217,10 @@ function SubtaskRow({
 }
 
 /** Название — и всё: проект, раздел и спринт подзадача берёт у головной. */
-function AddSubtask({ parent }: { parent: Task }) {
+function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean }) {
   const createTask = useCreateTask()
   const { showError } = useToast()
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(startOpen)
   const [name, setName] = useState('')
 
   function submit() {
