@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
 import { ArrowRight } from '../components/Icon'
 import { Overline, Tag, fieldClass } from '../components/ui'
-import { buildReportData } from '../lib/report'
+import type { ReportOptions } from '../lib/report'
+import { loadReport } from '../lib/queries/report'
 import { describeError, useToast } from '../lib/Toast'
 import { useAuth } from '../lib/AuthContext'
 import { useProjects } from '../lib/queries/projects'
 import { useSections } from '../lib/queries/sections'
 import { useSetStatusFinal, useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
-import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
@@ -192,8 +192,25 @@ function loadExportRange(): { from: string; to: string } {
   return { from: firstOfMonthStr(), to: todayStr() }
 }
 
+const EXPORT_OPTIONS_KEY = 'semternity.exportOptions'
+
+/** галочки выгрузки по умолчанию выключены: проверка и комментарии — для себя, не для отчёта наружу */
+function loadExportOptions(): ReportOptions {
+  try {
+    const raw = localStorage.getItem(EXPORT_OPTIONS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<ReportOptions>
+      return { includeChecks: parsed.includeChecks === true, includeComments: parsed.includeComments === true }
+    }
+  } catch {
+    // приватный режим или испорченное значение — берём значения по умолчанию
+  }
+  return { includeChecks: false, includeComments: false }
+}
+
 function ExportSection() {
   const [range, setRange] = useState(loadExportRange)
+  const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
   const [generating, setGenerating] = useState<'excel' | 'pdf' | null>(null)
   const { showError } = useToast()
@@ -226,12 +243,29 @@ function ExportSection() {
   const { data: projects = [] } = useProjects()
   const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
-  const { data: entries = [] } = useTimeEntriesInRange(from, to)
+
+  function setOption(key: keyof ReportOptions, value: boolean) {
+    setOptions((prev) => {
+      const next = { ...prev, [key]: value }
+      try {
+        localStorage.setItem(EXPORT_OPTIONS_KEY, JSON.stringify(next))
+      } catch {
+        // не смогли запомнить — галочки просто сбросятся при следующем открытии
+      }
+      return next
+    })
+  }
 
   async function handleExport(format: 'excel' | 'pdf') {
+    if (from > to) {
+      showError('Начало периода позже конца — поменяйте даты местами')
+      return
+    }
     setGenerating(format)
     try {
-      const data = buildReportData(tasks, projects, sections, statuses, entries, from, to)
+      // записи, комментарии и закрытия грузятся в момент выгрузки: отчёту нужен ещё
+      // и прошлый период для сравнения, держать всё это на экране «Ещё» незачем
+      const data = await loadReport({ from, to, tasks, projects, sections, statuses, options })
       if (format === 'excel') {
         const { exportExcel } = await import('../lib/exportExcel')
         await exportExcel(data)
@@ -254,7 +288,8 @@ function ExportSection() {
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-100">Экспорт отчёта</span>
         <span className="text-2xs leading-[1.5] text-slate-500">
-          Задачи и время за период — в Excel или PDF.
+          Итоги и ритм, направления и проекты, спринты против плана, журнал по дням. PDF — чтобы
+          читать и отправлять, Excel — чтобы разбирать самому.
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -273,6 +308,36 @@ function ExportSection() {
           value={to}
           onChange={(v) => setTo(v ?? todayStr())}
         />
+      </div>
+      <div className="-my-1 flex flex-col">
+        {/* вся строка — цель нажатия, как у «Ежедневной» в карточке задачи */}
+        {(
+          [
+            {
+              key: 'includeComments',
+              title: 'Комментарии в журнале',
+              hint: 'пишутся для себя — включайте, если отчёт не уходит дальше',
+            },
+            {
+              key: 'includeChecks',
+              title: 'Проверка учёта',
+              hint: 'ночные таймеры, дни в минусе, будни без записей — только в PDF',
+            },
+          ] as const
+        ).map((o) => (
+          <label key={o.key} className="flex min-h-11 items-center gap-2.5 py-1">
+            <input
+              type="checkbox"
+              checked={options[o.key]}
+              onChange={(e) => setOption(o.key, e.target.checked)}
+              className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+            />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-sm text-slate-300">{o.title}</span>
+              <span className="text-2xs leading-[1.4] text-slate-500">{o.hint}</span>
+            </span>
+          </label>
+        ))}
       </div>
       <div className="flex gap-[9px]">
         {(['excel', 'pdf'] as const).map((format) => (
