@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { NotificationsCard, TelegramCard, ThemeCard } from '../components/AppPreferences'
 import { DatePicker } from '../components/DatePicker'
 import { ArrowRight } from '../components/Icon'
 import { Overline, Tag, fieldClass } from '../components/ui'
@@ -391,6 +392,9 @@ export function Settings() {
       </div>
 
       <div className="mt-3.5 flex flex-col gap-[9px]">
+        <ThemeCard />
+        <NotificationsCard />
+        <TelegramCard />
         <BudgetForm />
         <ExportSection />
       </div>
@@ -402,7 +406,7 @@ export function Settings() {
         >
           <span
             className="h-[34px] w-[34px] shrink-0 rounded-full"
-            style={{ background: '#1c1c22', border: '1px solid #2a2a30' }}
+            style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
           />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-slate-100">{session?.user.email}</span>

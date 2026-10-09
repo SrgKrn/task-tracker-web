@@ -95,7 +95,7 @@ export function PicklistAdmin<T extends Item>({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           placeholder={placeholder}
-          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-[#83838c] focus:border-sky-600"
+          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)] focus:border-sky-600"
         />
         <button
           onClick={handleCreate}

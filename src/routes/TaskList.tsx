@@ -14,7 +14,7 @@ import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
-import type { Task } from '../lib/types'
+import type { ActiveTimer, Task } from '../lib/types'
 
 type GroupBy = 'section' | 'project' | 'none'
 
@@ -39,7 +39,6 @@ export function TaskList() {
   const deleteTask = useDeleteTask()
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
-  useTicker(!!activeTimer)
 
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
@@ -64,12 +63,6 @@ export function TaskList() {
   const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
   const heads = useMemo(() => tasks.filter((t) => !t.parent_id), [tasks])
 
-  const liveHours = activeTimer ? elapsedHours(activeTimer.started_at) : 0
-  // факт спринта — вместе с подзадачами и с идущей сейчас сессией, где бы она ни шла
-  const factOf = (t: Task) => {
-    const children = childrenOf.get(t.id)
-    return rollupFact(t, children) + (runningWithin(t, children, activeTimer?.task_id) ? liveHours : 0)
-  }
 
   const query = search.trim().toLowerCase()
   /** спринты, у которых запрос нашёлся в подзадаче: их состав показываем раскрытым */
@@ -125,9 +118,7 @@ export function TaskList() {
     const withSum = (title: string, items: Task[]) => ({
       id: title,
       title: `${title} · ${items.length}`,
-      sum: `${formatHoursRu(items.reduce((a, t) => a + factOf(t), 0))} / ${formatHoursRu(
-        items.reduce((a, t) => a + t.planned_hours, 0),
-      )} ч`,
+      plan: items.reduce((a, t) => a + t.planned_hours, 0),
       items,
     })
 
@@ -142,9 +133,7 @@ export function TaskList() {
         return { ...withSum(bucket.name, items), id: bucket.id }
       })
       .filter((group) => group.items.length > 0)
-    // factOf зависит от тикающего таймера — пересчёт обеспечивает useTicker выше
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy, sorted, sections, projects, liveHours])
+  }, [groupBy, sorted, sections, projects])
 
   /** сколько задач за каждым чипом фильтра — видно ещё до его нажатия */
   const countsBySection = useMemo(() => {
@@ -160,16 +149,16 @@ export function TaskList() {
   }, [heads])
 
   const activeCount = heads.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
-  const totalFact = formatHoursRu(heads.reduce((a, t) => a + factOf(t), 0))
   // план считаем только по головным: план подзадач — это раскладка плана спринта, а не добавка к нему
-  const totalPlan = formatHoursRu(heads.reduce((a, t) => a + t.planned_hours, 0))
+  const totalPlan = heads.reduce((a, t) => a + t.planned_hours, 0)
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
       <div className="safe-top flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
         <div className="flex flex-col gap-0.5">
           <Overline className="tracking-[.14em]">
-            {plural(activeCount, ACTIVE_TASKS)} · {totalFact} / {totalPlan} ч
+            {plural(activeCount, ACTIVE_TASKS)} ·{' '}
+            <FactSum tasks={heads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
           </Overline>
           <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
         </div>
@@ -181,7 +170,7 @@ export function TaskList() {
           style={{
             background: 'var(--s-surface)',
             border: `1px solid ${sortByDue ? 'var(--s-accent)' : 'var(--s-border)'}`,
-            color: sortByDue ? 'var(--s-accent)' : '#8f8f98',
+            color: sortByDue ? 'var(--s-accent-text)' : 'var(--s-muted-text)',
           }}
         >
           <SortArrows size={16} className="mx-auto" />
@@ -193,12 +182,12 @@ export function TaskList() {
           className="flex h-[38px] flex-1 items-center gap-2 rounded-[11px] px-3"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         >
-          <span className="h-3 w-3 shrink-0 rounded-full" style={{ border: '1.5px solid #83838c' }} />
+          <span className="h-3 w-3 shrink-0 rounded-full" style={{ border: '1.5px solid var(--s-placeholder)' }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию"
-            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[#83838c]"
+            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
           />
         </div>
         <button
@@ -208,7 +197,7 @@ export function TaskList() {
           style={{
             background: filtersActive ? 'var(--s-accent)' : 'var(--s-surface)',
             border: `1px solid ${filtersActive ? 'var(--s-accent)' : 'var(--s-border)'}`,
-            color: filtersActive ? 'var(--s-on-accent)' : '#8f8f98',
+            color: filtersActive ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
           }}
         >
           Период
@@ -339,7 +328,9 @@ export function TaskList() {
               <div key={group.id} className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
                   <Overline>{group.title}</Overline>
-                  <span className="tabular font-mono text-2xs text-slate-600">{group.sum}</span>
+                  <span className="tabular font-mono text-2xs text-slate-600">
+                    <FactSum tasks={group.items} childrenOf={childrenOf} activeTimer={activeTimer} plan={group.plan} />
+                  </span>
                 </div>
                 {group.items.map((task) => (
                   <TaskListItem
@@ -394,5 +385,34 @@ export function TaskList() {
         }}
       />
     </div>
+  )
+}
+
+/**
+ * «факт / план» с идущей сессией. Тикает сама по себе: раньше раз в секунду
+ * перерисовывался весь список задач, и на телефоне при идущем таймере он подтормаживал —
+ * особенно заметно при вводе подзадачи.
+ */
+function FactSum({
+  tasks,
+  childrenOf,
+  activeTimer,
+  plan,
+}: {
+  tasks: Task[]
+  childrenOf: Map<string, Task[]>
+  activeTimer: ActiveTimer | null | undefined
+  plan: number
+}) {
+  useTicker(!!activeTimer)
+  const live = activeTimer ? elapsedHours(activeTimer.started_at) : 0
+  const fact = tasks.reduce((sum, t) => {
+    const children = childrenOf.get(t.id)
+    return sum + rollupFact(t, children) + (runningWithin(t, children, activeTimer?.task_id) ? live : 0)
+  }, 0)
+  return (
+    <>
+      {formatHoursRu(fact)} / {formatHoursRu(plan)} ч
+    </>
   )
 }

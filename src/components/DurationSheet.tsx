@@ -30,7 +30,7 @@ export function DurationSheet({ open, title, hours, onCancel, onSubmit }: Durati
   const minutesNum = Math.min(59, Math.max(0, Math.floor(Number(m) || 0)))
   const valid = h.trim() !== '' && m.trim() !== '' && Number.isFinite(Number(h)) && Number.isFinite(Number(m))
 
-  const fieldStyle = { background: '#0f0f13', border: '1px solid var(--s-border-strong)' }
+  const fieldStyle = { background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }
 
   return (
     <Sheet open={open} onClose={onCancel} title={title}>

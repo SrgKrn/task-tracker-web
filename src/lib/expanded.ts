@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 
 /**
  * Какие спринты раскрыты в списке. Живёт в localStorage: ушли в карточку, вернулись —
@@ -24,7 +25,7 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener)
 }
 
-function setOpen(id: string, open: boolean) {
+export function setOpen(id: string, open: boolean) {
   if (!!state[id] === open) return
   const next = { ...state }
   if (open) next[id] = true
@@ -56,4 +57,45 @@ export function autoExpandFor(headId: string, runningChildId: string | null | un
   if (!runningChildId || autoOpenedFor.get(headId) === runningChildId) return
   autoOpenedFor.set(headId, runningChildId)
   setOpen(headId, true)
+}
+
+/*
+ * Поле «новая подзадача» открыто ровно в одном месте списка. Раньше у каждого спринта было
+ * своё: раскрытие пустого спринта запоминалось навсегда, и пустые поля оставались висеть
+ * под спринтами, которые когда-то случайно задели.
+ */
+let addingFor: string | null = null
+const addingListeners = new Set<() => void>()
+
+function subscribeAdding(listener: () => void) {
+  addingListeners.add(listener)
+  return () => addingListeners.delete(listener)
+}
+
+export function useAddingFor(): string | null {
+  return useSyncExternalStore(subscribeAdding, () => addingFor)
+}
+
+export function stopAdding(parentId?: string) {
+  if (parentId && addingFor !== parentId) return
+  if (addingFor === null) return
+  addingFor = null
+  addingListeners.forEach((l) => l())
+}
+
+export function addInputId(parentId: string): string {
+  return `add-subtask-${parentId}`
+}
+
+/**
+ * Открыть поле и сразу поставить в него курсор. Делается синхронно внутри нажатия:
+ * iPhone показывает клавиатуру, только если фокус пришёл из самого жеста, а
+ * autoFocus после перерисовки срабатывал без клавиатуры.
+ */
+export function startAdding(parentId: string) {
+  flushSync(() => {
+    addingFor = parentId
+    addingListeners.forEach((l) => l())
+  })
+  document.getElementById(addInputId(parentId))?.focus()
 }

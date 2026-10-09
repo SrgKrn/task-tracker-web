@@ -72,7 +72,7 @@ export function useStartTimer() {
 
       const { error: upsertError } = await supabase
         .from('active_timers')
-        .upsert({ user_id: user.id, task_id: taskId, started_at: new Date().toISOString() })
+        .upsert({ user_id: user.id, task_id: taskId, started_at: new Date().toISOString(), reminded_hours: 0 })
       if (upsertError) throw upsertError
     },
     onSuccess: () => {
@@ -126,10 +126,59 @@ export function useAdjustFactHours() {
       })
       if (error) throw error
     },
-    onSuccess: (_data, variables) => {
+    // кольцо «Сегодня» и сводка считаются по записям за период — их тоже надо перечитать
+    onSuccess: (_data, variables) => invalidateTime(qc, variables.taskId),
+  })
+}
+
+/** всё, что зависит от записей времени: карточка, списки, кольцо «Сегодня», сводка */
+function invalidateTime(qc: ReturnType<typeof useQueryClient>, taskId?: string) {
+  qc.invalidateQueries({ queryKey: ['tasks'] })
+  if (taskId) qc.invalidateQueries({ queryKey: ['tasks', taskId] })
+  qc.invalidateQueries({ queryKey: ['time_entries'] })
+  qc.invalidateQueries({ queryKey: ['time_entries_range'] })
+}
+
+/**
+ * Укорачивает уже записанную сессию таймера — конец сдвигается раньше. Так исправляют
+ * забытый таймер: минуты уходят из того дня, когда сессия шла, а не из дня правки.
+ * `minutes` отрицательное — вернуть сессии длину (отмена).
+ */
+export function useTrimSession() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ entry, minutes }: { entry: TimeEntry; minutes: number }) => {
+      const nextDuration = entry.duration_minutes - minutes
+      if (nextDuration < 0) throw new Error('Сессия короче, чем нужно отнять')
+      const endedAt = entry.ended_at
+        ? new Date(new Date(entry.ended_at).getTime() - minutes * 60_000).toISOString()
+        : null
+      const { error } = await supabase
+        .from('time_entries')
+        .update({ duration_minutes: nextDuration, ended_at: endedAt })
+        .eq('id', entry.id)
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => invalidateTime(qc, v.entry.task_id),
+  })
+}
+
+/** Отнимает минуты у идущей сессии: начало таймера сдвигается позже. */
+export function useShiftActiveTimer() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ timer, minutes }: { timer: ActiveTimer; minutes: number }) => {
+      const startedAt = new Date(new Date(timer.started_at).getTime() + minutes * 60_000)
+      if (startedAt.getTime() > Date.now()) throw new Error('Идущая сессия короче, чем нужно отнять')
+      const { error } = await supabase
+        .from('active_timers')
+        .update({ started_at: startedAt.toISOString() })
+        .eq('user_id', timer.user_id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active_timer'] })
       qc.invalidateQueries({ queryKey: ['tasks'] })
-      qc.invalidateQueries({ queryKey: ['tasks', variables.taskId] })
-      qc.invalidateQueries({ queryKey: ['time_entries', variables.taskId] })
     },
   })
 }

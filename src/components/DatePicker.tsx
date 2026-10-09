@@ -101,7 +101,7 @@ export function DatePicker({
         style={{
           background: 'var(--s-surface)',
           border: `1px solid ${open ? 'var(--s-accent)' : 'var(--s-border)'}`,
-          color: value ? 'var(--color-slate-100)' : '#83838c',
+          color: value ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
         }}
       >
         <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
@@ -114,7 +114,7 @@ export function DatePicker({
           style={{
             background: 'var(--s-surface-2)',
             border: '1px solid var(--s-border-strong)',
-            boxShadow: '0 18px 40px -12px rgba(0,0,0,.7)',
+            boxShadow: 'var(--s-pop-shadow)',
           }}
         >
           <div className="mb-2.5 flex items-center justify-between">

@@ -128,7 +128,7 @@ export function Login() {
           ? 'Учёт часов и задач — там же, где вы его оставили.'
           : 'Данные привязаны к почте и синхронизируются между устройствами.'
 
-  const fieldStyle = { background: '#0f0f13', border: '1px solid var(--s-border-strong)' }
+  const fieldStyle = { background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }
 
   return (
     <div className="safe-top safe-bottom flex min-h-full flex-col items-center justify-center px-5 py-10">
@@ -170,7 +170,7 @@ export function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
+                className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
                 style={fieldStyle}
               />
             </div>
@@ -199,7 +199,7 @@ export function Login() {
                   placeholder={screen === 'signin' ? 'Ваш пароль' : `Минимум ${MIN_PASSWORD} символов`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-[46px] w-full rounded-[14px] pr-12 pl-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
+                  className="h-[46px] w-full rounded-[14px] pr-12 pl-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
                   style={fieldStyle}
                 />
                 <button

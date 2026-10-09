@@ -21,7 +21,7 @@
   /* оба тона подняты по контрасту: было 4.46:1 и 2.93:1 на фоне #0d0d0f —
      мета задач и подписи дней недели не дотягивали до нормы 4.5:1 */
   --color-slate-500: #8a8a92; /* muted-2: метки, мета */
-  --color-slate-600: #7a7a84; /* faint: сноски, отключённое */
+  --color-slate-600: #82828c; /* faint: сноски, отключённое; #7a7a84 давал 4.28:1 на карточке */
   --color-slate-700: #24242b; /* border */
   --color-slate-800: #15151a; /* surface */
   --color-slate-900: #0d0d0f; /* bg */
@@ -94,11 +94,121 @@
   /* было #6e6e77 — 3.79:1 на фоне приложения, ниже нормы для текста */
   --s-tab-idle: #83838c;
 
+  /* раньше эти цвета были прописаны прямо в компонентах — светлой теме их не перекрасить */
+  --s-text: #ededed;
+  --s-accent-text: #e8a33d;
+  --s-input: #0f0f13;
+  --s-input-2: #17171c;
+  --s-placeholder: #83838c;
+  --s-muted-text: #8f8f98;
+  --s-text-soft: #b6b6be;
+  --s-faint-text: #8a8a92;
+  --s-disabled-bg: #232329;
+  --s-disabled-fg: #6e6e77;
+  --s-backdrop: rgba(5, 5, 7, 0.62);
+  --s-swipe: #1e1e24;
+  --s-dot: #3a3a42;
+  --s-tag: rgba(255, 255, 255, 0.06);
+  --s-avatar: #1c1c22;
+  --s-avatar-border: #2a2a30;
+  --s-bar-past: #3a3a44;
+  --s-bar-future: #1c1c22;
+  --s-bar-empty: #232329;
+  --s-danger-track: #33231e;
+  --s-danger-center: #161112;
+  --s-toast-ok-bg: rgba(17, 32, 26, 0.72);
+  --s-toast-err-bg: rgba(40, 20, 17, 0.72);
+  --s-pop-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+
   /* единые токены движения — раньше длительность выбиралась по месту */
   --dur-fast: 120ms; /* отклик на касание и наведение */
   --dur-base: 180ms; /* сдвиги и раскрытия */
   --dur-slow: 300ms; /* заливка колец */
   --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/*
+ * Светлая тема — та же палитра, что у PDF-отчёта: белые листы на светлом тёплом сером,
+ * графитовый текст, латунь. Латунь здесь двух оттенков: заливка (кнопки, кольца) светлее,
+ * текст темнее — светлая латунь на белом не дотягивает до читаемого контраста.
+ * Шкалы Tailwind перемаплены так же, как в тёмной теме: text-slate-100 — основной текст,
+ * bg-slate-800 — поверхность, и компонентам ничего не нужно знать о теме.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-slate-50: #0f0f12;
+  --color-slate-100: #17171b;
+  --color-slate-300: #3a3a42;
+  --color-slate-400: #55555e;
+  --color-slate-500: #62626a;
+  --color-slate-600: #6b6b73;
+  --color-slate-700: #e6e4df;
+  --color-slate-800: #ffffff;
+  --color-slate-900: #f6f5f2;
+
+  --color-sky-400: #a8711f;
+  --color-sky-500: #9a6618;
+  --color-sky-600: #94631a;
+  --color-sky-700: #7d5414;
+
+  --color-red-400: #a8432c;
+  --color-red-500: #96392a;
+  --color-red-800: #f1d2c8;
+  --color-red-950: #fbeee9;
+
+  --color-emerald-400: #366b43;
+  --color-emerald-600: #4d8259;
+  --color-emerald-700: #3d6b47;
+
+  --s-bg: #f6f5f2;
+  --s-surface: #ffffff;
+  --s-surface-active: #fffaf0;
+  --s-surface-2: #fbfaf8;
+  --s-chrome: #ffffff;
+  --s-border: #e6e4df;
+  --s-border-strong: #dcd9d2;
+  --s-border-strong-2: #d2cfc7;
+  --s-hairline: #ebe9e4;
+  --s-hairline-2: #ebe9e4;
+  --s-hairline-3: #efede8;
+  --s-ring-track: #ebe8e2;
+  --s-ring-track-lg: #ece9e3;
+  --s-accent: #c98a2e;
+  --s-accent-muted: rgba(201, 138, 46, 0.55);
+  --s-accent-ghost: rgba(201, 138, 46, 0.12);
+  --s-accent-dim: #8a5d17;
+  --s-timer-bg: #fdf5e6;
+  --s-timer-track: #f0dfbf;
+  --s-success: #4d8259;
+  --s-danger: #c1583f;
+  --s-on-accent: #17171b;
+  --s-tab-idle: #6b6b73;
+
+  --s-text: #17171b;
+  --s-accent-text: #94631a;
+  --s-input: #ffffff;
+  --s-input-2: #ffffff;
+  --s-placeholder: #6e6e76;
+  --s-muted-text: #62626a;
+  --s-text-soft: #4c4c55;
+  --s-faint-text: #6b6b73;
+  --s-disabled-bg: #ece9e3;
+  --s-disabled-fg: #9a9aa2;
+  --s-backdrop: rgba(23, 23, 27, 0.28);
+  --s-swipe: #eeece7;
+  --s-dot: #cfccc4;
+  --s-tag: rgba(23, 23, 27, 0.06);
+  --s-avatar: #ece9e3;
+  --s-avatar-border: #dcd9d2;
+  --s-bar-past: #b9b5ad;
+  --s-bar-future: #efede8;
+  --s-bar-empty: #e6e3dc;
+  --s-danger-track: #f3d9d1;
+  --s-danger-center: #fdf6f4;
+  --s-toast-ok-bg: rgba(233, 243, 236, 0.94);
+  --s-toast-err-bg: rgba(250, 232, 226, 0.95);
+  --s-pop-shadow: 0 18px 40px -16px rgba(23, 23, 27, 0.22);
 }
 
 html,
@@ -109,7 +219,7 @@ body,
 
 body {
   background-color: var(--s-bg);
-  color: #ededed;
+  color: var(--s-text);
   font-family: "Instrument Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }

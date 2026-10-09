@@ -17,6 +17,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d0d0f" />
+    <!-- тема ставится до первой отрисовки: иначе светлая тема при запуске мигала бы тёмной -->
+    <script>
+      ;(function () {
+        try {
+          var c = localStorage.getItem('semternity.theme') || 'dark'
+          var t = c === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : c
+          document.documentElement.dataset.theme = t
+          if (t === 'light') {
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f6f5f2')
+            document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content', 'default')
+          }
+        } catch (e) {}
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

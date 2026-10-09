@@ -5,7 +5,7 @@ import { SubtaskList } from './SubtaskList'
 import { Tag } from './ui'
 import { Check, ChevronDown, Plus } from './Icon'
 import { tap } from '../lib/haptics'
-import { autoExpandFor, useExpanded } from '../lib/expanded'
+import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
 import type { ActiveTimer, Project, Section, Status, Task } from '../lib/types'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
@@ -65,8 +65,8 @@ export function TaskListItem({
 
   const hasSubtasks = !!subtasks && subtasks.length > 0
   const [storedOpen, setOpen] = useExpanded(task.id)
-  // пустой спринт раскрыли нажатием — сразу даём поле ввода: раскрывать там больше нечего
-  const [startAdding, setStartAdding] = useState(false)
+  // поле новой подзадачи открыто именно здесь
+  const addingHere = useAddingFor() === task.id
 
   // запустили учёт по подзадаче — спринт раскрывается сам, чтобы было видно, что тикает.
   // Один раз на подзадачу: свёрнутый после этого спринт так и остаётся свёрнутым
@@ -93,7 +93,9 @@ export function TaskListItem({
    * незакрытого спринта; у закрытого без подзадач раскладывать уже нечего.
    */
   const showComposition = expandable && !task.parent_id && (hasSubtasks || !done)
-  const open = showComposition && (storedOpen || forceExpanded)
+  // пустой спринт раскрыт, только пока в него вводят первую подзадачу: запомненное
+  // раскрытие пустых спринтов и давало «случайные» поля посреди списка
+  const open = showComposition && ((hasSubtasks && (storedOpen || forceExpanded)) || addingHere)
   // факт активной задачи растёт на лету — считаем от started_at, а не накоплением тиков
   const live = isRunning && activeTimer ? elapsedHours(activeTimer.started_at) : 0
   const fact = rollupFact(task, subtasks) + live
@@ -163,7 +165,7 @@ export function TaskListItem({
                   onDuplicate()
                 }}
                 className="flex-1 text-xs font-medium text-slate-300"
-                style={{ background: '#1e1e24' }}
+                style={{ background: 'var(--s-swipe)' }}
               >
                 Дублировать
               </button>
@@ -176,7 +178,7 @@ export function TaskListItem({
                   onDelete()
                 }}
                 className="flex-1 text-xs font-medium"
-                style={{ background: 'rgba(217,114,86,.18)', color: 'var(--s-danger)' }}
+                style={{ background: 'rgba(217,114,86,.18)', color: 'var(--color-red-400)' }}
               >
                 Удалить
               </button>
@@ -235,7 +237,7 @@ export function TaskListItem({
               <p
                 title={task.name}
                 className={`text-sm leading-[1.3] ${
-                  done ? 'font-normal text-[#8a8a92] line-through' : 'font-medium text-slate-100'
+                  done ? 'font-normal text-[var(--s-faint-text)] line-through' : 'font-medium text-slate-100'
                 }`}
                 style={{
                   display: '-webkit-box',
@@ -279,7 +281,13 @@ export function TaskListItem({
                   return
                 }
                 tap()
-                setStartAdding(!open && !hasSubtasks)
+                if (!hasSubtasks) {
+                  // у пустого спринта полоса — это сразу «добавить подзадачу»
+                  if (addingHere) stopAdding(task.id)
+                  else startAdding(task.id)
+                  return
+                }
+                if (open) stopAdding(task.id)
                 setOpen(!open)
               }}
             />
@@ -292,7 +300,6 @@ export function TaskListItem({
           id={`subtasks-${task.id}`}
           parent={task}
           subtasks={subtasks ?? []}
-          startAdding={startAdding}
           hideDone={hideDoneSubtasks}
           nested
         />

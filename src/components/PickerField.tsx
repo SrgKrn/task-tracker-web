@@ -73,7 +73,7 @@ export function PickerField({
         style={{
           background: 'var(--s-surface)',
           border: '1px solid var(--s-border)',
-          color: selected ? 'var(--color-slate-100)' : '#83838c',
+          color: selected ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
         }}
       >
         <span className="truncate">{selected?.name ?? noneLabel ?? placeholder}</span>
@@ -83,7 +83,7 @@ export function PickerField({
       <Sheet open={open} onClose={close} title={label}>
         <div
           className="flex h-11 items-center gap-2 rounded-xl px-3"
-          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         >
           <Search size={15} className="text-slate-600" />
           <input
@@ -91,7 +91,7 @@ export function PickerField({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"
-            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[#83838c]"
+            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
           />
         </div>
 
@@ -143,8 +143,8 @@ export function PickerField({
                 }
               }}
               placeholder={placeholder}
-              className="h-11 min-w-0 flex-1 rounded-xl px-3 text-sm text-slate-100 placeholder:text-[#83838c]"
-              style={{ background: '#0f0f13', border: '1px solid var(--s-accent)' }}
+              className="h-11 min-w-0 flex-1 rounded-xl px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+              style={{ background: 'var(--s-input)', border: '1px solid var(--s-accent)' }}
             />
             <button
               type="button"

@@ -13,6 +13,8 @@ export interface Project {
   id: string
   user_id: string
   name: string
+  /** описание проекта в его карточке: клиент, договорённости, ссылки */
+  description: string
   sort_order: number
   /** в архиве — не предлагается при создании задач, но история по нему сохраняется */
   archived: boolean
@@ -101,4 +103,18 @@ export interface UserSettings {
   planned_hours_per_day: number | null
   planned_hours_per_month: number | null
   updated_at: string
+}
+
+/** Файл задачи или проекта; сам файл — в хранилище attachments по пути path. */
+export interface Attachment {
+  id: string
+  user_id: string
+  project_id: string
+  /** null — файл проекта целиком, его база знаний */
+  task_id: string | null
+  name: string
+  path: string
+  size: number
+  mime: string
+  created_at: string
 }

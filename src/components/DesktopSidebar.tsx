@@ -88,7 +88,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
               to={link.to}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
                 active
-                  ? 'bg-sky-600 font-medium text-[var(--s-on-accent)]'
+                  ? 'bg-[var(--s-accent)] font-medium text-[var(--s-on-accent)]'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
               }`}
             >

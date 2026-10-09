@@ -99,8 +99,8 @@ export function NextSprintSheet({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Название спринта"
-          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
-          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
       </div>
 

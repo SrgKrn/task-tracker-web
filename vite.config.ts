@@ -16,6 +16,8 @@ export default defineConfig({
         // font) that are already code-split via dynamic import() — exclude them from the
         // mandatory install precache so most users never download this, only whoever exports.
         globIgnores: ['**/exportExcel-*.js', '**/exportPdf-*.js', '**/html2canvas-*.js', '**/purify.es-*.js', '**/index.es-*.js'],
+        // пуш-уведомления и нажатие на них — свой обработчик поверх сгенерированного воркера
+        importScripts: ['/push-handler.js'],
       },
       manifest: {
         name: 'Semternity',

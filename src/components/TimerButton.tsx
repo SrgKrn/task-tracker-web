@@ -24,7 +24,7 @@ export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButto
       style={{
         background: isRunning ? 'var(--s-accent)' : 'transparent',
         border: '1px solid var(--s-accent)',
-        color: isRunning ? 'var(--s-on-accent)' : 'var(--s-accent)',
+        color: isRunning ? 'var(--s-on-accent)' : 'var(--s-accent-text)',
       }}
     >
       {isRunning ? (

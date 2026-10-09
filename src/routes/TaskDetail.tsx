@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { AttachmentsBlock } from '../components/AttachmentsBlock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { DurationSheet } from '../components/DurationSheet'
 import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
+import { SubtractSheet, type SubtractSource } from '../components/SubtractSheet'
 import { NextSprintSheet } from '../components/NextSprintSheet'
 import { SprintComposition } from '../components/SprintComposition'
 import { ArrowLeft } from '../components/Icon'
@@ -25,7 +27,15 @@ import {
   useTasks,
   useUpdateTask,
 } from '../lib/queries/tasks'
-import { useActiveTimer, useAdjustFactHours, useStartTimer, useStopTimer } from '../lib/queries/timer'
+import {
+  useActiveTimer,
+  useAdjustFactHours,
+  useShiftActiveTimer,
+  useStartTimer,
+  useStopTimer,
+  useTimeEntries,
+  useTrimSession,
+} from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursMinutes, formatHoursRu, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 
@@ -49,6 +59,9 @@ export function TaskDetail() {
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
+  const trimSession = useTrimSession()
+  const shiftActiveTimer = useShiftActiveTimer()
+  const { data: entries = [] } = useTimeEntries(id)
   const createNextSprint = useCreateNextSprint()
 
   const childrenOf = useMemo(() => childrenByParent(allTasks), [allTasks])
@@ -59,6 +72,8 @@ export function TaskDetail() {
   const [duplicating, setDuplicating] = useState(false)
   const [nextSprint, setNextSprint] = useState(false)
   const [editingFact, setEditingFact] = useState(false)
+  // сколько минут отнять — окно выбора «отдельной правкой или из сессии»
+  const [subtracting, setSubtracting] = useState<number | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [draftName, setDraftName] = useState('')
   // день, к которому относится ручная правка. По умолчанию сегодня — быстрый случай
@@ -168,6 +183,57 @@ export function TaskDetail() {
     )
   }
 
+  /** отнять время выбранным способом — с отменой из уведомления */
+  function subtract(minutes: number, source: SubtractSource) {
+    setSubtracting(null)
+    if (!task) return
+    const label = formatHoursMinutes(minutes / 60)
+    if (source.kind === 'separate') {
+      setFact(task.fact_hours - minutes / 60)
+      return
+    }
+    if (source.kind === 'session') {
+      const entry = source.entry
+      trimSession.mutate(
+        { entry, minutes },
+        {
+          onError,
+          onSuccess: () => {
+            const trimmed = {
+              ...entry,
+              duration_minutes: entry.duration_minutes - minutes,
+              ended_at: entry.ended_at
+                ? new Date(new Date(entry.ended_at).getTime() - minutes * 60_000).toISOString()
+                : null,
+            }
+            showSuccess(`Сессия короче на ${label}`, {
+              label: 'Вернуть',
+              onAction: () => trimSession.mutate({ entry: trimmed, minutes: -minutes }, { onError }),
+            })
+          },
+        },
+      )
+      return
+    }
+    const timer = source.timer
+    shiftActiveTimer.mutate(
+      { timer, minutes },
+      {
+        onError,
+        onSuccess: () => {
+          const shifted = {
+            ...timer,
+            started_at: new Date(new Date(timer.started_at).getTime() + minutes * 60_000).toISOString(),
+          }
+          showSuccess(`Из идущей сессии −${label}`, {
+            label: 'Вернуть',
+            onAction: () => shiftActiveTimer.mutate({ timer: shifted, minutes: -minutes }, { onError }),
+          })
+        },
+      },
+    )
+  }
+
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:h-screen lg:max-w-none lg:w-full">
       <div className="safe-top flex items-center justify-between px-5 pt-3.5">
@@ -198,7 +264,13 @@ export function TaskDetail() {
         <div className="flex items-center gap-2">
           {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
           <span className="truncate font-mono text-xs text-slate-500">
-            {[project?.name, section?.name].filter(Boolean).join(' · ')}
+            {/* проект — ссылка на его карточку: там вся история и файлы по клиенту */}
+            {project ? (
+              <Link to={`/projects/${project.id}`} className="text-sky-600 underline-offset-4 hover:underline">
+                {project.name}
+              </Link>
+            ) : null}
+            {section ? `${project ? ' · ' : ''}${section.name}` : ''}
           </span>
         </div>
         {/* название правится прямо в заголовке: форма ниже идёт в режиме compact,
@@ -264,7 +336,7 @@ export function TaskDetail() {
               <FieldLabel>Факт / план</FieldLabel>
               <span className="tabular font-mono text-lg font-semibold leading-[1.1] text-slate-50">
                 {formatHoursRu(fact)}{' '}
-                <span className="text-sm text-[#83838c]">/ {formatHoursRu(task.planned_hours)} ч</span>
+                <span className="text-sm text-[var(--s-placeholder)]">/ {formatHoursRu(task.planned_hours)} ч</span>
               </span>
             </div>
             <TimerButton
@@ -302,6 +374,14 @@ export function TaskDetail() {
           />
         )}
 
+        <AttachmentsBlock
+          projectId={task.project_id}
+          taskId={task.id}
+          taskIds={[task.id, ...subtasks.map((c) => c.id)]}
+          taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
+          emptyText="Прикрепить файл: договор, ТЗ, скриншоты — откроются прямо отсюда"
+        />
+
         {/*
           Правка факта сохраняется мгновенно, а поля ниже — только по кнопке.
           Раньше это был один сплошной список, и понять, где какое правило, было
@@ -332,22 +412,29 @@ export function TaskDetail() {
             {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
                 иначе накрутила бы несколько правок от одного и того же исходного значения */}
             <span className="flex gap-1.5">
-              {[
-                { delta: -0.25, glyph: '−', label: 'Убавить 15 минут' },
-                { delta: 0.25, glyph: '+', label: 'Прибавить 15 минут' },
-              ].map(({ delta, glyph, label }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setFact(Math.round((task.fact_hours + delta) * 4) / 4)}
-                  disabled={adjustFactHours.isPending}
-                  aria-label={label}
-                  className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
-                  style={{ border: '1px solid var(--s-border-strong-2)' }}
-                >
-                  {glyph}
-                </button>
-              ))}
+              {/* минус открывает выбор: отдельной правкой или из сессии таймера */}
+              <button
+                type="button"
+                onClick={() => setSubtracting(15)}
+                disabled={adjustFactHours.isPending || (task.fact_hours <= 0 && !isRunning)}
+                aria-label="Отнять время"
+                className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
+                style={{ border: '1px solid var(--s-border-strong-2)' }}
+              >
+                −
+              </button>
+              {/* ровно +15 минут к тому, что есть. Раньше итог округлялся до четверти часа:
+                  с 2 ч 20 мин плюс давал 2 ч 30 мин, то есть добавлял 10 минут */}
+              <button
+                type="button"
+                onClick={() => setFact(task.fact_hours + 0.25)}
+                disabled={adjustFactHours.isPending}
+                aria-label="Прибавить 15 минут"
+                className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
+                style={{ border: '1px solid var(--s-border-strong-2)' }}
+              >
+                +
+              </button>
             </span>
           </div>
 
@@ -457,8 +544,22 @@ export function TaskDetail() {
         onCancel={() => setEditingFact(false)}
         onSubmit={(value) => {
           setEditingFact(false)
-          setFact(value)
+          const less = Math.round((task.fact_hours - value) * 60)
+          if (less > 0) setSubtracting(less)
+          else setFact(value)
         }}
+      />
+
+      <SubtractSheet
+        open={subtracting !== null}
+        minutes={subtracting ?? 15}
+        factHours={task.fact_hours}
+        entries={entries}
+        activeTimer={isRunning ? activeTimer : null}
+        adjustDateLabel={new Date(`${adjustDate}T00:00:00`)
+          .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+        onCancel={() => setSubtracting(null)}
+        onConfirm={subtract}
       />
 
       <ConfirmDialog

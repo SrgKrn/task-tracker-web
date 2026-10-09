@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Overline } from './ui'
+import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
 import { useAddComment, useComments } from '../lib/queries/comments'
 import { useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
@@ -10,6 +11,7 @@ type TimelineRow =
   | { kind: 'timer'; at: string; entry: TimeEntry }
   | { kind: 'adjustment'; at: string; entry: TimeEntry }
   | { kind: 'comment'; at: string; comment: Comment }
+  | { kind: 'file'; at: string; file: AttachmentWithUrl }
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('ru-RU', {
@@ -31,6 +33,7 @@ function formatMinutes(minutes: number): string {
 export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning: boolean }) {
   const { data: entries = [] } = useTimeEntries(taskId)
   const { data: comments = [] } = useComments(taskId)
+  const { data: files = [] } = useAttachments({ taskIds: [taskId] })
 
   const rows: TimelineRow[] = [
     ...entries.map((entry): TimelineRow =>
@@ -39,6 +42,8 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
         : { kind: 'adjustment', at: entry.created_at, entry },
     ),
     ...comments.map((comment): TimelineRow => ({ kind: 'comment', at: comment.created_at, comment })),
+    // файл — тоже событие в истории задачи: видно, когда пришёл договор или макет
+    ...files.map((file): TimelineRow => ({ kind: 'file', at: file.created_at, file })),
   ].sort((a, b) => b.at.localeCompare(a.at))
 
   return (
@@ -54,12 +59,17 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
           >
             <span
               className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full"
-              style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : '#3a3a42' }}
+              style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : 'var(--s-dot)' }}
             />
             <p className="flex-1 text-sm leading-[1.35] text-slate-300">
               {row.kind === 'timer' && `Трекинг: ${formatMinutes(row.entry.duration_minutes)}`}
               {row.kind === 'adjustment' && `Ручная правка: ${formatMinutes(row.entry.duration_minutes)}`}
               {row.kind === 'comment' && row.comment.body}
+              {row.kind === 'file' && (
+                <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
+                  Файл «{row.file.name}»
+                </a>
+              )}
             </p>
             <span className="shrink-0 font-mono text-2xs leading-[1.4] text-slate-600">
               {formatDateTime(row.at)}
@@ -97,8 +107,8 @@ export function CommentBar({ taskId }: { taskId: string }) {
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
         placeholder="Комментарий"
-        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-sm text-slate-100 placeholder:text-[#83838c]"
-        style={{ background: '#17171c', border: '1px solid var(--s-border-strong)' }}
+        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        style={{ background: 'var(--s-input-2)', border: '1px solid var(--s-border-strong)' }}
       />
       <button
         type="button"

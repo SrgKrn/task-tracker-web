@@ -1,18 +1,37 @@
-import { useState } from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { useLiveTimerNotification } from '../lib/push'
+import { useTask } from '../lib/queries/tasks'
+import { useActiveTimer } from '../lib/queries/timer'
+import { useTheme } from '../lib/theme'
 import { ActiveTimerBar } from './ActiveTimerBar'
 import { BottomTabBar } from './BottomTabBar'
 import { DesktopSidebar } from './DesktopSidebar'
 import { NewTaskSheet } from './NewTaskSheet'
 import { StaleTimerBanner } from './StaleTimerBanner'
 
-export function ProtectedLayout() {
-  const { session, loading } = useAuth()
-  const [sheetOpen, setSheetOpen] = useState(false)
+/** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
+function useAppEffects() {
+  const navigate = useNavigate()
+  const { data: activeTimer } = useActiveTimer()
+  const { data: task } = useTask(activeTimer?.task_id)
+  useLiveTimerNotification(activeTimer, task?.name.trim())
 
-  if (loading) return null
-  if (!session) return <Navigate to="/login" replace />
+  // нажали на уведомление при открытом приложении — воркер просит перейти к задаче
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'semternity:navigate' && typeof e.data.url === 'string') navigate(e.data.url)
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [navigate])
+}
+
+function SignedIn() {
+  const [sheetOpen, setSheetOpen] = useState(false)
+  useAppEffects()
 
   return (
     <div className="min-h-full lg:flex">
@@ -33,4 +52,14 @@ export function ProtectedLayout() {
       <NewTaskSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   )
+}
+
+export function ProtectedLayout() {
+  const { session, loading } = useAuth()
+  // тема «как в системе» следит за переключением системы, пока открыто приложение
+  useTheme()
+
+  if (loading) return null
+  if (!session) return <Navigate to="/login" replace />
+  return <SignedIn />
 }

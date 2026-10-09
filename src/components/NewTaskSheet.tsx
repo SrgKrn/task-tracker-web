@@ -75,7 +75,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
-      style={{ background: 'rgba(5,5,7,.62)' }}
+      style={{ background: 'var(--s-backdrop)' }}
       onClick={onClose}
     >
       <div
@@ -95,8 +95,8 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
-          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
 
         {/* раздел и проект заводятся прямо здесь: раньше при пустом справочнике
@@ -176,8 +176,8 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             disabled={!canCreate}
             className="h-12 flex-[2] rounded-[15px] text-sm font-semibold"
             style={{
-              background: canCreate ? 'var(--s-accent)' : '#232329',
-              color: canCreate ? 'var(--s-on-accent)' : '#6e6e77',
+              background: canCreate ? 'var(--s-accent)' : 'var(--s-disabled-bg)',
+              color: canCreate ? 'var(--s-on-accent)' : 'var(--s-disabled-fg)',
             }}
           >
             Создать и начать

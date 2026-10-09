@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { addInputId, setOpen, startAdding, stopAdding, useAddingFor } from '../lib/expanded'
 import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { Check, Plus } from './Icon'
@@ -19,8 +20,6 @@ interface SubtaskListProps {
   /** в списке задач состав висит под строкой спринта с отступом; в карточке — во всю ширину */
   nested?: boolean
   id?: string
-  /** открыть сразу с полем ввода — когда пустой спринт раскрыли, чтобы добавить первую */
-  startAdding?: boolean
 }
 
 /**
@@ -33,7 +32,6 @@ export function SubtaskList({
   hideDone = false,
   nested = false,
   id,
-  startAdding = false,
 }: SubtaskListProps) {
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
@@ -103,7 +101,7 @@ export function SubtaskList({
         <span className="px-1 font-mono text-2xs text-slate-600">скрыто готовых: {hiddenCount}</span>
       )}
 
-      <AddSubtask parent={parent} startOpen={startAdding} />
+      <AddSubtask parent={parent} />
     </div>
   )
 }
@@ -217,10 +215,10 @@ function SubtaskRow({
 }
 
 /** Название — и всё: проект, раздел и спринт подзадача берёт у головной. */
-function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean }) {
+function AddSubtask({ parent }: { parent: Task }) {
   const createTask = useCreateTask()
   const { showError } = useToast()
-  const [editing, setEditing] = useState(startOpen)
+  const editing = useAddingFor() === parent.id
   const [name, setName] = useState('')
 
   function submit() {
@@ -239,8 +237,12 @@ function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean })
       },
       {
         onError: (error) => showError(describeError(error)),
-        // поле остаётся открытым: состав спринта обычно набирают сразу несколькими строками
-        onSuccess: () => setName(''),
+        // поле остаётся открытым: состав спринта обычно набирают сразу несколькими строками.
+        // Спринт с первой подзадачей запоминаем раскрытым — в нём теперь есть что показывать
+        onSuccess: () => {
+          setName('')
+          setOpen(parent.id, true)
+        },
       },
     )
   }
@@ -249,7 +251,7 @@ function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean })
     return (
       <button
         type="button"
-        onClick={() => setEditing(true)}
+        onClick={() => startAdding(parent.id)}
         className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-xs text-slate-500"
         style={{ border: '1px dashed var(--s-border-strong-2)' }}
       >
@@ -269,11 +271,11 @@ function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean })
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-accent)' }}
     >
       <input
-        autoFocus
+        id={addInputId(parent.id)}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onBlur={() => {
-          if (!name.trim()) setEditing(false)
+        onBlur={(e) => {
+          if (!e.currentTarget.value.trim()) stopAdding(parent.id)
         }}
         onKeyDown={(e) => {
           // Enter обрабатываем сами, как во всех полях приложения: неявная отправка формы
@@ -284,12 +286,12 @@ function AddSubtask({ parent, startOpen }: { parent: Task; startOpen: boolean })
           }
           if (e.key === 'Escape') {
             setName('')
-            setEditing(false)
+            stopAdding(parent.id)
           }
         }}
         placeholder="Название подзадачи"
         aria-label={`Новая подзадача в «${parent.name}»`}
-        className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[#83838c]"
+        className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
         // фокус уже показывает латунная рамка всей строки — вторая рамка вокруг поля лишняя
         style={{ outline: 'none' }}
       />

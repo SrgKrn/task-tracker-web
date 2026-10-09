@@ -64,7 +64,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         key={tab.to}
         to={tab.to}
         className="flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-2xs font-medium"
-        style={{ color: active ? 'var(--s-accent)' : 'var(--s-tab-idle)' }}
+        style={{ color: active ? 'var(--s-accent-text)' : 'var(--s-tab-idle)' }}
       >
         {tab.icon}
         {tab.label}

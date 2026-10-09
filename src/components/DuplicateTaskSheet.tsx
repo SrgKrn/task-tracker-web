@@ -51,8 +51,8 @@ export function DuplicateTaskSheet({
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[#83838c]"
-          style={{ background: '#0f0f13', border: '1px solid var(--s-border-strong)' }}
+          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
       </div>
 

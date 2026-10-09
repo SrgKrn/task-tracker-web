@@ -108,7 +108,7 @@ export function Today() {
         <Link
           to="/settings"
           className="hit-44 block h-[30px] w-[30px] rounded-full"
-          style={{ background: '#1c1c22', border: '1px solid #2a2a30' }}
+          style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
           aria-label="Настройки"
         />
       </div>
@@ -136,7 +136,7 @@ export function Today() {
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--s-accent)' }} />
-              <span className="font-mono text-xs text-[#b6b6be]">
+              <span className="font-mono text-xs text-[var(--s-text-soft)]">
                 {dayFact >= dayNorm
                   ? 'норма дня выполнена'
                   : `осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
@@ -147,7 +147,7 @@ export function Today() {
                 className="h-[7px] w-[7px] shrink-0 rounded-full"
                 style={{ background: 'rgba(232,163,61,.35)' }}
               />
-              <span className="font-mono text-xs text-[#8a8a92]">
+              <span className="font-mono text-xs text-[var(--s-faint-text)]">
                 {todayTasks.length > 0 ? `${plural(todayTasks.length, TASKS)} на день` : 'задач на день нет'}
               </span>
             </span>
@@ -178,10 +178,10 @@ export function Today() {
                   background: isToday
                     ? 'var(--s-accent)'
                     : fact > 0
-                      ? '#3a3a44'
+                      ? 'var(--s-bar-past)'
                       : isFuture
-                        ? '#1c1c22'
-                        : '#232329',
+                        ? 'var(--s-bar-future)'
+                        : 'var(--s-bar-empty)',
                 }}
               />
             )
@@ -274,8 +274,8 @@ export function Today() {
                     size={34}
                     pct={pct}
                     state="over"
-                    track="#33231e"
-                    centerBg="#161112"
+                    track="var(--s-danger-track)"
+                    centerBg="var(--s-danger-center)"
                     onClick={() => {
                       tap()
                       startTimer.mutate(task.id, { onError })

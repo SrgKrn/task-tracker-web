@@ -57,3 +57,9 @@ export const EyeOff = (p: IconProps) =>
     </>,
     p,
   )
+export const Paperclip = (p: IconProps) =>
+  svg(<path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l8.6-8.6a4 4 0 0 1 5.7 5.7l-8.6 8.6a2 2 0 0 1-2.8-2.8l8.5-8.5" />, p)
+export const Bell = (p: IconProps) =>
+  svg(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></>, p)
+export const Send = (p: IconProps) =>
+  svg(<><path d="M21.5 3.5 2.8 10.7c-.8.3-.8 1.4 0 1.7l4.7 1.6 1.8 5.6c.2.7 1.1.9 1.6.4l2.7-2.6 4.9 3.6c.6.4 1.4.1 1.6-.6l3-15.4c.2-.9-.7-1.6-1.6-1.3Z" /><path d="m7.5 14 9.5-6.5" /></>, p)

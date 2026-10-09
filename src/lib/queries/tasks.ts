@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import type { Task } from '../types'
+import { removeTaskFiles } from './attachments'
 
 export function useTasks() {
   return useQuery({
@@ -88,10 +89,16 @@ export function useDeleteTask() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
+      // файлы задачи и её подзадач — из хранилища до удаления строк
+      const { data: children } = await supabase.from('tasks').select('id').eq('parent_id', id)
+      await removeTaskFiles([id, ...(children ?? []).map((c: { id: string }) => c.id)])
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['attachments'] })
+    },
   })
 }
 

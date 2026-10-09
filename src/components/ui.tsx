@@ -61,8 +61,8 @@ export function Chip({ active = false, onClick, children, className = '' }: Chip
       onClick={onClick}
       className={`min-h-9 shrink-0 rounded-[9px] px-[13px] py-[9px] text-xs ${
         active
-          ? 'bg-sky-600 font-medium text-[var(--s-on-accent)]'
-          : 'border border-slate-700 bg-slate-800 text-[#8f8f98]'
+          ? 'bg-[var(--s-accent)] font-medium text-[var(--s-on-accent)]'
+          : 'border border-slate-700 bg-slate-800 text-[var(--s-muted-text)]'
       } ${className}`}
     >
       {children}
@@ -104,7 +104,7 @@ export function Segmented<T extends string>({
             className="min-h-8 rounded-[9px] px-2.5 text-xs"
             style={{
               background: active ? 'var(--s-accent)' : 'transparent',
-              color: active ? 'var(--s-on-accent)' : '#8f8f98',
+              color: active ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
               fontWeight: active ? 500 : 400,
             }}
           >
@@ -145,7 +145,7 @@ export function Sheet({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
-      style={{ background: 'rgba(5,5,7,.62)' }}
+      style={{ background: 'var(--s-backdrop)' }}
       onClick={onClose}
     >
       <div
@@ -198,8 +198,8 @@ export function SheetActions({
         disabled={confirmDisabled}
         className="h-12 flex-[2] rounded-[15px] text-sm font-semibold"
         style={{
-          background: confirmDisabled ? '#232329' : 'var(--s-accent)',
-          color: confirmDisabled ? '#83838c' : 'var(--s-on-accent)',
+          background: confirmDisabled ? 'var(--s-disabled-bg)' : 'var(--s-accent)',
+          color: confirmDisabled ? 'var(--s-placeholder)' : 'var(--s-on-accent)',
         }}
       >
         {confirmLabel}
@@ -211,7 +211,7 @@ export function SheetActions({
 export type TagTone = 'neutral' | 'accent' | 'success' | 'danger'
 
 const TAG_TONE: Record<TagTone, string> = {
-  neutral: 'bg-white/6 text-slate-400',
+  neutral: 'bg-[var(--s-tag)] text-slate-400',
   accent: 'bg-[rgba(232,163,61,.14)] text-sky-600',
   success: 'bg-[rgba(127,184,148,.14)] text-emerald-400',
   danger: 'bg-[rgba(217,114,86,.12)] text-red-400',
@@ -251,7 +251,7 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
       >
         <span className="h-[14px] w-[14px] rounded-full" style={{ background: 'var(--s-on-accent)' }} />
       </span>
-      {label && <span className="whitespace-nowrap text-left text-2xs text-[#8f8f98]">{label}</span>}
+      {label && <span className="whitespace-nowrap text-left text-2xs text-[var(--s-muted-text)]">{label}</span>}
     </button>
   )
 }

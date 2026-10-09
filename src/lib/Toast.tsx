@@ -58,12 +58,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             style={
               t.tone === 'error'
                 ? {
-                    background: 'rgba(40,20,17,.72)',
+                    background: 'var(--s-toast-err-bg)',
                     border: '1px solid rgba(217,114,86,.35)',
                     color: 'var(--s-danger)',
                   }
                 : {
-                    background: 'rgba(17,32,26,.72)',
+                    background: 'var(--s-toast-ok-bg)',
                     border: '1px solid rgba(127,184,148,.3)',
                     color: 'var(--s-success)',
                   }
@@ -95,8 +95,16 @@ export function useToast() {
   return ctx
 }
 
+/**
+ * Ошибка, текст которой уже написан для человека (например, ответ серверной функции:
+ * «Telegram не принял сообщение…»). describeError показывает её как есть, а не прячет
+ * под общим «Не удалось сохранить».
+ */
+export class UserError extends Error {}
+
 /** Best-effort readable message for a Supabase/Postgres error surfaced from a mutation. */
 export function describeError(error: unknown): string {
+  if (error instanceof UserError) return error.message
   const message =
     error && typeof error === 'object' && 'message' in error
       ? String((error as { message: unknown }).message)

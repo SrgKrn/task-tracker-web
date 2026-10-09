@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
 import { Ring } from '../components/Ring'
 import { Chip, EmptyState, FieldLabel, Overline, Segmented } from '../components/ui'
@@ -201,7 +202,7 @@ export function Dashboard() {
             <FieldLabel>Часов затрачено</FieldLabel>
             <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
               {formatHoursRu(totalFactHours)}{' '}
-              <span className="text-sm text-[#83838c]">/ {formatHoursRu(totalPlanHours)} ч</span>
+              <span className="text-sm text-[var(--s-placeholder)]">/ {formatHoursRu(totalPlanHours)} ч</span>
             </span>
             {prevFactHours > 0 && (
               <span className="tabular font-mono text-2xs text-slate-500">
@@ -282,9 +283,11 @@ export function Dashboard() {
           const hasPlan = row.planHours > 0
           const pct = hasPlan ? Math.round((row.factHours / row.planHours) * 100) : 0
           const over = pct > 100
+          // строка ведёт в карточку проекта (задачи, файлы, хронология) или раздела
           return (
-            <div
+            <Link
               key={row.id}
+              to={groupBy === 'project' ? `/projects/${row.id}` : `/sections/${row.id}`}
               className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3"
               style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
             >
@@ -317,7 +320,7 @@ export function Dashboard() {
                   {plural(row.counted, TASKS)}
                 </span>
               </div>
-            </div>
+            </Link>
           )
         })}
         {rows.length === 0 && <EmptyState>За этот период нет плана или трекинга.</EmptyState>}
