@@ -157,8 +157,8 @@ export function TelegramCard() {
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="text-2xs leading-[1.5] text-slate-500">
-            Бот пришлёт предупреждение, если учёт идёт дольше часа, — и даст остановить его прямо из
-            чата. Работает вместе с пуш-уведомлениями или вместо них.
+            Итоги дня и недели, напоминание о долгом учёте и о встречах — с кнопками прямо в чате.
+            Учёт можно начать и остановить из Telegram, а комментарий — просто написать боту.
           </span>
           {isLoading && <span className="text-2xs text-slate-500">Проверяем…</span>}
           {error && <span className="text-2xs text-red-400">Не удалось узнать статус: {describeError(error)}</span>}
@@ -202,29 +202,68 @@ export function TelegramCard() {
 
       {linked && (
         <>
-          <label className="-my-1 flex min-h-11 items-center gap-2.5 py-1">
-            <input
-              type="checkbox"
-              checked={linked.notifyLongTimer}
-              onChange={(e) => actions.setLongTimer.mutate(e.target.checked, { onError })}
-              className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+          <div className="-my-1 flex flex-col">
+            <Toggle
+              on={linked.dailySummary}
+              onChange={(v) => actions.update.mutate({ dailySummary: v }, { onError })}
+              title="Итоги дня"
+              hint="сколько записано, что осталось без учёта, какие спринты подходят к плану"
             />
-            <span className="flex min-w-0 flex-col">
-              <span className="text-sm text-slate-300">Предупреждать о долгом учёте</span>
-              <span className="text-2xs leading-[1.4] text-slate-500">через час после запуска, потом каждый час</span>
-            </span>
-          </label>
+            <Toggle
+              on={linked.weeklySummary}
+              onChange={(v) => actions.update.mutate({ weeklySummary: v }, { onError })}
+              title="Итоги недели по пятницам"
+              hint="часы за неделю против прошлой и по проектам"
+            />
+            {(linked.dailySummary || linked.weeklySummary) && (
+              <label className="flex min-h-11 items-center justify-between gap-3 py-1 pl-[28px]">
+                <span className="text-sm text-slate-300">Время сводки</span>
+                <select
+                  value={linked.summaryHour}
+                  onChange={(e) => actions.update.mutate({ summaryHour: Number(e.target.value) }, { onError })}
+                  className="h-9 rounded-[10px] px-2.5 font-mono text-sm text-slate-100"
+                  style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <Toggle
+              on={linked.notifyLongTimer}
+              onChange={(v) => actions.update.mutate({ notifyLongTimer: v }, { onError })}
+              title="Предупреждать о долгом учёте"
+              hint="через час после запуска, потом каждый час — с кнопкой «Остановить»"
+            />
+            <Toggle
+              on={linked.notifyMeetings}
+              onChange={(v) => actions.update.mutate({ notifyMeetings: v }, { onError })}
+              title="Напоминать о встречах"
+              hint="встреча из календаря началась, а учёт не идёт — с кнопкой «Начать»"
+            />
+          </div>
+          <p
+            className="rounded-xl px-3 py-2.5 text-2xs leading-[1.6] text-slate-400"
+            style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)' }}
+          >
+            В чате с ботом: <span className="font-mono text-slate-300">/timer</span> — начать или остановить учёт,{' '}
+            <span className="font-mono text-slate-300">/today</span> и <span className="font-mono text-slate-300">/week</span>{' '}
+            — итоги. Любой текст боту станет комментарием к задаче, по которой идёт учёт.
+          </p>
           <div className="flex gap-[9px]">
             <button
               type="button"
-              disabled={actions.test.isPending}
+              disabled={actions.digestNow.isPending}
               onClick={() =>
-                actions.test.mutate(undefined, { onError, onSuccess: () => showSuccess('Отправили — загляните в Telegram') })
+                actions.digestNow.mutate(undefined, { onError, onSuccess: () => showSuccess('Итоги дня — в Telegram') })
               }
               className="h-11 flex-1 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
               style={{ border: '1px solid var(--s-border-strong-2)' }}
             >
-              Прислать пробное
+              Прислать итоги сейчас
             </button>
             <button
               type="button"
@@ -239,5 +278,33 @@ export function TelegramCard() {
         </>
       )}
     </div>
+  )
+}
+
+/** Строка-переключатель: вся строка — цель нажатия. */
+export function Toggle({
+  on,
+  onChange,
+  title,
+  hint,
+}: {
+  on: boolean
+  onChange: (on: boolean) => void
+  title: string
+  hint?: string
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-2.5 py-1">
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+      />
+      <span className="flex min-w-0 flex-col">
+        <span className="text-sm text-slate-300">{title}</span>
+        {hint && <span className="text-2xs leading-[1.4] text-slate-500">{hint}</span>}
+      </span>
+    </label>
   )
 }

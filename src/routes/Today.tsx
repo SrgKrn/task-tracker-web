@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
@@ -202,6 +203,13 @@ export function Today() {
           })}
         </div>
       </div>
+
+      {/* встречи из календаря: прошедшие — засчитать, идущая — начать учёт */}
+      <MeetingsBlock
+        date={today}
+        entries={weekEntries.filter((e) => e.effective_date === today)}
+        activeTimer={activeTimer}
+      />
 
       {/* задачи дня */}
       <div className="flex flex-col gap-[9px] px-5 pt-5 pb-2">

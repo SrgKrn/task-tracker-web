@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AttachmentsBlock } from '../components/AttachmentsBlock'
 import { TaskListItem } from '../components/TaskListItem'
-import { ArrowLeft, ChevronDown } from '../components/Icon'
+import { ArrowLeft, ChevronDown, Drive } from '../components/Icon'
 import { EmptyState, FieldLabel, Overline, Segmented } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { toDateString } from '../lib/period'
 import { useGroupModel, type GroupModel } from '../lib/groups'
+import { pickFromDrive, useGoogleStatus } from '../lib/google'
 import { entryNote } from '../lib/notes'
 import { useAttachments } from '../lib/queries/attachments'
 import { useUpdateGroupItem } from '../lib/queries/groups'
@@ -114,6 +115,8 @@ export function ItemDetail() {
 
       <ItemDescription item={item} />
 
+      <DriveFolder item={item} />
+
       <div
         className="grid grid-cols-3 rounded-2xl"
         style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
@@ -151,6 +154,7 @@ export function ItemDetail() {
       {tab === 'files' && (
         <AttachmentsBlock
           itemId={item.id}
+          driveFolderId={item.drive_folder_id}
           taskIds={itemTasks.map((t) => t.id)}
           taskNames={new Map(itemTasks.map((t) => [t.id, t.name]))}
           title="База знаний"
@@ -158,6 +162,67 @@ export function ItemDetail() {
         />
       )}
       {tab === 'history' && <ItemHistory item={item} tasks={itemTasks} statusById={statusById} />}
+    </div>
+  )
+}
+
+/**
+ * Папка проекта (клиента) на Google Диске: открыть её одним нажатием, а окно выбора
+ * файлов для этой карточки и её задач открывается сразу в ней.
+ */
+function DriveFolder({ item }: { item: GroupItem }) {
+  const { data: google } = useGoogleStatus()
+  const update = useUpdateGroupItem()
+  const { showError, showSuccess } = useToast()
+  if (!google?.linked?.drive) return null
+
+  async function choose() {
+    if (!google) return
+    try {
+      const [folder] = await pickFromDrive(google, { folders: true })
+      if (!folder) return
+      update.mutate(
+        { id: item.id, fields: { drive_folder_id: folder.id, drive_folder_name: folder.name } },
+        { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess(`Папка «${folder.name}» привязана`) },
+      )
+    } catch (e) {
+      showError(describeError(e))
+    }
+  }
+
+  if (!item.drive_folder_id) {
+    return (
+      <button
+        type="button"
+        onClick={choose}
+        className="flex min-h-11 items-center gap-2.5 self-start rounded-xl px-3 text-xs text-slate-400"
+        style={{ border: '1px dashed var(--s-border-strong-2)' }}
+      >
+        <Drive size={15} />
+        Привязать папку на Google Диске
+      </button>
+    )
+  }
+  return (
+    <div
+      className="flex items-center gap-3 rounded-xl py-2 pr-2 pl-3"
+      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+    >
+      <span className="text-sky-600">
+        <Drive size={16} />
+      </span>
+      <a
+        href={`https://drive.google.com/drive/folders/${item.drive_folder_id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-w-0 flex-1"
+      >
+        <span className="block truncate text-sm text-slate-100">{item.drive_folder_name || 'Папка на Диске'}</span>
+        <span className="block font-mono text-2xs text-slate-500">Google Диск · открыть</span>
+      </a>
+      <button type="button" onClick={choose} className="h-9 shrink-0 rounded-[10px] px-2.5 text-xs text-slate-400">
+        Сменить
+      </button>
     </div>
   )
 }

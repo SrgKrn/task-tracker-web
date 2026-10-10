@@ -6,7 +6,27 @@ export interface TelegramStatus {
   /** бот создан и подключён к приложению на сервере */
   configured: boolean
   bot: string
-  linked: { username: string; firstName: string; notifyLongTimer: boolean } | null
+  linked: {
+    username: string
+    firstName: string
+    notifyLongTimer: boolean
+    dailySummary: boolean
+    weeklySummary: boolean
+    /** час местного времени для сводки */
+    summaryHour: number
+    notifyMeetings: boolean
+  } | null
+}
+
+type Linked = NonNullable<TelegramStatus['linked']>
+
+/** поля настроек в приложении → колонки telegram_accounts */
+const COLUMN: Record<'notifyLongTimer' | 'dailySummary' | 'weeklySummary' | 'summaryHour' | 'notifyMeetings', string> = {
+  notifyLongTimer: 'notify_long_timer',
+  dailySummary: 'daily_summary',
+  weeklySummary: 'weekly_summary',
+  summaryHour: 'summary_hour',
+  notifyMeetings: 'notify_meetings',
 }
 
 /** Вся работа с Telegram — через серверную функцию: токен бота в приложение не попадает. */
@@ -62,22 +82,24 @@ export function useTelegramActions() {
         refresh()
       },
     }),
-    setLongTimer: useMutation({
-      onMutate: (on: boolean) =>
-        patch((s) => (s.linked ? { ...s, linked: { ...s.linked, notifyLongTimer: on } } : s)),
+    /** любая настройка уведомлений — переключатель меняется сразу, сервер догоняет */
+    update: useMutation({
+      onMutate: (fields: Partial<Pick<Linked, keyof typeof COLUMN>>) =>
+        patch((s) => (s.linked ? { ...s, linked: { ...s.linked, ...fields } } : s)),
       onError: refresh,
-      mutationFn: async (on: boolean) => {
+      mutationFn: async (fields: Partial<Pick<Linked, keyof typeof COLUMN>>) => {
         const {
           data: { user },
         } = await supabase.auth.getUser()
         if (!user) throw new Error('Нужно войти заново')
-        const { error } = await supabase
-          .from('telegram_accounts')
-          .update({ notify_long_timer: on })
-          .eq('user_id', user.id)
+        const row = Object.fromEntries(
+          Object.entries(fields).map(([k, v]) => [COLUMN[k as keyof typeof COLUMN], v]),
+        )
+        const { error } = await supabase.from('telegram_accounts').update(row).eq('user_id', user.id)
         if (error) throw error
       },
       onSuccess: refresh,
     }),
+    digestNow: useMutation({ mutationFn: () => call('digest_now') }),
   }
 }

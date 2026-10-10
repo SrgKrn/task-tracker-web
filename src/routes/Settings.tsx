@@ -1,13 +1,27 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { NotificationsCard, TelegramCard, ThemeCard } from '../components/AppPreferences'
+import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
-import { ArrowLeft, Bell, Check, ChevronRight, Download, Send, Sparkle } from '../components/Icon'
+import {
+  ArrowLeft,
+  Bell,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronRight,
+  Download,
+  Drive,
+  Drive as DriveIcon,
+  Send,
+  Sparkle,
+} from '../components/Icon'
 import { Overline, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
 import { usePush, type PushState } from '../lib/push'
+import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
+import { useCalendarSources } from '../lib/queries/calendar'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import type { ReportOptions } from '../lib/report'
@@ -17,7 +31,7 @@ import { describeError, useToast } from '../lib/Toast'
 import { useAuth } from '../lib/AuthContext'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
-import { useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
+import { useSaveDriveReportsFolder, useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { formatHoursRu } from '../lib/time'
@@ -223,8 +237,11 @@ function ExportSection() {
   const [range, setRange] = useState(loadExportRange)
   const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
-  const [generating, setGenerating] = useState<'excel' | 'pdf' | null>(null)
-  const { showError } = useToast()
+  const [generating, setGenerating] = useState<'excel' | 'pdf' | 'drive-excel' | 'drive-pdf' | null>(null)
+  const { data: google } = useGoogleStatus()
+  const { data: settings } = useUserSettings()
+  const saveFolder = useSaveDriveReportsFolder()
+  const { showError, showSuccess } = useToast()
 
   function setFrom(value: string) {
     setRange((prev) => {
@@ -284,6 +301,49 @@ function ExportSection() {
         const { exportPdf } = await import('../lib/exportPdf')
         await exportPdf(data)
       }
+    } catch (e) {
+      showError(describeError(e))
+    } finally {
+      setGenerating(null)
+    }
+  }
+
+  /** отчёт — сразу на Google Диск, в папку для отчётов (её выбирают один раз) */
+  async function saveToDrive(format: 'excel' | 'pdf') {
+    if (!google) return
+    if (from > to) {
+      showError('Начало периода позже конца — поменяйте даты местами')
+      return
+    }
+    try {
+      let folder = settings?.drive_reports_folder_id
+        ? { id: settings.drive_reports_folder_id, name: settings.drive_reports_folder_name ?? '' }
+        : null
+      if (!folder) {
+        const [picked] = await pickFromDrive(google, { folders: true })
+        if (!picked) return
+        folder = { id: picked.id, name: picked.name }
+        saveFolder.mutate(folder)
+      }
+      setGenerating(format === 'excel' ? 'drive-excel' : 'drive-pdf')
+      const data = await loadReport({ from, to, tasks, groups, items, statuses, options })
+      let blob: Blob
+      let name: string
+      if (format === 'excel') {
+        const { buildWorkbook } = await import('../lib/exportExcel')
+        const buffer = await buildWorkbook(data).xlsx.writeBuffer()
+        blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        name = `Отчёт_${from}_${to}.xlsx`
+      } else {
+        const { renderPdf } = await import('../lib/exportPdf')
+        blob = renderPdf(data).output('blob')
+        name = `Отчёт_${from}_${to}.pdf`
+      }
+      const link = await uploadToDrive(blob, name, folder.id)
+      showSuccess(`Отчёт на Диске${folder.name ? ` в «${folder.name}»` : ''}`, {
+        label: 'Открыть',
+        onAction: () => window.open(link, '_blank', 'noopener'),
+      })
     } catch (e) {
       showError(describeError(e))
     } finally {
@@ -363,6 +423,30 @@ function ExportSection() {
           </button>
         ))}
       </div>
+      {google?.linked?.drive && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-[9px]">
+            {(['excel', 'pdf'] as const).map((format) => (
+              <button
+                key={format}
+                type="button"
+                onClick={() => saveToDrive(format)}
+                disabled={generating !== null}
+                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
+                style={{ border: '1px solid var(--s-border-strong-2)' }}
+              >
+                <Drive size={14} />
+                {generating === `drive-${format}` ? 'Кладём на Диск…' : format === 'excel' ? 'Excel на Диск' : 'PDF на Диск'}
+              </button>
+            ))}
+          </div>
+          <span className="text-center text-2xs text-slate-500">
+            {settings?.drive_reports_folder_name
+              ? `в папку «${settings.drive_reports_folder_name}» · сменить — в «Google Диск»`
+              : 'папку выберете при первой выгрузке'}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -387,6 +471,8 @@ export function Settings() {
   const theme = useTheme()
   const push = usePush()
   const { data: telegram } = useTelegramStatus()
+  const { data: calendars = [] } = useCalendarSources()
+  const { data: google } = useGoogleStatus()
   const { data: userSettings } = useUserSettings()
 
   const plan = userSettings?.planned_hours_per_day
@@ -432,6 +518,24 @@ export function Settings() {
 
       <MenuGroup title="Интеграции">
         <MenuRow to="/settings/telegram" glyph={<Glyph><Send size={15} /></Glyph>} title="Telegram" value={tg} />
+        <MenuRow
+          to="/settings/calendar"
+          glyph={<Glyph><CalendarIcon size={15} /></Glyph>}
+          title="Google Календарь"
+          value={
+            calendars.length
+              ? calendars.some((c) => c.last_error)
+                ? 'Ошибка'
+                : calendars.find((c) => c.kind === 'google')?.name || 'Подключён'
+              : 'Не подключён'
+          }
+        />
+        <MenuRow
+          to="/settings/drive"
+          glyph={<Glyph><DriveIcon size={15} /></Glyph>}
+          title="Google Диск"
+          value={google?.linked?.drive ? google.linked.email || 'Подключён' : google?.configured ? 'Не подключён' : undefined}
+        />
       </MenuGroup>
 
       <MenuGroup title="Планы и аналитика">
@@ -512,6 +616,22 @@ export function ExportSettings() {
   return (
     <SettingsPage title="Экспорт отчёта">
       <ExportSection />
+    </SettingsPage>
+  )
+}
+
+export function CalendarSettings() {
+  return (
+    <SettingsPage title="Google Календарь">
+      <CalendarCard />
+    </SettingsPage>
+  )
+}
+
+export function DriveSettings() {
+  return (
+    <SettingsPage title="Google Диск">
+      <DriveCard />
     </SettingsPage>
   )
 }

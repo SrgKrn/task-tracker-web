@@ -35,16 +35,13 @@ export function useAttachments(scope: { itemId?: string; taskIds?: string[] }) {
       const { data, error } = await q
       if (error) throw error
       const files = (data ?? []) as Attachment[]
-      if (files.length === 0) return []
-      const { data: signed, error: signError } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrls(
-          files.map((f) => f.path),
-          LINK_TTL_SECONDS,
-        )
+      // у файлов из Google Диска ссылка своя — подписывать нужно только загруженные
+      const paths = files.map((f) => f.path).filter((p): p is string => !!p)
+      if (paths.length === 0) return files
+      const { data: signed, error: signError } = await supabase.storage.from(BUCKET).createSignedUrls(paths, LINK_TTL_SECONDS)
       if (signError) throw signError
       const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]))
-      return files.map((f) => ({ ...f, url: urlByPath.get(f.path) ?? null }))
+      return files.map((f) => (f.path ? { ...f, url: urlByPath.get(f.path) ?? null } : f))
     },
   })
 }
@@ -112,7 +109,8 @@ export function useDeleteAttachment() {
     mutationFn: async (file: Attachment) => {
       const { error } = await supabase.from('attachments').delete().eq('id', file.id)
       if (error) throw error
-      await supabase.storage.from(BUCKET).remove([file.path])
+      // файл из Диска остаётся на Диске — убираем только ссылку на него
+      if (file.path) await supabase.storage.from(BUCKET).remove([file.path])
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments'] }),
   })
@@ -126,6 +124,37 @@ export async function removeTaskFiles(taskIds: string[]) {
   if (taskIds.length === 0) return
   const { data, error } = await supabase.from('attachments').select('path').in('task_id', taskIds)
   if (error) throw error
-  const paths = (data ?? []).map((r: { path: string }) => r.path)
+  const paths = (data ?? []).map((r: { path: string | null }) => r.path).filter((p): p is string => !!p)
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths)
+}
+
+/** Файлы, выбранные на Google Диске: в задаче или карточке хранится ссылка, а не копия. */
+export function useAddDriveFiles() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      files,
+      itemId,
+      taskId,
+    }: {
+      files: { id: string; name: string; url: string; mimeType: string; sizeBytes?: number }[]
+      itemId?: string | null
+      taskId?: string | null
+    }) => {
+      if (files.length === 0) return
+      const { error } = await supabase.from('attachments').insert(
+        files.map((f) => ({
+          item_id: taskId ? null : (itemId ?? null),
+          task_id: taskId ?? null,
+          name: f.name,
+          drive_file_id: f.id,
+          url: f.url,
+          mime: f.mimeType,
+          size: f.sizeBytes ?? 0,
+        })),
+      )
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments'] }),
+  })
 }

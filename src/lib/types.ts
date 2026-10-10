@@ -33,6 +33,9 @@ export interface GroupItem {
   archived: boolean
   /** во что входит (значение родительской группы) */
   parent_item_id: string | null
+  /** папка на Google Диске */
+  drive_folder_id: string | null
+  drive_folder_name: string | null
   created_at: string
   updated_at: string
 }
@@ -122,6 +125,11 @@ export interface UserSettings {
   planned_hours_per_month: number | null
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
+  calendar_feed_token: string | null
+  /** пуш в начале встречи из календаря, если учёт не идёт */
+  meeting_reminders: boolean
+  drive_reports_folder_id: string | null
+  drive_reports_folder_name: string | null
   updated_at: string
 }
 
@@ -134,8 +142,42 @@ export interface Attachment {
   /** файл задачи (у файла значения пусто) */
   task_id: string | null
   name: string
-  path: string
+  /** путь в хранилище; у файла из Google Диска пусто — вместо него ссылка */
+  path: string | null
+  /** файл из Google Диска: ссылка на него, а не копия */
+  drive_file_id: string | null
+  url: string | null
   size: number
   mime: string
+  created_at: string
+}
+
+/** Календарь: Google — через вход в Google; ics — по секретной iCal-ссылке. */
+export interface CalendarSource {
+  id: string
+  user_id: string
+  kind: 'google' | 'ics'
+  /** у Google-календаря ссылки нет */
+  url: string | null
+  name: string
+  last_synced_at: string | null
+  last_error: string | null
+  created_at: string
+}
+
+/** Встреча из календаря — её можно засчитать в учёт. */
+export interface CalendarEvent {
+  id: number
+  user_id: string
+  source_id: string
+  uid: string
+  starts_at: string
+  ends_at: string
+  title: string
+  suggested_task_id: string | null
+  status: 'new' | 'logged' | 'dismissed'
+  task_id: string | null
+  entry_id: string | null
+  reminded: boolean
   created_at: string
 }

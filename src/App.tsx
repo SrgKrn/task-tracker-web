@@ -7,8 +7,11 @@ import { Changelog } from './routes/Changelog'
 import { GroupPage, GroupsAdmin } from './routes/GroupsAdmin'
 import { ItemDetail } from './routes/ItemDetail'
 import { NewTask } from './routes/NewTask'
+import { OAuthGoogle } from './routes/OAuthGoogle'
 import {
   AppearanceSettings,
+  CalendarSettings,
+  DriveSettings,
   ExportSettings,
   NotificationSettings,
   PlanSettings,
@@ -36,6 +39,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
+      {/* возврат из Google: может открыться вне приложения, без входа — свой маршрут */}
+      <Route path="/oauth/google" element={<OAuthGoogle />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Today />} />
         <Route path="/tasks" element={<TaskWorkspace />}>
@@ -55,6 +60,8 @@ export default function App() {
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
         <Route path="/settings/notifications" element={<NotificationSettings />} />
         <Route path="/settings/telegram" element={<TelegramSettings />} />
+        <Route path="/settings/calendar" element={<CalendarSettings />} />
+        <Route path="/settings/drive" element={<DriveSettings />} />
         <Route path="/settings/plan" element={<PlanSettings />} />
         <Route path="/settings/export" element={<ExportSettings />} />
         <Route path="/changelog" element={<Changelog />} />

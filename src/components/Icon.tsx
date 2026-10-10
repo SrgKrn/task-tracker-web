@@ -71,3 +71,7 @@ export const MoreDots = (p: IconProps) =>
   svg(<><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>, p)
 export const Download = (p: IconProps) =>
   svg(<><path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></>, p)
+export const Calendar = (p: IconProps) =>
+  svg(<><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17" /><path d="M8 3v4M16 3v4" /></>, p)
+export const Drive = (p: IconProps) =>
+  svg(<><path d="m8.5 4-6 10.5L5.5 20h13l3-5.5-6-10.5Z" /><path d="m8.5 4 6.5 11h6.5" /><path d="M2.5 14.5h13L12 20" /></>, p)

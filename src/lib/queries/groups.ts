@@ -108,7 +108,7 @@ async function removeItemFiles(itemIds: string[]) {
   if (itemIds.length === 0) return
   const { data, error } = await supabase.from('attachments').select('path').in('item_id', itemIds)
   if (error) throw error
-  const paths = (data ?? []).map((r: { path: string }) => r.path)
+  const paths = (data ?? []).map((r: { path: string | null }) => r.path).filter((p): p is string => !!p)
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths)
 }
 
@@ -169,7 +169,9 @@ export function useCreateGroupItem() {
   })
 }
 
-export type GroupItemFields = Partial<Pick<GroupItem, 'name' | 'description' | 'archived' | 'parent_item_id'>>
+export type GroupItemFields = Partial<
+  Pick<GroupItem, 'name' | 'description' | 'archived' | 'parent_item_id' | 'drive_folder_id' | 'drive_folder_name'>
+>
 
 export function useUpdateGroupItem() {
   const qc = useQueryClient()

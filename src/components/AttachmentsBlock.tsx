@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
 import { ConfirmDialog } from './ConfirmDialog'
-import { Close, Paperclip, Plus } from './Icon'
+import { Close, Drive, Paperclip, Plus } from './Icon'
 import { FieldLabel } from './ui'
 import { describeError, useToast } from '../lib/Toast'
+import { pickFromDrive, useGoogleStatus } from '../lib/google'
 import {
+  useAddDriveFiles,
   useAttachments,
   useDeleteAttachment,
   useUploadAttachments,
@@ -27,6 +29,8 @@ interface AttachmentsBlockProps {
   taskNames?: Map<string, string>
   title?: string
   emptyText: string
+  /** папка проекта на Диске: окно выбора откроется в ней */
+  driveFolderId?: string | null
 }
 
 function formatSize(bytes: number): string {
@@ -52,11 +56,15 @@ export function AttachmentsBlock({
   taskNames,
   title = 'Файлы',
   emptyText,
+  driveFolderId,
 }: AttachmentsBlockProps) {
   const scope = taskId ? { taskIds: taskIds?.length ? taskIds : [taskId] } : { itemId, taskIds }
   const { data: files = [], isLoading } = useAttachments(scope)
   const upload = useUploadAttachments()
   const remove = useDeleteAttachment()
+  const addDrive = useAddDriveFiles()
+  const { data: google } = useGoogleStatus()
+  const driveReady = !!google?.linked?.drive && !!google.apiKey
   const { showError, showSuccess } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
@@ -87,6 +95,24 @@ export function AttachmentsBlock({
     )
   }
 
+  /** файлы из Google Диска — ссылкой, без копии и без ограничения размера */
+  async function onPickDrive() {
+    if (!google) return
+    try {
+      const picked = await pickFromDrive(google, { startIn: driveFolderId })
+      if (picked.length === 0) return
+      addDrive.mutate(
+        { files: picked, itemId: itemId ?? null, taskId: taskId ?? null },
+        {
+          onError: (e) => showError(describeError(e)),
+          onSuccess: () => showSuccess(picked.length === 1 ? 'Файл из Диска добавлен' : `Добавлено из Диска: ${picked.length}`),
+        },
+      )
+    } catch (e) {
+      showError(describeError(e))
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -94,6 +120,18 @@ export function AttachmentsBlock({
           {title}
           {files.length > 0 ? ` · ${files.length}` : ''}
         </FieldLabel>
+        <span className="flex items-center gap-3">
+          {driveReady && (
+            <button
+              type="button"
+              onClick={onPickDrive}
+              disabled={addDrive.isPending}
+              className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-sky-600 disabled:opacity-50"
+            >
+              <Drive size={14} />
+              Из Диска
+            </button>
+          )}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -103,6 +141,7 @@ export function AttachmentsBlock({
           <Plus size={14} />
           {progress ? `Загружаем ${progress.done + 1 > progress.total ? progress.total : progress.done + 1} из ${progress.total}…` : 'Добавить'}
         </button>
+        </span>
         <input
           ref={inputRef}
           type="file"
@@ -127,7 +166,7 @@ export function AttachmentsBlock({
                 className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md font-mono text-[9.5px] font-medium tracking-[.04em]"
                 style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)', color: 'var(--color-slate-400)' }}
               >
-                {kindOf(f.name)}
+                {f.drive_file_id ? <Drive size={14} /> : kindOf(f.name)}
               </span>
               {/* ссылка готова заранее: окно, открытое после ожидания сервера, iPhone блокирует */}
               <a
@@ -144,7 +183,7 @@ export function AttachmentsBlock({
               >
                 <span className="block truncate text-sm text-slate-100">{f.name}</span>
                 <span className="block truncate font-mono text-2xs text-slate-500">
-                  {formatSize(f.size)} · {formatDate(f.created_at)}
+                  {f.drive_file_id ? 'Google Диск' : formatSize(f.size)} · {formatDate(f.created_at)}
                   {taskNames && f.task_id && taskNames.get(f.task_id) ? ` · ${taskNames.get(f.task_id)}` : ''}
                   {taskNames && !f.task_id ? ' · база знаний' : ''}
                 </span>
@@ -176,8 +215,12 @@ export function AttachmentsBlock({
 
       <ConfirmDialog
         open={deleting !== null}
-        title={`Удалить «${deleting?.name ?? ''}»?`}
-        description="Файл удалится насовсем — и из задачи, и из карточек, где он виден."
+        title={deleting?.drive_file_id ? `Убрать «${deleting?.name ?? ''}»?` : `Удалить «${deleting?.name ?? ''}»?`}
+        description={
+          deleting?.drive_file_id
+            ? 'Уберётся только ссылка — сам файл останется на Google Диске.'
+            : 'Файл удалится насовсем — и из задачи, и из карточек, где он виден.'
+        }
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting, { onError: (e) => showError(describeError(e)) })

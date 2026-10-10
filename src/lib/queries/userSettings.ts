@@ -46,3 +46,23 @@ export function useMarkReleaseSeen() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
+
+/** Папка Google Диска, куда ложатся отчёты. */
+export function useSaveDriveReportsFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (folder: { id: string; name: string } | null) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({
+        user_id: user.id,
+        drive_reports_folder_id: folder?.id ?? null,
+        drive_reports_folder_name: folder?.name ?? null,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}

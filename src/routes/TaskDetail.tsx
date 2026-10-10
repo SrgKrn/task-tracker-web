@@ -378,6 +378,8 @@ export function TaskDetail() {
 
         <AttachmentsBlock
           taskId={task.id}
+          // окно выбора Диска открывается в папке проекта задачи, если она привязана
+          driveFolderId={values.find((v) => v.item.drive_folder_id)?.item.drive_folder_id ?? null}
           taskIds={[task.id, ...subtasks.map((c) => c.id)]}
           taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
           emptyText="Прикрепить файл: договор, ТЗ, скриншоты — откроются прямо отсюда"

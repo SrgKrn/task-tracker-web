@@ -1,5 +1,5 @@
-// Напоминания о долгом учёте — пуш-уведомлением и в Telegram (если подключён). Работают,
-// даже когда приложение закрыто и экран заблокирован. Функцию раз в минуту вызывает
+// Напоминания о долгом учёте и о начале встречи из календаря — пуш-уведомлением и в Telegram
+// (если подключён). Работают, даже когда приложение закрыто и экран заблокирован. Функцию раз в минуту вызывает
 // pg_cron (заголовок x-cron-secret); из приложения её же вызывают с action: 'test',
 // чтобы прислать пробное уведомление.
 //
@@ -37,15 +37,20 @@ Deno.serve(async (req) => {
   const appUrl = secret.app_url ?? secret.vapid_subject ?? ''
 
   /** сообщение в Telegram, если пользователь подключил бота и не выключил этот вид уведомлений */
-  async function telegramTo(userId: string, text: string, keyboard?: unknown) {
+  async function telegramTo(
+    userId: string,
+    text: string,
+    keyboard?: unknown,
+    kind: 'notify_long_timer' | 'notify_meetings' = 'notify_long_timer',
+  ) {
     const token = secret.telegram_bot_token
     if (!token) return false
     const { data: acc } = await db
       .from('telegram_accounts')
-      .select('chat_id, notify_long_timer')
+      .select('chat_id, notify_long_timer, notify_meetings')
       .eq('user_id', userId)
       .maybeSingle()
-    if (!acc?.notify_long_timer) return false
+    if (!acc?.[kind]) return false
     const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,5 +147,49 @@ Deno.serve(async (req) => {
     await telegramTo(t.user_id, `⏱ ${title}\n«${taskName}» — вы всё ещё работаете?`, keyboard)
     reminded++
   }
-  return json({ active: timers?.length ?? 0, reminded })
+
+  // ── встреча из календаря началась, а учёт не идёт
+  const running = new Set((timers ?? []).map((t) => t.user_id))
+  const { data: meetings } = await db
+    .from('calendar_events')
+    .select('id, user_id, title, starts_at, ends_at, suggested_task_id')
+    .eq('status', 'new')
+    .eq('reminded', false)
+    .lte('starts_at', new Date(now + 60_000).toISOString())
+    .gte('starts_at', new Date(now - 5 * 60_000).toISOString())
+  let meetingReminders = 0
+  for (const ev of meetings ?? []) {
+    // отметка до отправки: наложившиеся запуски не напомнят дважды
+    const { data: claimed } = await db
+      .from('calendar_events')
+      .update({ reminded: true })
+      .eq('id', ev.id)
+      .eq('reminded', false)
+      .select('id')
+    if (!claimed?.length || running.has(ev.user_id)) continue
+    const { data: task } = ev.suggested_task_id
+      ? await db.from('tasks').select('id, name').eq('id', ev.suggested_task_id).maybeSingle()
+      : { data: null }
+    const question = task ? `Начать учёт по «${task.name.trim()}»?` : 'Начать учёт?'
+    const { data: prefs } = await db.from('user_settings').select('meeting_reminders').eq('user_id', ev.user_id).maybeSingle()
+    if (prefs?.meeting_reminders !== false) {
+      await sendTo(ev.user_id, {
+        title: `Началась встреча · ${ev.title}`,
+        body: question,
+        url: task ? `/tasks/${task.id}` : '/',
+        tag: `semternity-meeting-${ev.id}`,
+      })
+    }
+    const keyboard = {
+      inline_keyboard: [
+        task
+          ? [{ text: `▶ Начать учёт: ${task.name.trim().slice(0, 30)}`, callback_data: `mt:${ev.id}` }]
+          : [{ text: '▶ Выбрать задачу', callback_data: `pk:${ev.id}` }],
+        [{ text: 'Не учитывать', callback_data: `sk:${ev.id}` }],
+      ],
+    }
+    await telegramTo(ev.user_id, `📅 Началась встреча «${ev.title}»\n${question}`, keyboard, 'notify_meetings')
+    meetingReminders++
+  }
+  return json({ active: timers?.length ?? 0, reminded, meetingReminders })
 })
