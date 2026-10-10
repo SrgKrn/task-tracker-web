@@ -6,16 +6,17 @@ import { ArrowLeft, ChevronDown } from '../components/Icon'
 import { EmptyState, FieldLabel, Overline, Segmented } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { toDateString } from '../lib/period'
+import { useGroupModel, type GroupModel } from '../lib/groups'
+import { entryNote } from '../lib/notes'
 import { useAttachments } from '../lib/queries/attachments'
-import { useProjectActivity } from '../lib/queries/projectActivity'
-import { useProjects, useUpdateProjectDescription } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useUpdateGroupItem } from '../lib/queries/groups'
+import { useItemActivity } from '../lib/queries/itemActivity'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { formatHoursMinutes, formatHoursRu } from '../lib/time'
 import { childrenByParent } from '../lib/tree'
-import type { Project, Status, Task } from '../lib/types'
+import type { GroupItem, Status, Task } from '../lib/types'
 
 type Tab = 'tasks' | 'files' | 'history'
 
@@ -28,10 +29,10 @@ function daysAgo(n: number): string {
 }
 
 /**
- * Карточка проекта — всё по клиенту в одном месте: описание, задачи, файлы как база
- * знаний и хронология того, что по проекту делалось.
+ * Карточка значения группы — проекта, клиента, раздела: описание, во что входит и что входит
+ * в него, задачи, файлы как база знаний и хронология того, что по нему делалось.
  */
-export function ProjectDetail() {
+export function ItemDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -39,28 +40,36 @@ export function ProjectDetail() {
   const tab = (params.get('tab') as Tab) || 'tasks'
   const setTab = (t: Tab) => setParams(t === 'tasks' ? {} : { tab: t }, { replace: true })
 
-  const { data: projects = [] } = useProjects()
+  const model = useGroupModel()
   const { data: tasks = [] } = useTasks()
   const { data: statuses = [] } = useStatuses()
 
-  const project = projects.find((p) => p.id === id)
-  const projectTasks = useMemo(() => tasks.filter((t) => t.project_id === id), [tasks, id])
+  const item = id ? model.itemById.get(id) : undefined
+  const group = item ? model.groupById.get(item.group_id) : undefined
+  const itemTasks = useMemo(() => tasks.filter((t) => !!id && t.item_ids.includes(id)), [tasks, id])
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  const childrenOf = useMemo(() => childrenByParent(projectTasks), [projectTasks])
-  const heads = useMemo(() => projectTasks.filter((t) => !t.parent_id), [projectTasks])
+  const childrenOf = useMemo(() => childrenByParent(itemTasks), [itemTasks])
+  const heads = useMemo(() => itemTasks.filter((t) => !t.parent_id), [itemTasks])
   const isDone = (t: Task) => !!t.status_id && !!statusById.get(t.status_id)?.is_final
 
-  const totalHours = projectTasks.reduce((s, t) => s + t.fact_hours, 0)
+  const totalHours = itemTasks.reduce((s, t) => s + t.fact_hours, 0)
   const activeCount = heads.filter((t) => !isDone(t)).length
   const closedCount = heads.length - activeCount
 
-  if (!project) return null
+  if (!item || !group) return null
+  const parent = item.parent_item_id ? model.itemById.get(item.parent_item_id) : undefined
+  const parentGroup = parent ? model.groupById.get(parent.group_id) : undefined
+  // что входит в это значение: проекты клиента и т. п.
+  const children = model
+    .childGroupsOf(group.id)
+    .map((g) => ({ group: g, items: model.itemsOf(g.id).filter((i) => i.parent_item_id === item.id) }))
+    .filter((c) => c.items.length > 0)
 
   return (
     <div className="safe-top mx-auto flex max-w-lg flex-col gap-4 px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
       <button
         type="button"
-        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/projects'))}
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(`/groups/${group.id}`))}
         className="-my-2.5 flex items-center gap-2 self-start py-2.5 text-sm text-slate-400"
       >
         <ArrowLeft size={15} />
@@ -68,11 +77,42 @@ export function ProjectDetail() {
       </button>
 
       <div className="flex flex-col gap-1">
-        <Overline>Проект</Overline>
-        <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{project.name}</h1>
+        <Overline>
+          {group.item_name}
+          {item.archived ? ' · в архиве' : ''}
+        </Overline>
+        <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{item.name}</h1>
+        {parent && parentGroup && (
+          <span className="text-xs text-slate-500">
+            {parentGroup.item_name}:{' '}
+            <Link to={`/items/${parent.id}`} className="text-sky-600">
+              {parent.name}
+            </Link>
+          </span>
+        )}
       </div>
 
-      <ProjectDescription project={project} />
+      {children.map((c) => (
+        <div key={c.group.id} className="flex flex-col gap-1.5">
+          <FieldLabel>
+            {c.group.name} · {c.items.length}
+          </FieldLabel>
+          <div className="flex flex-wrap gap-2">
+            {c.items.map((child) => (
+              <Link
+                key={child.id}
+                to={`/items/${child.id}`}
+                className="rounded-[9px] px-[13px] py-[9px] text-xs text-[var(--s-muted-text)]"
+                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)', opacity: child.archived ? 0.55 : 1 }}
+              >
+                {child.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <ItemDescription item={item} />
 
       <div
         className="grid grid-cols-3 rounded-2xl"
@@ -106,30 +146,31 @@ export function ProjectDetail() {
       />
 
       {tab === 'tasks' && (
-        <ProjectTasks heads={heads} childrenOf={childrenOf} statusById={statusById} project={project} />
+        <ItemTasks heads={heads} childrenOf={childrenOf} statusById={statusById} model={model} />
       )}
       {tab === 'files' && (
         <AttachmentsBlock
-          projectId={project.id}
-          taskNames={new Map(projectTasks.map((t) => [t.id, t.name]))}
+          itemId={item.id}
+          taskIds={itemTasks.map((t) => t.id)}
+          taskNames={new Map(itemTasks.map((t) => [t.id, t.name]))}
           title="База знаний"
-          emptyText="Положите сюда всё, что нужно по проекту: договоры, доступы, презентации. Файлы из задач проекта появятся здесь сами"
+          emptyText="Положите сюда всё, что нужно: договоры, доступы, презентации. Файлы из задач появятся здесь сами"
         />
       )}
-      {tab === 'history' && <ProjectHistory project={project} tasks={projectTasks} statusById={statusById} />}
+      {tab === 'history' && <ItemHistory item={item} tasks={itemTasks} statusById={statusById} />}
     </div>
   )
 }
 
 /** Описание сохраняется, когда уходишь с поля: кнопки «Сохранить» здесь не нужно. */
-function ProjectDescription({ project }: { project: Project }) {
-  const update = useUpdateProjectDescription()
+function ItemDescription({ item }: { item: GroupItem }) {
+  const update = useUpdateGroupItem()
   const { showError, showSuccess } = useToast()
-  const [draft, setDraft] = useState(project.description ?? '')
+  const [draft, setDraft] = useState(item.description ?? '')
 
   useEffect(() => {
-    setDraft(project.description ?? '')
-  }, [project.id, project.description])
+    setDraft(item.description ?? '')
+  }, [item.id, item.description])
 
   return (
     <textarea
@@ -137,39 +178,37 @@ function ProjectDescription({ project }: { project: Project }) {
       onChange={(e) => setDraft(e.target.value)}
       onBlur={(e) => {
         const value = e.currentTarget.value.trim()
-        if (value === (project.description ?? '').trim()) return
+        if (value === (item.description ?? '').trim()) return
         update.mutate(
-          { id: project.id, description: value },
+          { id: item.id, fields: { description: value } },
           { onError: (err) => showError(describeError(err)), onSuccess: () => showSuccess('Описание сохранено') },
         )
       }}
       rows={Math.min(10, Math.max(3, draft.split('\n').length + 1))}
-      placeholder="Описание проекта: кто клиент, о чём договорились, контакты, ссылки. Сохраняется само"
+      placeholder="Описание: кто клиент, о чём договорились, контакты, ссылки. Сохраняется само"
       className="resize-none rounded-2xl px-3.5 py-3 text-sm leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     />
   )
 }
 
-function ProjectTasks({
+function ItemTasks({
   heads,
   childrenOf,
   statusById,
-  project,
+  model,
 }: {
   heads: Task[]
   childrenOf: Map<string, Task[]>
   statusById: Map<string, Status>
-  project: Project
+  model: GroupModel
 }) {
-  const { data: sections = [] } = useSections()
   const { data: activeTimer } = useActiveTimer()
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const [showClosed, setShowClosed] = useState(false)
-  const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
 
   const isDone = (t: Task) => !!t.status_id && !!statusById.get(t.status_id)?.is_final
   const active = heads.filter((t) => !isDone(t))
@@ -180,8 +219,7 @@ function ProjectTasks({
       key={task.id}
       task={task}
       status={task.status_id ? statusById.get(task.status_id) : undefined}
-      project={project}
-      section={sectionById.get(task.section_id)}
+      label={model.listLabel(task)}
       activeTimer={activeTimer}
       onStartTimer={() => startTimer.mutate(task.id, { onError })}
       onStopTimer={() => stopTimer.mutate(undefined, { onError })}
@@ -189,7 +227,7 @@ function ProjectTasks({
     />
   )
 
-  if (heads.length === 0) return <EmptyState>В этом проекте пока нет задач.</EmptyState>
+  if (heads.length === 0) return <EmptyState>Задач с этим значением пока нет.</EmptyState>
 
   return (
     <div className="flex flex-col gap-[9px]">
@@ -238,24 +276,24 @@ function dayTitle(day: string): string {
 }
 
 /**
- * Хронология проекта по дням. Время по задаче за день — одной строкой: сотни отдельных
- * правок по 15 минут иначе погребли бы под собой всё остальное. Комментарии, закрытия,
- * файлы и новые задачи — каждое отдельно.
+ * Хронология по дням. Время по задаче за день — одной строкой: сотни отдельных правок
+ * по 15 минут иначе погребли бы под собой всё остальное. Комментарии (и к задаче, и к сессиям
+ * учёта), закрытия, файлы и новые задачи — каждое отдельно.
  */
-function ProjectHistory({
-  project,
+function ItemHistory({
+  item,
   tasks,
   statusById,
 }: {
-  project: Project
+  item: GroupItem
   tasks: Task[]
   statusById: Map<string, Status>
 }) {
   const [windowDays, setWindowDays] = useState(HISTORY_STEP_DAYS)
   const since = daysAgo(windowDays)
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks])
-  const { data: activity, isLoading } = useProjectActivity(project.id, taskIds, since)
-  const { data: files = [] } = useAttachments({ projectId: project.id })
+  const { data: activity, isLoading } = useItemActivity(item.id, taskIds, since)
+  const { data: files = [] } = useAttachments({ itemId: item.id, taskIds })
 
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
   const titleOf = (taskId: string | null) => {
@@ -283,6 +321,13 @@ function ProjectHistory({
       if (v.minutes === 0) continue
       items.push({ at: v.at, day: v.day, text: titleOf(v.taskId), hours: v.minutes / 60, href: `/tasks/${v.taskId}`, tone: 'time' })
     }
+    // комментарии к сессиям учёта — рядом с обычными
+    for (const e of activity?.entries ?? []) {
+      const note = entryNote(e)
+      if (!note) continue
+      const at = e.ended_at ?? e.created_at
+      items.push({ at, day: e.effective_date, text: note, sub: `${titleOf(e.task_id)} · к сессии`, href: `/tasks/${e.task_id}`, tone: 'comment' })
+    }
     for (const c of activity?.comments ?? []) {
       items.push({ at: c.created_at, day: localDay(c.created_at), text: c.body, sub: titleOf(c.task_id), href: `/tasks/${c.task_id}`, tone: 'comment' })
     }
@@ -302,7 +347,7 @@ function ProjectHistory({
         at: f.created_at,
         day: localDay(f.created_at),
         text: `Файл «${f.name}»`,
-        sub: f.task_id ? titleOf(f.task_id) : 'в базу знаний проекта',
+        sub: f.task_id ? titleOf(f.task_id) : 'в базу знаний',
         href: f.url ?? undefined,
         external: true,
         tone: 'file',
@@ -331,7 +376,7 @@ function ProjectHistory({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity, files, tasks, since, statusById])
 
-  if (tasks.length === 0) return <EmptyState>В проекте пока ничего не происходило.</EmptyState>
+  if (tasks.length === 0) return <EmptyState>Здесь пока ничего не происходило.</EmptyState>
 
   const dot: Record<string, string> = {
     time: 'var(--s-accent)',
@@ -345,7 +390,7 @@ function ProjectHistory({
     <div className="flex flex-col gap-4">
       {isLoading && <p className="text-sm text-slate-500">Собираем историю…</p>}
       {!isLoading && days.length === 0 && (
-        <p className="text-sm text-slate-500">За последние {windowDays} дней по проекту ничего не происходило.</p>
+        <p className="text-sm text-slate-500">За последние {windowDays} дней ничего не происходило.</p>
       )}
       {days.map((d) => (
         <div key={d.day} className="flex flex-col">

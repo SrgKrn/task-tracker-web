@@ -63,3 +63,7 @@ export const Bell = (p: IconProps) =>
   svg(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></>, p)
 export const Send = (p: IconProps) =>
   svg(<><path d="M21.5 3.5 2.8 10.7c-.8.3-.8 1.4 0 1.7l4.7 1.6 1.8 5.6c.2.7 1.1.9 1.6.4l2.7-2.6 4.9 3.6c.6.4 1.4.1 1.6-.6l3-15.4c.2-.9-.7-1.6-1.6-1.3Z" /><path d="m7.5 14 9.5-6.5" /></>, p)
+export const Comment = (p: IconProps) =>
+  svg(<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z" />, p)
+export const Sparkle = (p: IconProps) =>
+  svg(<><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m6.3 6.3 2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1" /></>, p)

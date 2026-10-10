@@ -3,18 +3,21 @@ import { Link } from 'react-router-dom'
 import { NotificationsCard, TelegramCard, ThemeCard } from '../components/AppPreferences'
 import { DatePicker } from '../components/DatePicker'
 import { ArrowRight } from '../components/Icon'
-import { Overline, Tag, fieldClass } from '../components/ui'
+import { Overline, fieldClass } from '../components/ui'
+import { BUILD_TIME } from '../lib/appUpdate'
+import { LATEST_RELEASE } from '../lib/changelog'
+import { useGroupModel } from '../lib/groups'
 import type { ReportOptions } from '../lib/report'
+import { useGroupItems, useGroups } from '../lib/queries/groups'
 import { loadReport } from '../lib/queries/report'
 import { describeError, useToast } from '../lib/Toast'
 import { useAuth } from '../lib/AuthContext'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
-import { useSetStatusFinal, useStatuses } from '../lib/queries/statuses'
+import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
+import { plural } from '../lib/time'
 
 function firstOfMonthStr(): string {
   const d = new Date()
@@ -30,6 +33,29 @@ const ProjectIcon = (
 const StatusIcon = (
   <span className="h-3.5 w-3.5 rounded-full" style={{ border: '1.5px solid var(--s-accent)' }} />
 )
+const BuilderIcon = (
+  <span className="relative h-3.5 w-3.5">
+    <span className="absolute top-0 left-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid var(--s-accent)' }} />
+    <span className="absolute right-0 bottom-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid var(--s-accent)' }} />
+  </span>
+)
+const HistoryIcon = (
+  <span className="flex h-3.5 w-3.5 flex-col justify-between py-[1px]">
+    <span className="h-[1.5px] w-full rounded-full" style={{ background: 'var(--s-accent)' }} />
+    <span className="h-[1.5px] w-3/4 rounded-full" style={{ background: 'var(--s-accent)' }} />
+    <span className="h-[1.5px] w-1/2 rounded-full" style={{ background: 'var(--s-accent)' }} />
+  </span>
+)
+
+/** Заголовок блока на экране «Ещё»: раньше двенадцать карточек шли сплошной лентой. */
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-4 flex flex-col gap-[9px]">
+      <Overline className="px-0.5">{title}</Overline>
+      {children}
+    </section>
+  )
+}
 
 function NavCard({
   to,
@@ -50,7 +76,7 @@ function NavCard({
     >
       <span
         className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]"
-        style={{ background: 'rgba(232,163,61,.12)' }}
+        style={{ background: 'var(--s-accent-ghost)' }}
       >
         {icon}
       </span>
@@ -60,50 +86,6 @@ function NavCard({
       </span>
       <ArrowRight size={16} className="text-slate-600" />
     </Link>
-  )
-}
-
-function StatusEditor() {
-  const { data: statuses = [] } = useStatuses()
-  const setStatusFinal = useSetStatusFinal()
-  const { showError } = useToast()
-
-  if (statuses.length === 0) return null
-
-  return (
-    <div
-      className="flex flex-col gap-2.5 pt-4"
-      style={{ borderTop: '1px solid var(--s-hairline-2)' }}
-    >
-      <Overline>Статусы · финальность</Overline>
-      <div className="flex flex-col">
-        {statuses.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center gap-3 py-3"
-            style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
-          >
-            <span className="flex-1 text-sm text-slate-100">{s.label}</span>
-            <button
-              type="button"
-              className="-my-2.5 py-2.5 pl-3"
-              onClick={() =>
-                setStatusFinal.mutate(
-                  { id: s.id, isFinal: !s.is_final },
-                  { onError: (e) => showError(describeError(e)) },
-                )
-              }
-            >
-              <Tag tone={s.is_final ? 'success' : 'neutral'}>{s.is_final ? 'финальный' : 'активный'}</Tag>
-            </button>
-          </div>
-        ))}
-        <Link to="/statuses" className="flex items-center gap-3 py-3 text-sm text-slate-500">
-          <span className="font-mono text-xs text-sky-600">+</span>
-          Новый статус
-        </Link>
-      </div>
-    </div>
   )
 }
 
@@ -241,8 +223,8 @@ function ExportSection() {
   }
 
   const { data: tasks = [] } = useTasks()
-  const { data: projects = [] } = useProjects()
-  const { data: sections = [] } = useSections()
+  const { data: groups = [] } = useGroups()
+  const { data: items = [] } = useGroupItems()
   const { data: statuses = [] } = useStatuses()
 
   function setOption(key: keyof ReportOptions, value: boolean) {
@@ -266,7 +248,7 @@ function ExportSection() {
     try {
       // записи, комментарии и закрытия грузятся в момент выгрузки: отчёту нужен ещё
       // и прошлый период для сравнения, держать всё это на экране «Ещё» незачем
-      const data = await loadReport({ from, to, tasks, projects, sections, statuses, options })
+      const data = await loadReport({ from, to, tasks, groups, items, statuses, options })
       if (format === 'excel') {
         const { exportExcel } = await import('../lib/exportExcel')
         await exportExcel(data)
@@ -289,7 +271,7 @@ function ExportSection() {
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-100">Экспорт отчёта</span>
         <span className="text-2xs leading-[1.5] text-slate-500">
-          Итоги и ритм, направления и проекты, спринты против плана, журнал по дням. PDF — чтобы
+          Итоги и ритм, разрезы по группам, спринты против плана, журнал по дням. PDF — чтобы
           читать и отправлять, Excel — чтобы разбирать самому.
         </span>
       </div>
@@ -317,7 +299,7 @@ function ExportSection() {
             {
               key: 'includeComments',
               title: 'Комментарии в журнале',
-              hint: 'пишутся для себя — включайте, если отчёт не уходит дальше',
+              hint: 'к задачам и к сессиям учёта; пишутся для себя — включайте, если отчёт не уходит дальше',
             },
             {
               key: 'includeChecks',
@@ -358,48 +340,55 @@ function ExportSection() {
   )
 }
 
+const VALUES: [string, string, string] = ['значение', 'значения', 'значений']
+
 export function Settings() {
   const { session } = useAuth()
-  const { data: sections = [] } = useSections()
-  const { data: projects = [] } = useProjects()
+  const model = useGroupModel()
   const { data: statuses = [] } = useStatuses()
 
   return (
-    <div className="safe-top mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-2 lg:mx-0 lg:max-w-2xl">
-      <h1 className="mb-2 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
+    <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-2 lg:mx-0 lg:max-w-2xl">
+      <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
 
-      <NavCard
-        to="/sections"
-        icon={SectionIcon}
-        title="Разделы"
-        hint={`Категории для аналитики план/факт · ${sections.filter((s) => !s.archived).length}`}
-      />
-      <NavCard
-        to="/projects"
-        icon={ProjectIcon}
-        title="Проекты"
-        hint={`Клиенты или направления работы · ${projects.filter((p) => !p.archived).length}`}
-      />
-      <NavCard
-        to="/statuses"
-        icon={StatusIcon}
-        title="Статусы"
-        hint={`Свой список статусов задач · ${statuses.length}`}
-      />
+      <Block title="Группы">
+        {model.groups.map((g, i) => {
+          const parent = g.parent_group_id ? model.groupById.get(g.parent_group_id) : undefined
+          const count = model.itemsOf(g.id).filter((x) => !x.archived).length
+          return (
+            <NavCard
+              key={g.id}
+              to={`/groups/${g.id}`}
+              icon={i % 2 === 0 ? SectionIcon : ProjectIcon}
+              title={g.name}
+              hint={[plural(count, VALUES), parent ? `входит в «${parent.name}»` : null].filter(Boolean).join(' · ')}
+            />
+          )
+        })}
+        <NavCard to="/statuses" icon={StatusIcon} title="Статусы" hint={`Этапы задачи и что считается готовым · ${statuses.length}`} />
+        <NavCard
+          to="/groups"
+          icon={BuilderIcon}
+          title="Конструктор групп"
+          hint="Добавить свою группу, связать группы, поменять порядок или удалить"
+        />
+      </Block>
 
-      <div className="mt-3.5">
-        <StatusEditor />
-      </div>
-
-      <div className="mt-3.5 flex flex-col gap-[9px]">
+      <Block title="Настройки">
         <ThemeCard />
         <NotificationsCard />
+      </Block>
+
+      <Block title="Интеграции">
         <TelegramCard />
+      </Block>
+
+      <Block title="Планы и аналитика">
         <BudgetForm />
         <ExportSection />
-      </div>
+      </Block>
 
-      <div className="mt-3.5 flex flex-col gap-3">
+      <Block title="Аккаунт">
         <div
           className="flex items-center gap-3 rounded-2xl px-3.5 py-3.5"
           style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
@@ -413,15 +402,30 @@ export function Settings() {
             <span className="block font-mono text-2xs text-slate-500">синхронизация включена</span>
           </span>
         </div>
+        <NavCard
+          to="/changelog"
+          icon={HistoryIcon}
+          title="История изменений"
+          hint={`Что нового в версии ${LATEST_RELEASE.version} и раньше`}
+        />
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
           className="h-11 rounded-[14px] text-sm font-medium text-red-400"
-          style={{ border: '1px solid rgba(217,114,86,.45)' }}
+          style={{ border: '1px solid var(--s-danger-line)' }}
         >
           Выйти
         </button>
-      </div>
+        <span className="pb-1 text-center font-mono text-2xs text-slate-600">
+          Версия {LATEST_RELEASE.version} · сборка от{' '}
+          {new Date(BUILD_TIME).toLocaleString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
+      </Block>
     </div>
   )
 }

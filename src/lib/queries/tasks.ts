@@ -30,15 +30,15 @@ export function useTask(id: string | undefined) {
 
 export interface NewTaskInput {
   name: string
-  project_id: string
-  section_id: string
+  /** значения групп; у подзадачи не нужны — база возьмёт их у спринта */
+  item_ids?: string[]
   status_id: string | null
   planned_hours: number
   start_date: string | null
   end_date: string | null
   is_daily?: boolean
   duplicated_from?: string | null
-  /** спринт, в который кладётся подзадача; проект и раздел база возьмёт у него */
+  /** спринт, в который кладётся подзадача; значения групп база возьмёт у него */
   parent_id?: string | null
 }
 
@@ -58,8 +58,7 @@ export type TaskFieldsInput = Partial<
   Pick<
     Task,
     | 'name'
-    | 'project_id'
-    | 'section_id'
+    | 'item_ids'
     | 'status_id'
     | 'planned_hours'
     | 'start_date'
@@ -119,8 +118,7 @@ export function useDuplicateTask() {
     mutationFn: async ({ task, overrides }: { task: Task; overrides?: DuplicateOverrides }) => {
       const input: NewTaskInput = {
         name: overrides?.name?.trim() || `${task.name} (копия)`,
-        project_id: task.project_id,
-        section_id: task.section_id,
+        item_ids: task.item_ids,
         status_id: task.status_id,
         planned_hours: task.planned_hours,
         start_date: overrides?.start_date !== undefined ? overrides.start_date : task.start_date,
@@ -150,7 +148,7 @@ export interface NextSprintInput {
 }
 
 /**
- * «Спринт 6 → Спринт 7»: новый спринт на следующий период с незакрытыми подзадачами.
+ * «Новый период»: «Спринт 6 → Спринт 7» с незакрытыми подзадачами.
  * Старый спринт не трогаем — его часы, закрытые подзадачи и история остаются в нём.
  */
 export function useCreateNextSprint() {
@@ -159,8 +157,7 @@ export function useCreateNextSprint() {
     mutationFn: async (input: NextSprintInput) => {
       const head: NewTaskInput = {
         name: input.name.trim(),
-        project_id: input.from.project_id,
-        section_id: input.from.section_id,
+        item_ids: input.from.item_ids,
         status_id: input.status_id,
         planned_hours: input.planned_hours,
         start_date: input.start_date,
@@ -175,8 +172,6 @@ export function useCreateNextSprint() {
       if (input.carry.length > 0) {
         const rows: NewTaskInput[] = input.carry.map((c) => ({
           name: c.name,
-          project_id: sprint.project_id,
-          section_id: sprint.section_id,
           status_id: null,
           planned_hours: c.planned_hours,
           start_date: null,

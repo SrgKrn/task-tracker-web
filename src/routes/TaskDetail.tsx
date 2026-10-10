@@ -16,8 +16,7 @@ import { TimerButton } from '../components/TimerButton'
 import { FieldLabel, Tag } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { todayStr } from '../lib/period'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import {
   useCreateNextSprint,
@@ -48,8 +47,7 @@ export function TaskDetail() {
   const { data: task, isFetched } = useTask(id)
   const { data: original } = useTask(task?.duplicated_from ?? undefined)
   const { data: allTasks = [] } = useTasks()
-  const { data: projects = [] } = useProjects()
-  const { data: sections = [] } = useSections()
+  const model = useGroupModel()
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
 
@@ -95,8 +93,7 @@ export function TaskDetail() {
   if (!task) return null
 
   const status = task.status_id ? statuses.find((s) => s.id === task.status_id) : undefined
-  const project = projects.find((p) => p.id === task.project_id)
-  const section = sections.find((s) => s.id === task.section_id)
+  const values = model.valuesOf(task)
 
   const isSubtask = !!task.parent_id
   // куда возвращаться: у подзадачи — в её спринт, а не в общий список
@@ -110,10 +107,9 @@ export function TaskDetail() {
   const over = pct > 100 && !done
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning || runningInside ? 'running' : 'idle'
 
-  const values: TaskFormValues = {
+  const formValues: TaskFormValues = {
     name: task.name,
-    project_id: task.project_id,
-    section_id: task.section_id,
+    item_ids: task.item_ids,
     status_id: task.status_id,
     planned_hours: task.planned_hours,
     start_date: task.start_date,
@@ -264,13 +260,19 @@ export function TaskDetail() {
         <div className="flex items-center gap-2">
           {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
           <span className="truncate font-mono text-xs text-slate-500">
-            {/* проект — ссылка на его карточку: там вся история и файлы по клиенту */}
-            {project ? (
-              <Link to={`/projects/${project.id}`} className="text-sky-600 underline-offset-4 hover:underline">
-                {project.name}
-              </Link>
-            ) : null}
-            {section ? `${project ? ' · ' : ''}${section.name}` : ''}
+            {/* каждое значение — ссылка на свою карточку: там вся история и файлы по нему */}
+            {values.map((v, i) => (
+              <span key={v.item.id}>
+                {i > 0 && ' · '}
+                <Link
+                  to={`/items/${v.item.id}`}
+                  title={v.group.item_name}
+                  className={`underline-offset-4 hover:underline ${v.group.show_in_list ? 'text-sky-600' : ''}`}
+                >
+                  {v.item.name}
+                </Link>
+              </span>
+            ))}
           </span>
         </div>
         {/* название правится прямо в заголовке: форма ниже идёт в режиме compact,
@@ -375,7 +377,6 @@ export function TaskDetail() {
         )}
 
         <AttachmentsBlock
-          projectId={task.project_id}
           taskId={task.id}
           taskIds={[task.id, ...subtasks.map((c) => c.id)]}
           taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
@@ -462,9 +463,7 @@ export function TaskDetail() {
         </div>
 
         <TaskForm
-          initial={values}
-          projects={projects}
-          sections={sections}
+          initial={formValues}
           statuses={statuses}
           submitLabel="Сохранить"
           compact
@@ -497,7 +496,7 @@ export function TaskDetail() {
         task={task}
         note={
           subtasks.length > 0
-            ? 'Подзадачи не копируются — чтобы перенести незакрытые, есть «Следующий спринт».'
+            ? 'Подзадачи не копируются — чтобы перенести незакрытые, есть «Новый период».'
             : undefined
         }
         onCancel={() => setDuplicating(false)}
@@ -526,8 +525,8 @@ export function TaskDetail() {
                 onSuccess: (row) => {
                   showSuccess(
                     values.carry.length > 0
-                      ? `Спринт создан, перенесено подзадач: ${values.carry.length}`
-                      : 'Спринт создан',
+                      ? `Новый период создан, перенесено подзадач: ${values.carry.length}`
+                      : 'Новый период создан',
                   )
                   navigate(`/tasks/${row.id}`)
                 },

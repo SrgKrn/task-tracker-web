@@ -9,8 +9,7 @@ import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { currentWeekRange, formatTodayLabel, todayStr } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
@@ -28,8 +27,7 @@ export function Today() {
 
   const { data: tasks = [], isLoading } = useTasks()
   const { data: statuses = [] } = useStatuses()
-  const { data: projects = [] } = useProjects()
-  const { data: sections = [] } = useSections()
+  const model = useGroupModel()
   const { data: activeTimer } = useActiveTimer()
   const { data: userSettings } = useUserSettings()
   const { data: weekEntries = [] } = useTimeEntriesInRange(week.from, week.to)
@@ -46,8 +44,6 @@ export function Today() {
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
-  const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
   const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
 
@@ -145,7 +141,7 @@ export function Today() {
             <span className="flex items-center gap-2">
               <span
                 className="h-[7px] w-[7px] shrink-0 rounded-full"
-                style={{ background: 'rgba(232,163,61,.35)' }}
+                style={{ background: 'var(--s-accent-muted)' }}
               />
               <span className="font-mono text-xs text-[var(--s-faint-text)]">
                 {todayTasks.length > 0 ? `${plural(todayTasks.length, TASKS)} на день` : 'задач на день нет'}
@@ -230,8 +226,7 @@ export function Today() {
               key={task.id}
               task={task}
               status={task.status_id ? statusById.get(task.status_id) : undefined}
-              project={projectById.get(task.project_id)}
-              section={sectionById.get(task.section_id)}
+              label={model.listLabel(task)}
               activeTimer={activeTimer}
               onStartTimer={() => startTimer.mutate(task.id, { onError })}
               onStopTimer={() => stopTimer.mutate(undefined, { onError })}
@@ -260,15 +255,13 @@ export function Today() {
             {overdueTasks.map((task) => {
               const fact = rollupFact(task, childrenOf.get(task.id))
               const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
-              // у подзадачи важнее спринт, чем проект: «Созвон» без спринта ни о чём не говорит
-              const category = task.parent_id
-                ? (taskById.get(task.parent_id)?.name ?? '')
-                : (projectById.get(task.project_id)?.name ?? sectionById.get(task.section_id)?.name ?? '')
+              // у подзадачи важнее спринт, чем группы: «Созвон» без спринта ни о чём не говорит
+              const category = task.parent_id ? (taskById.get(task.parent_id)?.name ?? '') : model.listLabel(task)
               return (
                 <div
                   key={task.id}
                   className="flex items-center gap-3 rounded-2xl px-3.5 py-3"
-                  style={{ background: 'rgba(217,114,86,.08)', border: '1px solid rgba(217,114,86,.35)' }}
+                  style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
                 >
                   <Ring
                     size={34}

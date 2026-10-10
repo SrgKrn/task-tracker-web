@@ -416,8 +416,8 @@ function overview(p: Pdf, r: ReportData) {
     weeklyChart(p, r.weeks, MX, top + 22, colW, 128)
   }
   const dx = MX + colW + 24
-  p.text('По направлениям', dx, top, { b: true, s: 10 })
-  if (r.prevTotal > 0) p.legend([{ kind: 'bar', text: shortName(r.curName) }, { kind: 'prev', text: shortName(r.prevName) }], top)
+  if (r.outer) p.text(r.outer.name, dx, top, { b: true, s: 10 })
+  if (r.outer && r.prevTotal > 0) p.legend([{ kind: 'bar', text: shortName(r.curName) }, { kind: 'prev', text: shortName(r.prevName) }], top)
   const dirs = r.directions.slice(0, 5)
   const max = Math.max(...dirs.map((d) => Math.max(d.hours, d.prevHours)), 1)
   let ry = top + 16
@@ -529,16 +529,28 @@ function weeklyChart(p: Pdf, weeks: WeekPoint[], x0: number, y0: number, w: numb
 /* ── страница 2: направления и проекты ───────────────────────────── */
 
 function directionsPage(p: Pdf, r: ReportData) {
+  // без групп раскладывать нечего — страницы нет
+  if (!r.outer || r.directions.length === 0) return
+  const outer = r.outer
+  const inner = r.inner
   const prev = r.prevName === 'прошлый период' ? 'прошлый' : r.prevName
-  p.page('Направления и проекты')
+  p.page(inner ? `${outer.name} и ${inner.name.toLowerCase()}` : outer.name)
   p.legend([{ kind: 'bar', text: r.curName }, { kind: 'prev', text: r.prevName }], p.y - 18)
 
   // таблица направлений
   const max = Math.max(...r.directions.map((d) => Math.max(d.hours, d.prevHours)), 1)
   const cols = { name: MX, bar: MX + 116, barW: 150, h: MX + 316, share: MX + 350, prev: MX + 420, d: MX + 466, n: PW - MX }
   p.rule(p.y + 4)
-  for (const [t, x, a] of [['направление', cols.name, 'left'], ['часы', cols.h, 'right'], ['доля', cols.share, 'right'], [prev, cols.prev, 'right'], ['разница', cols.d, 'right'], ['проектов', cols.n, 'right']] as const) {
-    p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.4, c: C.muted, a })
+  const heads: [string, number, 'left' | 'right'][] = [
+    [outer.item, cols.name, 'left'],
+    ['часы', cols.h, 'right'],
+    ['доля', cols.share, 'right'],
+    [prev, cols.prev, 'right'],
+    ['разница', cols.d, 'right'],
+  ]
+  if (inner) heads.push([inner.name, cols.n, 'right'])
+  for (const [t, x, a] of heads) {
+    p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.4, c: C.muted, a, w: x === cols.n ? 56 : undefined })
   }
   p.y += 4
   for (const d of r.directions) {
@@ -551,21 +563,22 @@ function directionsPage(p: Pdf, r: ReportData) {
     p.text(`${f1(d.prevHours)} · ${pctLabel(d.prevHours, r.prevTotal)}`, cols.prev, cy + 3, { f: 'mono', s: 8, c: C.muted, a: 'right' })
     const dl = p.delta(d.hours, d.prevHours)
     p.text(dl.s, cols.d, cy + 3, { f: 'mono', s: 8, c: dl.c, a: 'right' })
-    p.text(String(d.projectCount), cols.n, cy + 3, { f: 'mono', s: 8, c: C.muted, a: 'right' })
+    if (inner) p.text(String(d.childCount), cols.n, cy + 3, { f: 'mono', s: 8, c: C.muted, a: 'right' })
     p.y += 26
     p.rule(p.y, MX, PW - MX, C.track)
   }
 
-  // проекты внутри направлений
+  // вторая группа внутри первой
+  if (!inner) return
   p.y += 26
   p.ensure(60)
-  p.text('Проекты внутри направлений', MX, p.y, { b: true, s: 10 })
+  p.text(`${outer.name} → ${inner.name.toLowerCase()}`, MX, p.y, { b: true, s: 10 })
   p.labelRight('шкала общая для всех строк', PW - MX, p.y)
   p.y += 10
   const pmax = Math.max(...r.groups.flatMap((g) => g.rows.map((row) => Math.max(row.hours, row.prevHours))), 1)
   const pc = { name: MX + 9, bar: MX + 124, barW: 196, h: MX + 360, share: MX + 394, prev: MX + 446, d: PW - MX }
   p.rule(p.y + 4)
-  for (const [t, x, a] of [['проект', MX, 'left'], ['часы', pc.h, 'right'], ['доля', pc.share, 'right'], [prev, pc.prev, 'right'], ['разница', pc.d, 'right']] as const) {
+  for (const [t, x, a] of [[inner.item, MX, 'left'], ['часы', pc.h, 'right'], ['доля', pc.share, 'right'], [prev, pc.prev, 'right'], ['разница', pc.d, 'right']] as const) {
     p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.4, c: C.muted, a })
   }
   p.y += 6
@@ -593,7 +606,7 @@ function directionsPage(p: Pdf, r: ReportData) {
       p.rule(p.y, MX, PW - MX, C.track)
     }
     if (g.note) {
-      // вывод под направлением: первая строка на 10 пт ниже последней строки проектов
+      // вывод под строкой: первая строка на 10 пт ниже последней строки значений
       const step = 7.8 * 1.45
       p.y += 10 + p.para(g.note, MX, p.y + 10, CW, { s: 7.8, c: C.muted }) - step + 8
     }
@@ -647,10 +660,11 @@ function sprintsPage(p: Pdf, r: ReportData) {
     for (const s of rows) {
       p.ensure(17)
       const cy = p.y + 9
-      // название и проект в одной строке: проект серым, если влезает
+      // название и значение группы в одной строке: значение серым, если влезает
       const nameW = p.width(s.name, { s: 8.2 })
+      const tag = s.inner || s.outer
       p.text(s.name, cols.name, cy + 3, { s: 8.2, w: 146 })
-      if (nameW < 120) p.text(`· ${s.project}`, cols.name + nameW + 3, cy + 3, { s: 7.6, c: C.muted, w: 146 - nameW - 3 })
+      if (tag && nameW < 120) p.text(`· ${tag}`, cols.name + nameW + 3, cy + 3, { s: 7.6, c: C.muted, w: 146 - nameW - 3 })
 
       // пуля: доля плана на общей для всех шкале
       p.rect(cols.bullet, cy - 3, BW, 6, C.track)
@@ -829,7 +843,7 @@ function journalPage(p: Pdf, r: ReportData) {
       if (p.doc.getNumberOfPages() !== pageBefore) dayHead(`${day.label} — продолжение`, '')
       p.y += 12
       p.text(row.title, MX, p.y, { s: 8.3, w: CW - 170 })
-      p.text(row.project, PW - MX - 150, p.y, { s: 7.8, c: C.muted, w: 90 })
+      p.text(row.inner || row.outer, PW - MX - 150, p.y, { s: 7.8, c: C.muted, w: 90 })
       p.text(row.hours === 0 ? '—' : hm(row.hours), PW - MX, p.y, { f: 'mono', s: 8.2, c: row.hours < 0 ? C.terraInk : C.ink, a: 'right' })
       if (notes) {
         const step = 7.4 * 1.35

@@ -1,11 +1,12 @@
-import { useState } from 'react'
-import { Overline } from './ui'
+import { useEffect, useState } from 'react'
+import { Overline, Sheet, SheetActions } from './ui'
 import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
 import { useAddComment, useComments } from '../lib/queries/comments'
-import { useTimeEntries } from '../lib/queries/timer'
+import { useSetEntryNote, useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
+import { entryNote } from '../lib/notes'
 import type { Comment, TimeEntry } from '../lib/types'
-import { ArrowUp } from './Icon'
+import { ArrowUp, Comment as CommentIcon } from './Icon'
 
 type TimelineRow =
   | { kind: 'timer'; at: string; entry: TimeEntry }
@@ -30,7 +31,21 @@ function formatMinutes(minutes: number): string {
   return `${sign}${h > 0 ? `${h} ч ` : ''}${m} мин`
 }
 
+function clock(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : ''
+}
+
+/** «9 окт, 14:40–15:18 · 38 мин» — чтобы было видно, к какой именно сессии комментарий */
+function entrySummary(entry: TimeEntry): string {
+  const day = new Date(`${entry.effective_date}T00:00:00`)
+    .toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    .replace('.', '')
+  const span = entry.entry_type === 'timer' && entry.started_at ? `, ${clock(entry.started_at)}–${clock(entry.ended_at)}` : ''
+  return `${day}${span} · ${formatMinutes(entry.duration_minutes)}`
+}
+
 export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning: boolean }) {
+  const [noting, setNoting] = useState<TimeEntry | null>(null)
   const { data: entries = [] } = useTimeEntries(taskId)
   const { data: comments = [] } = useComments(taskId)
   const { data: files = [] } = useAttachments({ taskIds: [taskId] })
@@ -51,34 +66,120 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
       <Overline>Таймлайн</Overline>
 
       <div className="flex flex-col">
-        {rows.map((row, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-[11px] py-[9px]"
-            style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
-          >
-            <span
-              className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full"
-              style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : 'var(--s-dot)' }}
-            />
-            <p className="flex-1 text-sm leading-[1.35] text-slate-300">
-              {row.kind === 'timer' && `Трекинг: ${formatMinutes(row.entry.duration_minutes)}`}
-              {row.kind === 'adjustment' && `Ручная правка: ${formatMinutes(row.entry.duration_minutes)}`}
-              {row.kind === 'comment' && row.comment.body}
-              {row.kind === 'file' && (
-                <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
-                  Файл «{row.file.name}»
-                </a>
+        {rows.map((row, i) => {
+          const entry = row.kind === 'timer' || row.kind === 'adjustment' ? row.entry : null
+          const note = entry ? entryNote(entry) : null
+          return (
+            <div
+              key={i}
+              className="flex items-start gap-[11px] py-[9px]"
+              style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
+            >
+              <span
+                className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full"
+                style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : 'var(--s-dot)' }}
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                {/* строка учёта целиком — цель нажатия: по ней открывается комментарий к ней */}
+                {entry ? (
+                  <button
+                    type="button"
+                    onClick={() => setNoting(entry)}
+                    className="self-start text-left text-sm leading-[1.35] text-slate-300"
+                  >
+                    {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}: {formatMinutes(entry.duration_minutes)}
+                  </button>
+                ) : (
+                <p className="text-sm leading-[1.35] text-slate-300">
+                  {row.kind === 'comment' && row.comment.body}
+                  {row.kind === 'file' && (
+                    <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
+                      Файл «{row.file.name}»
+                    </a>
+                  )}
+                </p>
+                )}
+                {/* комментарий к самой сессии — под ней, нажатием правится */}
+                {entry && note && (
+                  <button
+                    type="button"
+                    onClick={() => setNoting(entry)}
+                    className="self-start rounded-[9px] px-2.5 py-1.5 text-left text-xs leading-[1.45] text-slate-300"
+                    style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)', overflowWrap: 'anywhere' }}
+                  >
+                    «{note}»
+                  </button>
+                )}
+              </div>
+              <span className="shrink-0 font-mono text-2xs leading-[1.4] text-slate-600">
+                {formatDateTime(row.at)}
+              </span>
+              {entry && (
+                <button
+                  type="button"
+                  onClick={() => setNoting(entry)}
+                  aria-label={note ? 'Изменить комментарий к сессии' : 'Комментарий к сессии'}
+                  title="Комментарий к этой строке"
+                  className="hit-44 -my-0.5 flex h-5 w-5 shrink-0 items-center justify-center"
+                  style={{ color: note ? 'var(--s-accent-text)' : 'var(--s-placeholder)' }}
+                >
+                  <CommentIcon size={14} />
+                </button>
               )}
-            </p>
-            <span className="shrink-0 font-mono text-2xs leading-[1.4] text-slate-600">
-              {formatDateTime(row.at)}
-            </span>
-          </div>
-        ))}
+              {!entry && <span className="w-5 shrink-0" />}
+            </div>
+          )
+        })}
         {rows.length === 0 && <p className="py-2 text-sm text-slate-600">Пока ничего нет.</p>}
       </div>
+
+      <EntryNoteSheet entry={noting} onClose={() => setNoting(null)} />
     </div>
+  )
+}
+
+/** Комментарий к одной строке учёта: что делалось именно в эти полчаса. */
+function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: () => void }) {
+  const setNote = useSetEntryNote()
+  const { showError } = useToast()
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    if (entry) setDraft(entryNote(entry) ?? '')
+  }, [entry])
+
+  if (!entry) return null
+  const save = (note: string) =>
+    setNote.mutate({ entry, note }, { onError: (e) => showError(describeError(e)), onSuccess: onClose })
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title={entry.entry_type === 'timer' ? 'Комментарий к сессии' : 'Комментарий к правке'}
+    >
+      <span className="-mt-2 font-mono text-xs text-slate-500">{entrySummary(entry)}</span>
+      <textarea
+        autoFocus
+        rows={4}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Что делали в это время"
+        className="resize-none rounded-[14px] px-3.5 py-3 text-sm leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+      />
+      {entryNote(entry) && (
+        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-xs text-red-400">
+          Удалить комментарий
+        </button>
+      )}
+      <SheetActions
+        onCancel={onClose}
+        onConfirm={() => save(draft)}
+        confirmLabel="Сохранить"
+        confirmDisabled={setNote.isPending || draft.trim() === (entryNote(entry) ?? '')}
+      />
+    </Sheet>
   )
 }
 

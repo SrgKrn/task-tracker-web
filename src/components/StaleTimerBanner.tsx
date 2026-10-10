@@ -28,7 +28,7 @@ export function StaleTimerBanner() {
   return (
     <div
       className="safe-top flex items-center justify-between gap-3 px-5 py-2 text-sm text-sky-600"
-      style={{ background: 'var(--s-timer-bg)', borderBottom: '1px solid rgba(232,163,61,.4)' }}
+      style={{ background: 'var(--s-timer-bg)', borderBottom: '1px solid var(--s-accent-line)' }}
     >
       <span>Таймер идёт уже {hours} ч — забыли остановить?</span>
       <button onClick={() => setDismissedFor(activeTimer.started_at)} className="shrink-0 text-slate-400">

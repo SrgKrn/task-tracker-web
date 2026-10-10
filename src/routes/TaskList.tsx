@@ -7,8 +7,7 @@ import { SortArrows } from '../components/Icon'
 import { Chip, EmptyState, Overline, Segmented, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod } from '../lib/period'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
@@ -16,7 +15,11 @@ import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '..
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 import type { ActiveTimer, Task } from '../lib/types'
 
-type GroupBy = 'section' | 'project' | 'none'
+/** 'none' — одним списком, иначе id группы */
+type GroupBy = string
+
+/** значение «не указано» в фильтрах и группировке */
+const NONE = ''
 
 /** переключает id в наборе; null означает «выбрано всё» */
 function toggleMember(set: Set<string> | null, id: string, allIds: string[]): Set<string> | null {
@@ -29,8 +32,7 @@ function toggleMember(set: Set<string> | null, id: string, allIds: string[]): Se
 
 export function TaskList() {
   const { data: tasks = [], isLoading } = useTasks()
-  const { data: sections = [] } = useSections()
-  const { data: projects = [] } = useProjects()
+  const model = useGroupModel()
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
   const startTimer = useStartTimer()
@@ -47,17 +49,17 @@ export function TaskList() {
   const [periodFrom, setPeriodFrom] = useState('')
   const [periodTo, setPeriodTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [hideCompleted, setHideCompleted] = useState(false)
+  // готовое по умолчанию скрыто: в работе нужны открытые задачи, закрытые — по запросу
+  const [hideCompleted, setHideCompleted] = useState(true)
   const [sortByDue, setSortByDue] = useState(true)
-  const [selectedSectionIds, setSelectedSectionIds] = useState<Set<string> | null>(null)
-  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string> | null>(null)
+  /** выбранные значения по группам; нет ключа — в группе выбрано всё */
+  const [selected, setSelected] = useState<Record<string, Set<string>>>({})
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
-  const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
+  // группировка по удалённой группе — снова одним списком
+  const activeGroupBy = groupBy !== 'none' && model.groupById.has(groupBy) ? groupBy : 'none'
 
-  const filtersActive =
-    !!periodFrom || !!periodTo || selectedSectionIds !== null || selectedProjectIds !== null || hideCompleted
+  const filtersActive = !!periodFrom || !!periodTo || Object.keys(selected).length > 0
 
   // в списке только головные задачи; подзадачи живут в раскрывающемся составе спринта
   const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
@@ -83,26 +85,14 @@ export function TaskList() {
           !q ||
           t.name.toLowerCase().includes(q) ||
           matchedInside.has(t.id) ||
-          projectById.get(t.project_id)?.name.toLowerCase().includes(q) ||
-          sectionById.get(t.section_id)?.name.toLowerCase().includes(q),
+          model.valuesOf(t).some((v) => v.item.name.toLowerCase().includes(q)),
       )
       .filter((t) => overlapsPeriod(t, periodFrom, periodTo))
       .filter((t) => !hideCompleted || !(t.status_id && statusById.get(t.status_id)?.is_final))
-      .filter((t) => selectedSectionIds === null || selectedSectionIds.has(t.section_id))
-      .filter((t) => selectedProjectIds === null || selectedProjectIds.has(t.project_id))
-  }, [
-    heads,
-    query,
-    matchedInside,
-    periodFrom,
-    periodTo,
-    hideCompleted,
-    statusById,
-    projectById,
-    sectionById,
-    selectedSectionIds,
-    selectedProjectIds,
-  ])
+      .filter((t) =>
+        Object.entries(selected).every(([groupId, ids]) => ids.has(model.valueOf(t, groupId)?.id ?? NONE)),
+      )
+  }, [heads, query, matchedInside, periodFrom, periodTo, hideCompleted, statusById, model, selected])
 
   const sorted = useMemo(() => {
     if (!sortByDue) return filtered
@@ -115,38 +105,42 @@ export function TaskList() {
   }, [filtered, sortByDue])
 
   const groups = useMemo(() => {
-    const withSum = (title: string, items: Task[]) => ({
-      id: title,
+    const withSum = (id: string, title: string, items: Task[]) => ({
+      id,
       title: `${title} · ${items.length}`,
       plan: items.reduce((a, t) => a + t.planned_hours, 0),
       items,
     })
 
-    if (groupBy === 'none') {
-      return sorted.length > 0 ? [withSum('Все задачи', sorted)] : []
+    if (activeGroupBy === 'none') {
+      return sorted.length > 0 ? [withSum('all', 'Все задачи', sorted)] : []
     }
-    const buckets = groupBy === 'section' ? sections : projects
-    const key = groupBy === 'section' ? 'section_id' : 'project_id'
+    const buckets = [
+      ...model.itemsOf(activeGroupBy).map((i) => ({ id: i.id, name: i.name })),
+      { id: NONE, name: 'Не указано' },
+    ]
     return buckets
-      .map((bucket) => {
-        const items = sorted.filter((t: Task) => t[key as 'section_id' | 'project_id'] === bucket.id)
-        return { ...withSum(bucket.name, items), id: bucket.id }
-      })
+      .map((bucket) =>
+        withSum(
+          bucket.id || 'none',
+          bucket.name,
+          sorted.filter((t) => (model.valueOf(t, activeGroupBy)?.id ?? NONE) === bucket.id),
+        ),
+      )
       .filter((group) => group.items.length > 0)
-  }, [groupBy, sorted, sections, projects])
+  }, [activeGroupBy, sorted, model])
 
   /** сколько задач за каждым чипом фильтра — видно ещё до его нажатия */
-  const countsBySection = useMemo(() => {
+  const counts = useMemo(() => {
     const map = new Map<string, number>()
-    for (const t of heads) map.set(t.section_id, (map.get(t.section_id) ?? 0) + 1)
+    for (const t of heads) {
+      for (const g of model.groups) {
+        const key = `${g.id}|${model.valueOf(t, g.id)?.id ?? NONE}`
+        map.set(key, (map.get(key) ?? 0) + 1)
+      }
+    }
     return map
-  }, [heads])
-
-  const countsByProject = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const t of heads) map.set(t.project_id, (map.get(t.project_id) ?? 0) + 1)
-    return map
-  }, [heads])
+  }, [heads, model])
 
   const activeCount = heads.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
   // план считаем только по головным: план подзадач — это раскладка плана спринта, а не добавка к нему
@@ -244,74 +238,58 @@ export function TaskList() {
             </div>
           </div>
 
-          {sections.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Overline>Разделы</Overline>
-              <div className="flex flex-wrap gap-2">
-                {sections.map((s) => (
-                  <Chip
-                    key={s.id}
-                    active={selectedSectionIds === null || selectedSectionIds.has(s.id)}
-                    onClick={() =>
-                      setSelectedSectionIds(
-                        toggleMember(
-                          selectedSectionIds,
-                          s.id,
-                          sections.map((x) => x.id),
-                        ),
-                      )
-                    }
-                  >
-                    {s.name}
-                    <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
-                      {countsBySection.get(s.id) ?? 0}
-                    </span>
-                  </Chip>
-                ))}
+          {model.groups.map((group) => {
+            // «Не указано» — только если такие задачи есть
+            const options = [
+              ...model.itemsOf(group.id).map((i) => ({ id: i.id, name: i.name })),
+              { id: NONE, name: 'Не указано' },
+            ].filter((o) => o.id !== NONE || (counts.get(`${group.id}|${NONE}`) ?? 0) > 0)
+            if (options.length === 0) return null
+            const current = selected[group.id] ?? null
+            return (
+              <div key={group.id} className="flex flex-col gap-1.5">
+                <Overline>{group.name}</Overline>
+                <div className="flex flex-wrap gap-2">
+                  {options.map((o) => (
+                    <Chip
+                      key={o.id || 'none'}
+                      active={current === null || current.has(o.id)}
+                      onClick={() => {
+                        const next = toggleMember(
+                          current,
+                          o.id,
+                          options.map((x) => x.id),
+                        )
+                        setSelected((prev) => {
+                          const copy = { ...prev }
+                          if (next === null) delete copy[group.id]
+                          else copy[group.id] = next
+                          return copy
+                        })
+                      }}
+                    >
+                      {o.name}
+                      <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
+                        {counts.get(`${group.id}|${o.id}`) ?? 0}
+                      </span>
+                    </Chip>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-
-          {projects.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Overline>Проекты</Overline>
-              <div className="flex flex-wrap gap-2">
-                {projects.map((p) => (
-                  <Chip
-                    key={p.id}
-                    active={selectedProjectIds === null || selectedProjectIds.has(p.id)}
-                    onClick={() =>
-                      setSelectedProjectIds(
-                        toggleMember(
-                          selectedProjectIds,
-                          p.id,
-                          projects.map((x) => x.id),
-                        ),
-                      )
-                    }
-                  >
-                    {p.name}
-                    <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
-                      {countsByProject.get(p.id) ?? 0}
-                    </span>
-                  </Chip>
-                ))}
-              </div>
-            </div>
-          )}
+            )
+          })}
         </div>
       )}
 
       <div className="flex items-center justify-between gap-2.5 px-5 pb-2.5">
-        <Segmented
-          value={groupBy}
-          onChange={setGroupBy}
-          options={[
-            { value: 'none', label: 'Все' },
-            { value: 'section', label: 'Разделы' },
-            { value: 'project', label: 'Проекты' },
-          ]}
-        />
+        {/* групп может быть сколько угодно — переключатель прокручивается, а не переносится */}
+        <div className="sc -my-1 min-w-0 overflow-x-auto py-1">
+          <Segmented
+            value={activeGroupBy}
+            onChange={setGroupBy}
+            options={[{ value: 'none', label: 'Все' }, ...model.groups.map((g) => ({ value: g.id, label: g.name }))]}
+          />
+        </div>
         <Switch on={hideCompleted} onChange={setHideCompleted} label="скрыть готовые" />
       </div>
 
@@ -337,8 +315,7 @@ export function TaskList() {
                     key={task.id}
                     task={task}
                     status={task.status_id ? statusById.get(task.status_id) : undefined}
-                    project={projectById.get(task.project_id)}
-                    section={sectionById.get(task.section_id)}
+                    label={model.listLabel(task)}
                     activeTimer={activeTimer}
                     onStartTimer={() => startTimer.mutate(task.id, { onError })}
                     onStopTimer={() => stopTimer.mutate(undefined, { onError })}

@@ -42,7 +42,7 @@ const tabs = [
     to: '/settings',
     label: 'Ещё',
     match: (p: string) =>
-      p.startsWith('/settings') || p.startsWith('/sections') || p.startsWith('/projects') || p.startsWith('/statuses'),
+      ['/settings', '/groups', '/items', '/statuses', '/changelog', '/sections', '/projects'].some((x) => p.startsWith(x)),
     icon: (
       <span className="flex h-[19px] w-[19px] items-center justify-center gap-[3px]">
         <span className="h-[3px] w-[3px] rounded-full bg-current" />
@@ -89,7 +89,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
             style={{
               background: 'var(--s-accent)',
               color: 'var(--s-on-accent)',
-              boxShadow: '0 8px 20px -6px rgba(232,163,61,.6)',
+              boxShadow: '0 8px 20px -6px var(--s-accent-glow)',
             }}
           >
             +

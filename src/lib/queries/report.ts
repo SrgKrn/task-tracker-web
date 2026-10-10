@@ -1,6 +1,6 @@
 import { buildReport, previousPeriod, type ReportData, type ReportOptions } from '../report'
 import { supabase } from '../supabaseClient'
-import type { Comment, Project, Section, Status, Task, TimeEntry } from '../types'
+import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from '../types'
 
 /** местная полночь дня YYYY-MM-DD в ISO — граница для полей timestamptz */
 function localMidnightIso(iso: string, addDays = 0): string {
@@ -30,8 +30,8 @@ export async function loadReport(args: {
   from: string
   to: string
   tasks: Task[]
-  projects: Project[]
-  sections: Section[]
+  groups: Group[]
+  items: GroupItem[]
   statuses: Status[]
   options: ReportOptions
 }): Promise<ReportData> {
@@ -75,8 +75,8 @@ export async function loadReport(args: {
     from,
     to,
     tasks: args.tasks,
-    projects: args.projects,
-    sections: args.sections,
+    groups: args.groups,
+    items: args.items,
     statuses: args.statuses,
     entries,
     comments,

@@ -1,6 +1,7 @@
+import { buildGroupModel } from './groups'
+import { entryNote } from './notes'
 import { overlapsPeriod, toDateString } from './period'
-import { plural } from './time'
-import type { Comment, Project, Section, Status, Task, TimeEntry } from './types'
+import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
 
 /**
  * Отчёт за период: всё, что потом рисуют PDF и Excel, считается здесь — одним проходом
@@ -11,7 +12,7 @@ import type { Comment, Project, Section, Status, Task, TimeEntry } from './types
 export interface ReportOptions {
   /** «Что проверить»: ночные сессии таймера, дни в минусе, будни без записей */
   includeChecks: boolean
-  /** комментарии к задачам в журнале — пишутся для себя и бывают неформальными */
+  /** комментарии к задачам и к сессиям учёта в журнале — пишутся для себя и бывают неформальными */
   includeComments: boolean
 }
 
@@ -19,8 +20,9 @@ export interface ReportInput {
   from: string
   to: string
   tasks: Task[]
-  projects: Project[]
-  sections: Section[]
+  /** группы по порядку: первая — верхний уровень отчёта, вторая — то, что внутри */
+  groups: Group[]
+  items: GroupItem[]
   statuses: Status[]
   /** записи за [начало прошлого периода, конец текущего] — текущий период и то, с чем сравниваем */
   entries: TimeEntry[]
@@ -64,7 +66,8 @@ export interface DirectionRow {
   prevHours: number
   share: number
   prevShare: number
-  projectCount: number
+  /** сколько значений второй группы набрали часы внутри */
+  childCount: number
 }
 
 export interface ProjectRow {
@@ -84,8 +87,9 @@ export type SprintGroup = 'over' | 'inplan' | 'noplan'
 export interface SprintRow {
   id: string
   name: string
-  project: string
-  section: string
+  /** значения первой и второй группы */
+  outer: string
+  inner: string
   plan: number
   /** факт за всё время спринта — план ведь тоже на весь спринт */
   factTotal: number
@@ -102,8 +106,8 @@ export interface SprintRow {
 
 export interface JournalRow {
   title: string
-  project: string
-  section: string
+  outer: string
+  inner: string
   hours: number
   comments: string[]
 }
@@ -120,8 +124,8 @@ export interface EntryRecord {
   date: string
   week: number
   weekday: string
-  section: string
-  project: string
+  /** значения всех групп — по порядку ReportData.groupNames */
+  dims: string[]
   sprint: string
   subtask: string
   hours: number
@@ -136,10 +140,21 @@ export interface ReportChecks {
   emptyWeekdays: string[]
 }
 
+/** как называется группа в отчёте: «Проекты» и «Проект» */
+export interface ReportDim {
+  name: string
+  item: string
+}
+
 export interface ReportData {
   from: string
   to: string
   label: string
+  /** первая группа — верхний уровень, вторая — то, что внутри; без групп разрезов нет */
+  outer: ReportDim | null
+  inner: ReportDim | null
+  /** все группы — колонки листа «Записи» */
+  groupNames: string[]
   /** «август» или «прошлый период» — то, с чем сравниваем, в подписях колонок */
   prevName: string
   /** «к августу», «к прошлому периоду» */
@@ -190,7 +205,6 @@ const MONTHS_DAT = ['январю', 'февралю', 'марту', 'апрел�
 const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
 const WEEKDAYS_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']
 const WEEKDAYS_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
-const PROJECTS: [string, string, string] = ['проект', 'проекта', 'проектов']
 
 /* ── даты ─────────────────────────────────────────────────────────── */
 
@@ -341,7 +355,7 @@ function localTime(iso: string | null): string {
 /* ── сборка ───────────────────────────────────────────────────────── */
 
 export function buildReport(input: ReportInput): ReportData {
-  const { from, to, tasks, projects, sections, statuses, options } = input
+  const { from, to, tasks, statuses, options } = input
   const prev = previousPeriod(from, to)
   const whole = isWholeMonth(from, to)
   const prevMonth = parseDate(prev.from).getMonth()
@@ -351,8 +365,15 @@ export function buildReport(input: ReportInput): ReportData {
   const curName = whole ? MONTHS_NOM[parseDate(from).getMonth()] : 'этот период'
 
   const taskById = new Map(tasks.map((t) => [t.id, t]))
-  const projectName = new Map(projects.map((p) => [p.id, p.name]))
-  const sectionName = new Map(sections.map((s) => [s.id, s.name]))
+  const model = buildGroupModel(input.groups, input.items)
+  const outerGroup = input.groups[0] ?? null
+  const innerGroup = input.groups[1] ?? null
+  const itemName = (id: string) => model.itemById.get(id)?.name ?? 'Не указано'
+  /** id значения задачи в группе; '' — не указано */
+  const valueId = (task: Task | undefined, group: Group | null) =>
+    task && group ? (model.valueOf(task, group.id)?.id ?? '') : ''
+  const valueName = (task: Task | undefined, group: Group | null) =>
+    task && group ? (model.valueOf(task, group.id)?.name ?? '') : ''
   const statusById = new Map(statuses.map((s) => [s.id, s]))
   const headOf = (taskId: string): Task | undefined => {
     const t = taskById.get(taskId)
@@ -420,9 +441,9 @@ export function buildReport(input: ReportInput): ReportData {
   }
   for (const w of weeks) w.label = shortRange(w.from, w.to)
 
-  // ── направления и проекты
-  const sectionOf = (e: TimeEntry) => taskById.get(e.task_id)?.section_id ?? ''
-  const projectOf = (e: TimeEntry) => taskById.get(e.task_id)?.project_id ?? ''
+  // ── разрезы: первая группа и вторая внутри неё
+  const sectionOf = (e: TimeEntry) => valueId(taskById.get(e.task_id), outerGroup)
+  const projectOf = (e: TimeEntry) => valueId(taskById.get(e.task_id), innerGroup)
   const tally = (list: TimeEntry[], key: (e: TimeEntry) => string) => {
     const m = new Map<string, number>()
     for (const e of list) m.set(key(e), (m.get(key(e)) ?? 0) + e.duration_minutes)
@@ -441,44 +462,50 @@ export function buildReport(input: ReportInput): ReportData {
     const head = headOf(e.task_id)
     if (head && head.planned_hours <= 0) {
       unplannedMinutes += e.duration_minutes
-      unplannedBySection.set(head.section_id, (unplannedBySection.get(head.section_id) ?? 0) + e.duration_minutes)
+      const key = valueId(head, outerGroup)
+      unplannedBySection.set(key, (unplannedBySection.get(key) ?? 0) + e.duration_minutes)
     }
   }
 
-  const sectionIds = new Set([...secCur.keys(), ...secPrev.keys()].filter(Boolean))
+  // без групп разрезов нет; «не указано» — честная строка, а не потерянные часы
+  const sectionIds = outerGroup ? new Set([...secCur.keys(), ...secPrev.keys()]) : new Set<string>()
   const directions: DirectionRow[] = [...sectionIds]
     .map((id) => {
       const hours = toHours(secCur.get(id) ?? 0)
       const prevHours = toHours(secPrev.get(id) ?? 0)
-      const projectCount = [...pairCur.entries()].filter(([k, v]) => k.startsWith(`${id}|`) && v > 0).length
+      const childCount = innerGroup
+        ? [...pairCur.entries()].filter(([k, v]) => k.startsWith(`${id}|`) && v > 0).length
+        : 0
       return {
         id,
-        name: sectionName.get(id) ?? 'Без направления',
+        name: id ? itemName(id) : 'Не указано',
         hours,
         prevHours,
         share: total > 0 ? hours / total : 0,
         prevShare: prevTotal > 0 ? prevHours / prevTotal : 0,
-        projectCount,
+        childCount,
       }
     })
     .filter((d) => Math.abs(d.hours) > 0.004 || Math.abs(d.prevHours) > 0.004)
     .sort((a, b) => b.hours - a.hours || b.prevHours - a.prevHours)
 
   const groups: DirectionGroup[] = directions.map((d) => {
-    const keys = new Set([...pairCur.keys(), ...pairPrev.keys()].filter((k) => k.startsWith(`${d.id}|`)))
+    const keys = innerGroup
+      ? new Set([...pairCur.keys(), ...pairPrev.keys()].filter((k) => k.startsWith(`${d.id}|`)))
+      : new Set<string>()
     const rows: ProjectRow[] = [...keys]
       .map((k) => {
         const projectId = k.split('|')[1]
         return {
           id: projectId,
-          name: projectName.get(projectId) ?? 'Без проекта',
+          name: projectId ? itemName(projectId) : 'Не указано',
           hours: toHours(pairCur.get(k) ?? 0),
           prevHours: toHours(pairPrev.get(k) ?? 0),
         }
       })
       .filter((r) => Math.abs(r.hours) > 0.004 || Math.abs(r.prevHours) > 0.004)
       .sort((a, b) => b.hours - a.hours || b.prevHours - a.prevHours)
-    return { ...d, rows, note: groupNote(d, rows, toHours(unplannedBySection.get(d.id) ?? 0)) }
+    return { ...d, rows, note: groupNote(d, rows, toHours(unplannedBySection.get(d.id) ?? 0), innerGroup) }
   })
 
   // ── спринты: головные задачи периода, факт — с подзадачами
@@ -513,8 +540,8 @@ export function buildReport(input: ReportInput): ReportData {
       return {
         id: t.id,
         name: t.name.trim(),
-        project: projectName.get(t.project_id) ?? '',
-        section: sectionName.get(t.section_id) ?? '',
+        outer: valueName(t, outerGroup),
+        inner: valueName(t, innerGroup),
         plan,
         factTotal,
         factPeriod: toHours(headPeriodMinutes.get(t.id) ?? 0),
@@ -583,6 +610,13 @@ export function buildReport(input: ReportInput): ReportData {
       const key = `${toDateString(new Date(c.created_at))}|${c.task_id}`
       commentsByKey.set(key, [...(commentsByKey.get(key) ?? []), c.body.trim()])
     }
+    // комментарий к сессии учёта — в тот же день, что и сама сессия
+    for (const e of current) {
+      const note = entryNote(e)
+      if (!note) continue
+      const key = `${e.effective_date}|${e.task_id}`
+      commentsByKey.set(key, [...(commentsByKey.get(key) ?? []), note])
+    }
   }
   const dayTask = new Map<string, number>()
   for (const e of current) {
@@ -604,8 +638,8 @@ export function buildReport(input: ReportInput): ReportData {
     const title = task?.parent_id && head ? `${head.name.trim()} / ${task.name.trim()}` : (task?.name.trim() ?? 'Удалённая задача')
     const row: JournalRow = {
       title,
-      project: task ? (projectName.get(task.project_id) ?? '') : '',
-      section: task ? (sectionName.get(task.section_id) ?? '') : '',
+      outer: valueName(task, outerGroup),
+      inner: valueName(task, innerGroup),
       hours: toHours(minutes),
       comments,
     }
@@ -630,8 +664,7 @@ export function buildReport(input: ReportInput): ReportData {
         date: e.effective_date,
         week: isoWeek(e.effective_date),
         weekday: WEEKDAYS_SHORT[parseDate(e.effective_date).getDay()],
-        section: task ? (sectionName.get(task.section_id) ?? '') : '',
-        project: task ? (projectName.get(task.project_id) ?? '') : '',
+        dims: input.groups.map((g) => valueName(task, g)),
         sprint: head?.name.trim() ?? 'Удалённая задача',
         subtask: task?.parent_id ? task.name.trim() : '',
         hours: toHours(e.duration_minutes),
@@ -649,14 +682,21 @@ export function buildReport(input: ReportInput): ReportData {
       ? input.firstEntryDate
       : null
 
-  const projectTotals = [...projCur.entries()]
-    .map(([id, minutes]) => ({ name: projectName.get(id) ?? 'Без проекта', hours: toHours(minutes) }))
-    .sort((a, b) => b.hours - a.hours)
+  // «больше всего часов ушло на…» — по второй группе: она обычно конкретнее первой
+  const projectTotals = innerGroup
+    ? [...projCur.entries()]
+        .filter(([id]) => !!id)
+        .map(([id, minutes]) => ({ name: itemName(id), hours: toHours(minutes) }))
+        .sort((a, b) => b.hours - a.hours)
+    : []
 
   const report: ReportData = {
     from,
     to,
     label: periodLabel(from, to),
+    outer: outerGroup ? { name: outerGroup.name, item: outerGroup.item_name } : null,
+    inner: innerGroup ? { name: innerGroup.name, item: innerGroup.item_name } : null,
+    groupNames: input.groups.map((g) => g.name),
     prevName,
     prevDative,
     prevWith,
@@ -700,7 +740,8 @@ export function buildReport(input: ReportInput): ReportData {
  */
 function buildInsights(r: ReportData, projectTotals: { name: string; hours: number }[]): string[] {
   const out: string[] = []
-  const top = r.directions[0]
+  const top = r.directions.find((d) => d.id) ?? r.directions[0]
+  const what = (name: string) => (r.outer ? `${r.outer.item} «${name}»` : `«${name}»`)
 
   if (top && r.prevTotal > 0) {
     const biggest = [...r.directions].sort(
@@ -714,23 +755,23 @@ function buildInsights(r: ReportData, projectTotals: { name: string; hours: numb
       let s: string
       if (delta > 0) {
         s = ratio >= 3
-          ? `Направление «${biggest.name}» выросло более чем втрое — ${from}`
+          ? `${what(biggest.name)}: часов втрое больше — ${from}`
           : ratio >= 2
-            ? `Направление «${biggest.name}» выросло более чем вдвое — ${from}`
-            : `Направление «${biggest.name}» выросло на ${f1(delta)} ч — ${from}`
+            ? `${what(biggest.name)}: часов вдвое больше — ${from}`
+            : `${what(biggest.name)}: на ${f1(delta)} ч больше — ${from}`
         s += biggest.id === top.id && prevTop.id !== top.id
-          ? ` — и стало главным: ${pct(top.hours, r.total)}% времени.`
+          ? ` — теперь это главное: ${pct(top.hours, r.total)}% времени.`
           : '.'
       } else {
         s = ratio <= 0.5
-          ? `Направление «${biggest.name}» сократилось более чем вдвое — ${from}.`
-          : `Направление «${biggest.name}» сократилось на ${f1(-delta)} ч — ${from}.`
+          ? `${what(biggest.name)}: часов вдвое меньше — ${from}.`
+          : `${what(biggest.name)}: на ${f1(-delta)} ч меньше — ${from}.`
       }
       out.push(s)
     }
   }
   if (out.length === 0 && top && r.total > 0) {
-    out.push(`Главное направление — «${top.name}»: ${f1(top.hours)} ч, ${pct(top.hours, r.total)}% времени.`)
+    out.push(`Больше всего времени — ${what(top.name).replace(/^./, (c) => c.toLowerCase())}: ${f1(top.hours)} ч, ${pct(top.hours, r.total)}%.`)
   }
 
   const topProject = projectTotals[0]
@@ -739,12 +780,13 @@ function buildInsights(r: ReportData, projectTotals: { name: string; hours: numb
   }
 
   const overs = r.sprints.filter((s) => s.group === 'over').sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0))
+  const tag = (s: SprintRow) => [s.inner || s.outer, `${s.pct}%`].filter(Boolean).join(', ')
   if (overs.length >= 2) {
     const [a, b] = overs
-    out.push(`Сильнее всего вышли за план «${a.name}» (${a.project}, ${a.pct}%) и «${b.name}» (${b.project}, ${b.pct}%).`)
+    out.push(`Сильнее всего вышли за план «${a.name}» (${tag(a)}) и «${b.name}» (${tag(b)}).`)
   } else if (overs.length === 1) {
     const a = overs[0]
-    out.push(`За план вышел только «${a.name}» (${a.project}): ${a.pct}%, сверх плана ${f1(a.over)} ч.`)
+    out.push(`За план вышел только «${a.name}» (${tag(a)}), сверх плана ${f1(a.over)} ч.`)
   } else if (r.sprints.some((s) => s.plan > 0)) {
     out.push('Все спринты с планом уложились в него.')
   }
@@ -755,8 +797,8 @@ function buildInsights(r: ReportData, projectTotals: { name: string; hours: numb
   return out.slice(0, 4)
 }
 
-/** Одна-две фразы под направлением: из чего оно состоит и на чём держится. */
-function groupNote(d: DirectionRow, rows: ProjectRow[], unplanned: number): string {
+/** Одна-две фразы под строкой первой группы: из чего она состоит и на чём держится. */
+function groupNote(d: DirectionRow, rows: ProjectRow[], unplanned: number, inner: Group | null): string {
   const active = rows.filter((r) => r.hours > 0.004)
   const dropped = rows.filter((r) => r.hours <= 0.004 && r.prevHours > 0.004)
   const parts: string[] = []
@@ -767,10 +809,10 @@ function groupNote(d: DirectionRow, rows: ProjectRow[], unplanned: number): stri
     const [a, b] = active
     const top2 = d.hours > 0 ? (a.hours + b.hours) / d.hours : 0
     if (active.length >= 3 && top2 >= 0.85) {
-      parts.push(`${Math.round(top2 * 100)}% направления — два проекта: ${a.name} и ${b.name}.`)
+      parts.push(`${Math.round(top2 * 100)}% этих часов — ${a.name} и ${b.name}.`)
     } else {
-      parts.push(`${plural(active.length, PROJECTS)}, в среднем ${f1(d.hours / active.length)} ч на проект.`)
-      if (d.hours > 0 && a.hours / d.hours >= 0.3) parts.push(`${a.name} — ${pct(a.hours, d.hours)}% направления.`)
+      parts.push(`${inner?.name ?? 'Значений'}: ${active.length}, в среднем по ${f1(d.hours / active.length)} ч.`)
+      if (d.hours > 0 && a.hours / d.hours >= 0.3) parts.push(`${a.name} — ${pct(a.hours, d.hours)}% этих часов.`)
     }
   }
   if (d.hours > 0 && unplanned / d.hours >= 0.3) {

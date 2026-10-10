@@ -14,15 +14,23 @@ import {
   type PeriodPreset,
 } from '../lib/period'
 import { useClosedTaskCount, useTimeEntriesInRange } from '../lib/queries/dashboard'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
+import { useGroupModel } from '../lib/groups'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { TASKS, formatHoursRu, plural } from '../lib/time'
 import { headIdOf } from '../lib/tree'
 
-type GroupBy = 'project' | 'section'
 type PresetKey = PeriodPreset['key'] | 'custom'
+
+const GROUP_KEY = 'semternity.dashboardGroup'
+
+function loadGroupChoice(): string | null {
+  try {
+    return localStorage.getItem(GROUP_KEY)
+  } catch {
+    return null
+  }
+}
 
 function shortDate(iso: string): string {
   return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`
@@ -32,13 +40,26 @@ export function Dashboard() {
   const [preset, setPreset] = useState<PresetKey>('this_month')
   const [customFrom, setCustomFrom] = useState(todayStr())
   const [customTo, setCustomTo] = useState(todayStr())
-  const [groupBy, setGroupBy] = useState<GroupBy>('project')
+  const [groupChoice, setGroupChoice] = useState<string | null>(loadGroupChoice)
 
   const { from, to } = preset === 'custom' ? { from: customFrom, to: customTo } : rangeForPreset(preset)
 
   const { data: tasks = [] } = useTasks()
-  const { data: projects = [] } = useProjects()
-  const { data: sections = [] } = useSections()
+  const model = useGroupModel()
+  // разрез: выбранный раньше, иначе группа «в строке задачи» (обычно проекты), иначе первая
+  const groupBy =
+    (groupChoice && model.groupById.has(groupChoice) ? groupChoice : null) ??
+    model.groups.find((g) => g.show_in_list)?.id ??
+    model.groups[0]?.id ??
+    null
+  function chooseGroup(id: string) {
+    setGroupChoice(id)
+    try {
+      localStorage.setItem(GROUP_KEY, id)
+    } catch {
+      // не запомнили — в следующий раз откроется разрез по умолчанию
+    }
+  }
   const { data: userSettings } = useUserSettings()
   const { data: entries = [] } = useTimeEntriesInRange(from, to)
   const { data: closedCount = 0 } = useClosedTaskCount(`${from}T00:00:00`, `${to}T23:59:59.999`)
@@ -94,11 +115,11 @@ export function Dashboard() {
   const sumPct = totalPlanHours > 0 ? Math.round((totalFactHours / totalPlanHours) * 100) : 0
 
   const rows = useMemo(() => {
-    const buckets = groupBy === 'project' ? projects : sections
-    const key = groupBy === 'project' ? 'project_id' : 'section_id'
+    if (!groupBy) return []
+    const buckets = [...model.itemsOf(groupBy).map((i) => ({ id: i.id, name: i.name })), { id: '', name: 'Не указано' }]
     return buckets
       .map((bucket) => {
-        const bucketTasks = heads.filter((t) => t[key as 'project_id' | 'section_id'] === bucket.id)
+        const bucketTasks = heads.filter((t) => (model.valueOf(t, groupBy)?.id ?? '') === bucket.id)
         const planHours = bucketTasks
           .filter((t) => overlapsPeriod(t, from, to))
           .reduce((sum, t) => sum + t.planned_hours, 0)
@@ -117,7 +138,7 @@ export function Dashboard() {
       })
       .filter((r) => r.planHours > 0 || r.factHours > 0)
       .sort((a, b) => b.factHours - a.factHours)
-  }, [groupBy, projects, sections, heads, factByTask, from, to])
+  }, [groupBy, model, heads, factByTask, from, to])
 
   /* «13,3 ч» само по себе не отвечает на вопрос «это много или мало» —
      сравниваем с предыдущим отрезком той же длины */
@@ -265,16 +286,20 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="flex px-5 pt-3.5 pb-2.5">
-        <Segmented
-          value={groupBy}
-          onChange={setGroupBy}
-          options={[
-            { value: 'project', label: 'По проектам' },
-            { value: 'section', label: 'По разделам' },
-          ]}
-        />
-      </div>
+      {groupBy && model.groups.length > 1 && (
+        <div className="sc flex overflow-x-auto px-5 pt-3.5 pb-2.5">
+          <Segmented
+            value={groupBy}
+            onChange={chooseGroup}
+            options={model.groups.map((g) => ({ value: g.id, label: g.name }))}
+          />
+        </div>
+      )}
+      {groupBy && model.groups.length === 1 && (
+        <div className="px-5 pt-3.5 pb-2.5">
+          <Overline>{model.groupById.get(groupBy)?.name}</Overline>
+        </div>
+      )}
 
       <div className="flex flex-col gap-[9px] px-5 pb-2 lg:grid lg:grid-cols-2 lg:gap-3">
         {rows.map((row) => {
@@ -283,18 +308,18 @@ export function Dashboard() {
           const hasPlan = row.planHours > 0
           const pct = hasPlan ? Math.round((row.factHours / row.planHours) * 100) : 0
           const over = pct > 100
-          // строка ведёт в карточку проекта (задачи, файлы, хронология) или раздела
+          // строка ведёт в карточку значения: задачи, файлы, хронология
           return (
             <Link
-              key={row.id}
-              to={groupBy === 'project' ? `/projects/${row.id}` : `/sections/${row.id}`}
+              key={row.id || 'none'}
+              to={row.id ? `/items/${row.id}` : '/tasks'}
               className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3"
               style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
             >
               <Ring
                 size={38}
                 pct={pct}
-                color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'rgba(232,163,61,.55)'}
+                color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'var(--s-accent-muted)'}
               >
                 <span
                   className={`tabular font-mono text-2xs font-medium ${

@@ -80,7 +80,7 @@ export function Ring({
             left: '50%',
             marginLeft: -4,
             background: 'var(--s-accent)',
-            boxShadow: '0 0 12px rgba(232,163,61,.8)',
+            boxShadow: '0 0 12px var(--s-accent-glow)',
           }}
         />
       )}

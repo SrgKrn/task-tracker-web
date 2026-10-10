@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from './ConfirmDialog'
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Close } from './Icon'
@@ -26,6 +26,17 @@ interface PicklistAdminProps<T extends Item> {
   onToggleArchived?: (item: T, value: boolean) => void
   /** when provided, adds a "view tasks in this bucket" affordance per row */
   onOpen?: (item: T) => void
+  /** куда ведёт «назад» и как он подписан */
+  backTo?: string
+  backLabel?: string
+  /** что показать между заголовком и полем добавления (настройки группы) */
+  header?: ReactNode
+  /** что показать под списком (удаление группы) */
+  footer?: ReactNode
+  /** подпись над списком значений */
+  listTitle?: string
+  /** вторая строка под названием (во что входит значение) */
+  extraOf?: (item: T) => ReactNode
 }
 
 export function PicklistAdmin<T extends Item>({
@@ -43,6 +54,12 @@ export function PicklistAdmin<T extends Item>({
   archivedOf,
   onToggleArchived,
   onOpen,
+  backTo = '/settings',
+  backLabel = 'Ещё',
+  header,
+  footer,
+  listTitle,
+  extraOf,
 }: PicklistAdminProps<T>) {
   const navigate = useNavigate()
   const [newName, setNewName] = useState('')
@@ -84,10 +101,19 @@ export function PicklistAdmin<T extends Item>({
 
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
-      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-        <ArrowLeft size={15} />Ещё
+      <button onClick={() => navigate(backTo)} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
+        <ArrowLeft size={15} />
+        {backLabel}
       </button>
       <h1 className="mb-4 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
+
+      {header}
+
+      {listTitle && (
+        <span className="mb-2 block font-mono text-2xs font-medium uppercase tracking-[.16em] text-slate-500">
+          {listTitle}
+        </span>
+      )}
 
       <div className="mb-4 flex gap-2">
         <input
@@ -145,24 +171,27 @@ export function PicklistAdmin<T extends Item>({
                 </button>
               </div>
 
-              {editingId === item.id ? (
-                <input
-                  autoFocus
-                  value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
-                  onBlur={commitEdit}
-                  onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                  className="min-w-0 flex-1 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                />
-              ) : (
-                <button
-                  onClick={() => startEdit(item)}
-                  title={labelOf(item)}
-                  className="min-w-0 flex-1 truncate text-left text-sm text-slate-100"
-                >
-                  {labelOf(item)}
-                </button>
-              )}
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                {editingId === item.id ? (
+                  <input
+                    autoFocus
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
+                    className="w-full min-w-0 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
+                  />
+                ) : (
+                  <button
+                    onClick={() => startEdit(item)}
+                    title={labelOf(item)}
+                    className="w-full min-w-0 truncate text-left text-sm text-slate-100"
+                  >
+                    {labelOf(item)}
+                  </button>
+                )}
+                {extraOf?.(item)}
+              </div>
 
               {onOpen && (
                 <button
@@ -211,6 +240,8 @@ export function PicklistAdmin<T extends Item>({
           </li>
         )}
       </ul>
+
+      {footer}
 
       <ConfirmDialog
         open={deletingItem !== null}

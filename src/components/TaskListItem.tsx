@@ -7,7 +7,7 @@ import { Check, ChevronDown, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
-import type { ActiveTimer, Project, Section, Status, Task } from '../lib/types'
+import type { ActiveTimer, Status, Task } from '../lib/types'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 import { isOverdue, rollupFact, runningWithin } from '../lib/tree'
 
@@ -16,8 +16,8 @@ export { isOverdue }
 interface TaskListItemProps {
   task: Task
   status: Status | undefined
-  project: Project | undefined
-  section: Section | undefined
+  /** значения групп «в строке» — например «Ромашка» или «Битрикс24 · Ромашка» */
+  label?: string
   activeTimer: ActiveTimer | null | undefined
   onStartTimer: () => void
   onStopTimer: () => void
@@ -44,8 +44,7 @@ const MAX_PIPS = 12
 export function TaskListItem({
   task,
   status,
-  project,
-  section,
+  label = '',
   activeTimer,
   onStartTimer,
   onStopTimer,
@@ -109,10 +108,8 @@ export function TaskListItem({
 
   // мета держится в одну строку: раньше приписка «просрочено» переносила её на вторую
   // и строка становилась на треть выше соседних. Состояние показываем тегом справа —
-  // там для него есть отдельное место, и оно не спорит с проектом за ширину.
-  const category = parentName
-    ? [project?.name, parentName].filter(Boolean).join(' · ')
-    : (project?.name ?? section?.name ?? '')
+  // там для него есть отдельное место, и оно не спорит с группами за ширину.
+  const category = parentName ? [label, parentName].filter(Boolean).join(' · ') : label
   // «1,8 / 0 ч» выглядело как ошибка: у задачи без плана нет знаменателя
   const hours = hasPlan
     ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
@@ -178,7 +175,7 @@ export function TaskListItem({
                   onDelete()
                 }}
                 className="flex-1 text-xs font-medium"
-                style={{ background: 'rgba(217,114,86,.18)', color: 'var(--color-red-400)' }}
+                style={{ background: 'var(--s-danger-ghost)', color: 'var(--s-danger-text)' }}
               >
                 Удалить
               </button>

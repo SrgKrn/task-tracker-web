@@ -1,16 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
 import { describeError, useToast } from '../lib/Toast'
-import { useProjects } from '../lib/queries/projects'
-import { useSections } from '../lib/queries/sections'
 import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask } from '../lib/queries/tasks'
 import { ArrowLeft } from '../components/Icon'
 
 const empty: TaskFormValues = {
   name: '',
-  project_id: '',
-  section_id: '',
+  item_ids: [],
   status_id: null,
   planned_hours: 0,
   start_date: null,
@@ -20,8 +17,6 @@ const empty: TaskFormValues = {
 
 export function NewTask() {
   const navigate = useNavigate()
-  const { data: projects = [] } = useProjects()
-  const { data: sections = [] } = useSections()
   const { data: statuses = [] } = useStatuses()
   const createTask = useCreateTask()
   const { showError } = useToast()
@@ -36,8 +31,6 @@ export function NewTask() {
       </h1>
       <TaskForm
         initial={empty}
-        projects={projects}
-        sections={sections}
         statuses={statuses}
         submitLabel="Создать"
         onSubmit={(values) =>

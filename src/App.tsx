@@ -1,18 +1,23 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { useAuth } from './lib/AuthContext'
 import { Dashboard } from './routes/Dashboard'
 import { Login } from './routes/Login'
+import { Changelog } from './routes/Changelog'
+import { GroupPage, GroupsAdmin } from './routes/GroupsAdmin'
+import { ItemDetail } from './routes/ItemDetail'
 import { NewTask } from './routes/NewTask'
-import { ProjectDetail } from './routes/ProjectDetail'
-import { ProjectsAdmin } from './routes/ProjectsAdmin'
-import { SectionDetail } from './routes/SectionDetail'
-import { SectionsAdmin } from './routes/SectionsAdmin'
 import { Settings } from './routes/Settings'
 import { StatusesAdmin } from './routes/StatusesAdmin'
 import { TaskDetail } from './routes/TaskDetail'
 import { TaskWorkspace } from './routes/TaskWorkspace'
 import { Today } from './routes/Today'
+
+/** старые ссылки на проект и раздел: значения переехали в группы с теми же id */
+function LegacyItemRedirect() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/items/${id}`} replace />
+}
 
 function LoginRoute() {
   const { session } = useAuth()
@@ -31,12 +36,16 @@ export default function App() {
           <Route path=":id" element={<TaskDetail />} />
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/sections" element={<SectionsAdmin />} />
-        <Route path="/sections/:id" element={<SectionDetail />} />
-        <Route path="/projects" element={<ProjectsAdmin />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/groups" element={<GroupsAdmin />} />
+        <Route path="/groups/:id" element={<GroupPage />} />
+        <Route path="/items/:id" element={<ItemDetail />} />
+        <Route path="/sections" element={<Navigate to="/groups" replace />} />
+        <Route path="/projects" element={<Navigate to="/groups" replace />} />
+        <Route path="/sections/:id" element={<LegacyItemRedirect />} />
+        <Route path="/projects/:id" element={<LegacyItemRedirect />} />
         <Route path="/statuses" element={<StatusesAdmin />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/changelog" element={<Changelog />} />
       </Route>
     </Routes>
   )

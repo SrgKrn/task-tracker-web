@@ -212,9 +212,9 @@ export type TagTone = 'neutral' | 'accent' | 'success' | 'danger'
 
 const TAG_TONE: Record<TagTone, string> = {
   neutral: 'bg-[var(--s-tag)] text-slate-400',
-  accent: 'bg-[rgba(232,163,61,.14)] text-sky-600',
-  success: 'bg-[rgba(127,184,148,.14)] text-emerald-400',
-  danger: 'bg-[rgba(217,114,86,.12)] text-red-400',
+  accent: 'bg-[var(--s-accent-ghost)] text-[var(--s-accent-text)]',
+  success: 'bg-[var(--s-success-ghost)] text-[var(--s-success-text)]',
+  danger: 'bg-[var(--s-danger-ghost)] text-[var(--s-danger-text)]',
 }
 
 /** Тег статуса: пользовательские статусы нейтральны, латунь и зелень зарезервированы. */

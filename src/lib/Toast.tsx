@@ -59,13 +59,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               t.tone === 'error'
                 ? {
                     background: 'var(--s-toast-err-bg)',
-                    border: '1px solid rgba(217,114,86,.35)',
-                    color: 'var(--s-danger)',
+                    border: '1px solid var(--s-danger-line)',
+                    color: 'var(--s-danger-text)',
                   }
                 : {
                     background: 'var(--s-toast-ok-bg)',
-                    border: '1px solid rgba(127,184,148,.3)',
-                    color: 'var(--s-success)',
+                    border: '1px solid var(--s-success-line)',
+                    color: 'var(--s-success-text)',
                   }
             }
           >
@@ -109,6 +109,9 @@ export function describeError(error: unknown): string {
     error && typeof error === 'object' && 'message' in error
       ? String((error as { message: unknown }).message)
       : String(error)
+  // свои проверки база пишет по-русски («…есть в задачах — его можно отправить в архив»):
+  // их показываем как есть, а английские системные — переводим или обобщаем
+  if (/[а-яё]/i.test(message)) return message
   if (message.includes('violates foreign key constraint')) {
     return 'Нельзя удалить: используется в других записях.'
   }

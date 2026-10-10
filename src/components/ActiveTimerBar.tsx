@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Ring, StopGlyph } from './Ring'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
-import { useProjects } from '../lib/queries/projects'
+import { useGroupModel } from '../lib/groups'
 import { useTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStopTimer } from '../lib/queries/timer'
 import { formatClock, sessionHourPct, useTicker } from '../lib/time'
@@ -16,7 +16,7 @@ export function ActiveTimerBar() {
   const { data: activeTimer } = useActiveTimer()
   const { data: task } = useTask(activeTimer?.task_id)
   const { data: parent } = useTask(task?.parent_id ?? undefined)
-  const { data: projects = [] } = useProjects()
+  const model = useGroupModel()
   const location = useLocation()
   const stopTimer = useStopTimer()
   const { showError } = useToast()
@@ -25,12 +25,12 @@ export function ActiveTimerBar() {
   if (!activeTimer || !task) return null
   if (location.pathname === `/tasks/${task.id}`) return null
 
-  const project = projects.find((p) => p.id === task.project_id)
+  const label = model.listLabel(task)
 
   return (
     <div
       className="safe-top mx-4 mt-2 mb-2 flex items-center gap-3 rounded-[20px] px-[14px] py-[11px]"
-      style={{ background: 'var(--s-timer-bg)', border: '1px solid rgba(232,163,61,.4)' }}
+      style={{ background: 'var(--s-timer-bg)', border: '1px solid var(--s-accent-line)' }}
     >
       <Ring
         size={34}
@@ -48,9 +48,9 @@ export function ActiveTimerBar() {
       </Ring>
 
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-        {/* в одну строку: название спринта длиннее проекта и переносом раздувало док вдвое */}
+        {/* в одну строку: название спринта длиннее подписи и переносом раздувало док вдвое */}
         <span className="block truncate font-mono text-2xs uppercase tracking-[.12em] text-sky-700">
-          Идёт учёт{parent ? ` · ${parent.name}` : project ? ` · ${project.name}` : ''}
+          Идёт учёт{parent ? ` · ${parent.name}` : label ? ` · ${label}` : ''}
         </span>
         <span className="block truncate text-sm font-medium text-slate-100">{task.name}</span>
       </Link>

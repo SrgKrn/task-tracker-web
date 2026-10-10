@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { DatePicker } from './DatePicker'
 import { ChipPicker } from './ChipPicker'
 import { DurationSheet } from './DurationSheet'
+import { GroupFields } from './GroupFields'
 import { ChevronDown } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
 import { FieldLabel, fieldClass } from './ui'
 import { formatHoursMinutes } from '../lib/time'
 import { describeError, useToast } from '../lib/Toast'
-import { useCreateProject } from '../lib/queries/projects'
-import { useCreateSection } from '../lib/queries/sections'
+import { missingRequired, useGroupModel } from '../lib/groups'
 import { useCreateStatus } from '../lib/queries/statuses'
-import type { Project, Section, Status } from '../lib/types'
+import type { Status } from '../lib/types'
 
 export interface TaskFormValues {
   name: string
-  project_id: string
-  section_id: string
+  /** значения групп: по одному из каждой */
+  item_ids: string[]
   status_id: string | null
   planned_hours: number
   start_date: string | null
@@ -27,15 +27,13 @@ export interface TaskFormValues {
 
 interface TaskFormProps {
   initial: TaskFormValues
-  projects: Project[]
-  sections: Section[]
   statuses: Status[]
   submitLabel: string
   /** карточка редактирует существующую задачу — название и статус живут в её шапке */
   compact?: boolean
   /**
-   * Форма подзадачи: вместо проекта и раздела — выбор спринта. Проект и раздел подзадача
-   * всё равно берёт у спринта (это держит база), и показывать их на выбор было бы враньём.
+   * Форма подзадачи: вместо групп — выбор спринта. Значения групп подзадача всё равно
+   * берёт у спринта (это держит база), и показывать их на выбор было бы враньём.
    */
   sprints?: PickerOption[]
   onSubmit: (values: TaskFormValues) => void
@@ -43,8 +41,6 @@ interface TaskFormProps {
 
 export function TaskForm({
   initial,
-  projects,
-  sections,
   statuses,
   submitLabel,
   compact = false,
@@ -56,28 +52,22 @@ export function TaskForm({
 
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
-  const createProject = useCreateProject()
-  const createSection = useCreateSection()
+  const model = useGroupModel()
   const createStatus = useCreateStatus()
 
   function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
   }
 
-  // архивные справочники не предлагаем, но уже выбранный оставляем — иначе у старой
-  // задачи молча слетела бы привязка к проекту/разделу
-  const pickableProjects = useMemo(
-    () => projects.filter((p) => !p.archived || p.id === values.project_id),
-    [projects, values.project_id],
-  )
-  const pickableSections = useMemo(
-    () => sections.filter((s) => !s.archived || s.id === values.section_id),
-    [sections, values.section_id],
-  )
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!values.name.trim() || !values.project_id || !values.section_id) return
+    if (!values.name.trim()) return
+    // у подзадачи групп нет — их держит спринт
+    const missing = sprints ? [] : missingRequired(model, values.item_ids)
+    if (missing.length > 0) {
+      showError(`Выберите: ${missing.map((g) => g.item_name.toLowerCase()).join(', ')}`)
+      return
+    }
     // В компактном режиме поля имени тут нет — им владеет заголовок карточки.
     // Если всё равно отправить своё values.name, форма затрёт свежее переименование
     // тем значением, с которым она смонтировалась.
@@ -158,34 +148,7 @@ export function TaskForm({
           placeholder="Спринт"
         />
       ) : (
-        <div className="flex gap-[9px]">
-          <PickerField
-            label="Проект"
-            items={pickableProjects.map((p) => ({
-              id: p.id,
-              name: p.archived ? `${p.name} (в архиве)` : p.name,
-            }))}
-            value={values.project_id || null}
-            onChange={(id) => id && set('project_id', id)}
-            placeholder="Название проекта"
-            onCreate={(name, onCreated) =>
-              createProject.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
-            }
-          />
-          <PickerField
-            label="Раздел"
-            items={pickableSections.map((s) => ({
-              id: s.id,
-              name: s.archived ? `${s.name} (в архиве)` : s.name,
-            }))}
-            value={values.section_id || null}
-            onChange={(id) => id && set('section_id', id)}
-            placeholder="Название раздела"
-            onCreate={(name, onCreated) =>
-              createSection.mutate(name, { onError, onSuccess: (row) => onCreated(row.id) })
-            }
-          />
-        </div>
+        <GroupFields model={model} value={values.item_ids} onChange={(ids) => set('item_ids', ids)} />
       )}
 
       {/* статусов обычно единицы — их держим чипами, выбор виден без лишнего касания */}

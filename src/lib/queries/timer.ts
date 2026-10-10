@@ -121,7 +121,8 @@ export function useAdjustFactHours() {
         task_id: taskId,
         entry_type: 'manual_adjustment',
         duration_minutes: deltaMinutes,
-        note: 'Manual correction',
+        // комментарий к правке пишет сам пользователь — по нажатию на неё в таймлайне
+        note: null,
         effective_date: effectiveDate ?? toDateString(new Date()),
       })
       if (error) throw error
@@ -179,6 +180,29 @@ export function useShiftActiveTimer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['active_timer'] })
       qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
+  })
+}
+
+/** Комментарий к конкретной сессии учёта или правке — пустая строка его убирает. */
+export function useSetEntryNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ entry, note }: { entry: TimeEntry; note: string }) => {
+      const { error } = await supabase
+        .from('time_entries')
+        .update({ note: note.trim() || null })
+        .eq('id', entry.id)
+      if (error) throw error
+    },
+    // заметка видна сразу, не дожидаясь сервера
+    onMutate: ({ entry, note }) =>
+      qc.setQueryData<TimeEntry[]>(['time_entries', entry.task_id], (list) =>
+        list?.map((e) => (e.id === entry.id ? { ...e, note: note.trim() || null } : e)),
+      ),
+    onSettled: (_d, _e, v) => {
+      qc.invalidateQueries({ queryKey: ['time_entries', v.entry.task_id] })
+      qc.invalidateQueries({ queryKey: ['item_activity'] })
     },
   })
 }

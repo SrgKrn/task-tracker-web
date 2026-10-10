@@ -28,3 +28,21 @@ export function useSaveUserSettings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
+
+/** Отметить, что историю изменений этой версии пользователь видел — на всех его устройствах. */
+export function useMarkReleaseSeen() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (version: string) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, seen_release: version })
+      if (error) throw error
+    },
+    onMutate: (version) =>
+      qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, seen_release: version } : s)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}

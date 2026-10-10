@@ -17,7 +17,7 @@ export interface NextSprintValues {
 }
 
 /**
- * «Спринт 6 → Спринт 7» одним действием. Раньше продолжение заводилось руками: дублировать,
+ * «Новый период»: «Спринт 6 → Спринт 7» одним действием. Раньше продолжение заводилось руками: дублировать,
  * переименовать, перебить оба срока, заново набрать то, что не успели. Здесь всё это
  * предзаполнено, а незакрытые подзадачи едут в новый спринт с остатком плана.
  */
@@ -92,13 +92,13 @@ export function NextSprintSheet({
   }
 
   return (
-    <Sheet open={open} onClose={onCancel} title="Следующий спринт">
+    <Sheet open={open} onClose={onCancel} title="Новый период">
       <div className="flex flex-col gap-1.5">
         <FieldLabel>Название</FieldLabel>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Название спринта"
+          placeholder="Например: Спринт 7 или Октябрь"
           className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
           style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
@@ -183,13 +183,13 @@ export function NextSprintSheet({
         onCancel={onCancel}
         onConfirm={submit}
         confirmDisabled={!name.trim()}
-        confirmLabel="Создать спринт"
+        confirmLabel="Начать новый период"
       />
 
       {/* внутри содержимого листа: клик по подложке этого окна не должен закрыть и лист спринта */}
       <DurationSheet
         open={editingPlan}
-        title="План спринта"
+        title="План на период"
         hours={plan}
         onCancel={() => setEditingPlan(false)}
         onSubmit={(value) => {

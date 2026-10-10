@@ -17,6 +17,12 @@ interface PickerFieldProps {
   placeholder: string
   /** подпись варианта «ничего не выбрано»; без неё выбор обязателен */
   noneLabel?: string
+  /** что написано в поле, пока ничего не выбрано (по умолчанию — placeholder) */
+  emptyLabel?: string
+  /** подсказка под списком в окне выбора */
+  hint?: string
+  /** маленький чип вместо поля с подписью — для строк списков */
+  chip?: boolean
 }
 
 /**
@@ -34,6 +40,9 @@ export function PickerField({
   onCreate,
   placeholder,
   noneLabel,
+  emptyLabel,
+  hint,
+  chip = false,
 }: PickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -63,22 +72,42 @@ export function PickerField({
     })
   }
 
+  const shown = selected?.name ?? noneLabel ?? emptyLabel ?? placeholder
+
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <FieldLabel>{label}</FieldLabel>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm"
-        style={{
-          background: 'var(--s-surface)',
-          border: '1px solid var(--s-border)',
-          color: selected ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
-        }}
-      >
-        <span className="truncate">{selected?.name ?? noneLabel ?? placeholder}</span>
-        <ChevronDown size={14} className="text-slate-600" />
-      </button>
+    <div className={chip ? 'flex min-w-0 max-w-full' : 'flex min-w-0 flex-col gap-1.5'}>
+      {chip ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex max-w-full items-center gap-1 rounded-[7px] px-2 py-[3px] text-2xs"
+          style={{
+            background: selected ? 'var(--s-accent-ghost)' : 'transparent',
+            border: `1px ${selected ? 'solid' : 'dashed'} var(--s-border-strong-2)`,
+            color: selected ? 'var(--s-accent-text)' : 'var(--s-muted-text)',
+          }}
+        >
+          <span className="truncate">{selected ? `${label}: ${selected.name}` : shown}</span>
+          <ChevronDown size={11} className="shrink-0 opacity-70" />
+        </button>
+      ) : (
+        <>
+          <FieldLabel>{label}</FieldLabel>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm"
+            style={{
+              background: 'var(--s-surface)',
+              border: '1px solid var(--s-border)',
+              color: selected ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
+            }}
+          >
+            <span className="truncate">{shown}</span>
+            <ChevronDown size={14} className="text-slate-600" />
+          </button>
+        </>
+      )}
 
       <Sheet open={open} onClose={close} title={label}>
         <div
@@ -129,6 +158,8 @@ export function PickerField({
             <p className="py-4 text-center text-xs text-slate-600">Ничего не нашлось</p>
           )}
         </div>
+
+        {hint && <p className="-mt-1 text-2xs leading-[1.45] text-slate-500">{hint}</p>}
 
         {!onCreate ? null : creating ? (
           <div className="flex items-center gap-2">

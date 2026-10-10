@@ -68,7 +68,7 @@ export function DuplicateTaskSheet({
       </div>
 
       <p className="text-2xs leading-[1.5] text-slate-600">
-        Проект, раздел, статус и план часов копируются. Факт и история трекинга — нет.
+        Группы, статус и план часов копируются. Факт и история трекинга — нет.
         {note && <span className="mt-1 block">{note}</span>}
       </p>
 

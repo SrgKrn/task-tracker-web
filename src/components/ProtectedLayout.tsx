@@ -9,6 +9,7 @@ import { ActiveTimerBar } from './ActiveTimerBar'
 import { BottomTabBar } from './BottomTabBar'
 import { DesktopSidebar } from './DesktopSidebar'
 import { NewTaskSheet } from './NewTaskSheet'
+import { ReleaseBanner } from './ReleaseBanner'
 import { StaleTimerBanner } from './StaleTimerBanner'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
@@ -49,6 +50,7 @@ function SignedIn() {
       </div>
 
       <BottomTabBar onCreate={() => setSheetOpen(true)} />
+      <ReleaseBanner />
       <NewTaskSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   )

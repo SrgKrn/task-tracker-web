@@ -14,16 +14,16 @@ import {
 const MAX_BYTES = 50 * 1024 * 1024
 
 interface AttachmentsBlockProps {
-  /** проект, к которому ляжет новый файл */
-  projectId: string
   /**
-   * Задача, к которой ляжет новый файл. Не задана — блок проекта: показывает все файлы
-   * проекта и его задач, а новые кладёт в сам проект.
+   * Значение группы (проект, клиент…): блок его карточки показывает все файлы значения
+   * и его задач, а новые кладёт в само значение.
    */
+  itemId?: string
+  /** задача, к которой ляжет новый файл (блок карточки задачи) */
   taskId?: string
-  /** чьи файлы показывать в карточке задачи: сама задача и её подзадачи */
+  /** чьи файлы показывать: задача и её подзадачи или все задачи значения */
   taskIds?: string[]
-  /** подписи задач — в карточке проекта видно, откуда файл */
+  /** подписи задач — в карточке значения видно, откуда файл */
   taskNames?: Map<string, string>
   title?: string
   emptyText: string
@@ -46,14 +46,14 @@ function kindOf(name: string): string {
 }
 
 export function AttachmentsBlock({
-  projectId,
+  itemId,
   taskId,
   taskIds,
   taskNames,
   title = 'Файлы',
   emptyText,
 }: AttachmentsBlockProps) {
-  const scope = taskId ? { taskIds: taskIds?.length ? taskIds : [taskId] } : { projectId }
+  const scope = taskId ? { taskIds: taskIds?.length ? taskIds : [taskId] } : { itemId, taskIds }
   const { data: files = [], isLoading } = useAttachments(scope)
   const upload = useUploadAttachments()
   const remove = useDeleteAttachment()
@@ -75,7 +75,7 @@ export function AttachmentsBlock({
     upload.mutate(
       {
         files: picked,
-        projectId,
+        itemId: itemId ?? null,
         taskId: taskId ?? null,
         onProgress: (done, total) => setProgress({ done, total }),
       },
@@ -146,7 +146,7 @@ export function AttachmentsBlock({
                 <span className="block truncate font-mono text-2xs text-slate-500">
                   {formatSize(f.size)} · {formatDate(f.created_at)}
                   {taskNames && f.task_id && taskNames.get(f.task_id) ? ` · ${taskNames.get(f.task_id)}` : ''}
-                  {taskNames && !f.task_id ? ' · проект' : ''}
+                  {taskNames && !f.task_id ? ' · база знаний' : ''}
                 </span>
               </a>
               <button
@@ -177,7 +177,7 @@ export function AttachmentsBlock({
       <ConfirmDialog
         open={deleting !== null}
         title={`Удалить «${deleting?.name ?? ''}»?`}
-        description="Файл удалится насовсем — и из задачи, и из карточки проекта."
+        description="Файл удалится насовсем — и из задачи, и из карточек, где он виден."
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting, { onError: (e) => showError(describeError(e)) })

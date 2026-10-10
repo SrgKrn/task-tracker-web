@@ -9,21 +9,29 @@ const LINK_TTL_SECONDS = 60 * 60
 export type AttachmentWithUrl = Attachment & { url: string | null }
 
 /**
- * Файлы проекта (все: его собственные и всех его задач) или набора задач.
+ * Файлы значения группы (его собственные и всех задач с ним) или набора задач.
  * Вместе с каждым файлом — готовая ссылка на открытие: на iPhone окно, открытое
  * после ожидания ответа сервера, браузер блокирует, поэтому ссылку берём заранее.
  */
-export function useAttachments(scope: { projectId?: string; taskIds?: string[] }) {
-  const key = scope.projectId
-    ? ['attachments', 'project', scope.projectId]
-    : ['attachments', 'tasks', ...(scope.taskIds ?? [])]
+export function useAttachments(scope: { itemId?: string; taskIds?: string[] }) {
+  const taskIds = scope.taskIds ?? []
+  const key = scope.itemId
+    ? ['attachments', 'item', scope.itemId, taskIds.length]
+    : ['attachments', 'tasks', ...taskIds]
   return useQuery({
     queryKey: key,
-    enabled: !!scope.projectId || (scope.taskIds?.length ?? 0) > 0,
+    enabled: !!scope.itemId || taskIds.length > 0,
     staleTime: (LINK_TTL_SECONDS - 10 * 60) * 1000,
     queryFn: async (): Promise<AttachmentWithUrl[]> => {
       let q = supabase.from('attachments').select('*').order('created_at', { ascending: false })
-      q = scope.projectId ? q.eq('project_id', scope.projectId) : q.in('task_id', scope.taskIds ?? [])
+      if (scope.itemId) {
+        // свои файлы значения и файлы его задач
+        q = taskIds.length
+          ? q.or(`item_id.eq.${scope.itemId},task_id.in.(${taskIds.join(',')})`)
+          : q.eq('item_id', scope.itemId)
+      } else {
+        q = q.in('task_id', taskIds)
+      }
       const { data, error } = await q
       if (error) throw error
       const files = (data ?? []) as Attachment[]
@@ -55,12 +63,13 @@ export function useUploadAttachments() {
   return useMutation({
     mutationFn: async ({
       files,
-      projectId,
+      itemId,
       taskId,
       onProgress,
     }: {
       files: File[]
-      projectId: string
+      /** файл значения группы — его база знаний; у файла задачи не задаётся */
+      itemId?: string | null
       taskId?: string | null
       onProgress?: (done: number, total: number) => void
     }) => {
@@ -70,14 +79,15 @@ export function useUploadAttachments() {
       if (!user) throw new Error('Нужно войти заново')
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        const path = `${user.id}/${projectId}/${crypto.randomUUID()}${extensionOf(file.name)}`
+        const folder = taskId ? `tasks/${taskId}` : `items/${itemId}`
+        const path = `${user.id}/${folder}/${crypto.randomUUID()}${extensionOf(file.name)}`
         const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
           contentType: file.type || 'application/octet-stream',
           upsert: false,
         })
         if (uploadError) throw uploadError
         const { error } = await supabase.from('attachments').insert({
-          project_id: projectId,
+          item_id: taskId ? null : (itemId ?? null),
           task_id: taskId ?? null,
           name: file.name,
           path,

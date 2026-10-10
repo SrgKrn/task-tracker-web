@@ -2,21 +2,21 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import type { Comment, TaskStatusEvent, TimeEntry } from '../types'
 
-export interface ProjectActivity {
+export interface ItemActivity {
   entries: TimeEntry[]
   comments: Comment[]
   statusEvents: TaskStatusEvent[]
 }
 
 /**
- * Всё, что происходило в задачах проекта начиная с `since`: записи времени, комментарии,
+ * Всё, что происходило в задачах значения группы начиная с `since`: записи времени, комментарии,
  * смены статуса. Файлы и создание задач карточка берёт из уже загруженных списков.
  */
-export function useProjectActivity(projectId: string | undefined, taskIds: string[], since: string) {
+export function useItemActivity(itemId: string | undefined, taskIds: string[], since: string) {
   return useQuery({
-    queryKey: ['project_activity', projectId, since, taskIds.length],
-    enabled: !!projectId && taskIds.length > 0,
-    queryFn: async (): Promise<ProjectActivity> => {
+    queryKey: ['item_activity', itemId, since, taskIds.length],
+    enabled: !!itemId && taskIds.length > 0,
+    queryFn: async (): Promise<ItemActivity> => {
       const sinceIso = new Date(`${since}T00:00:00`).toISOString()
       const [entries, comments, events] = await Promise.all([
         supabase

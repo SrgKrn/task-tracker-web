@@ -1,23 +1,38 @@
-export interface Section {
+/**
+ * Группа — измерение, по которому раскладываются задачи: «Проекты», «Разделы», «Клиенты»…
+ * Заводит и настраивает пользователь в конструкторе групп.
+ */
+export interface Group {
   id: string
   user_id: string
+  /** «Проекты» — в меню, группировке, фильтрах и отчётах */
   name: string
+  /** «Проект» — подпись поля в задаче */
+  item_name: string
   sort_order: number
-  /** в архиве — не предлагается при создании задач, но история по нему сохраняется */
-  archived: boolean
+  /** без значения в этой группе задачу не создать */
+  required: boolean
+  /** значение видно в строке задачи в списках */
+  show_in_list: boolean
+  /** связь: каждое значение этой группы входит в значение родительской */
+  parent_group_id: string | null
   created_at: string
   updated_at: string
 }
 
-export interface Project {
+/** Значение группы: конкретный проект, раздел, клиент. */
+export interface GroupItem {
   id: string
   user_id: string
+  group_id: string
   name: string
-  /** описание проекта в его карточке: клиент, договорённости, ссылки */
+  /** описание в карточке: клиент, договорённости, ссылки */
   description: string
   sort_order: number
-  /** в архиве — не предлагается при создании задач, но история по нему сохраняется */
+  /** в архиве — не предлагается в новых задачах, но история по нему сохраняется */
   archived: boolean
+  /** во что входит (значение родительской группы) */
+  parent_item_id: string | null
   created_at: string
   updated_at: string
 }
@@ -36,8 +51,11 @@ export interface Task {
   id: string
   user_id: string
   name: string
-  project_id: string
-  section_id: string
+  /**
+   * Значения групп — по одному из каждой. У подзадачи всегда те же, что у спринта,
+   * а значение связанной группы («клиент проекта») база подставляет сама.
+   */
+  item_ids: string[]
   status_id: string | null
   planned_hours: number
   fact_hours: number
@@ -49,7 +67,7 @@ export interface Task {
   duplicated_from: string | null
   /**
    * id головной задачи (спринта), если это подзадача. Уровней ровно два: у подзадачи
-   * своих подзадач не бывает, а проект и раздел она всегда берёт у спринта — это держит база.
+   * своих подзадач не бывает, а значения групп она всегда берёт у спринта — это держит база.
    */
   parent_id: string | null
   created_at: string
@@ -102,15 +120,18 @@ export interface UserSettings {
   user_id: string
   planned_hours_per_day: number | null
   planned_hours_per_month: number | null
+  /** последняя версия, чью историю изменений пользователь уже видел */
+  seen_release: string | null
   updated_at: string
 }
 
-/** Файл задачи или проекта; сам файл — в хранилище attachments по пути path. */
+/** Файл задачи или значения группы; сам файл — в хранилище attachments по пути path. */
 export interface Attachment {
   id: string
   user_id: string
-  project_id: string
-  /** null — файл проекта целиком, его база знаний */
+  /** файл значения целиком — его база знаний (у файла задачи пусто) */
+  item_id: string | null
+  /** файл задачи (у файла значения пусто) */
   task_id: string | null
   name: string
   path: string

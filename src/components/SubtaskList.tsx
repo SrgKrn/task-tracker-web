@@ -144,7 +144,7 @@ function SubtaskRow({
       className="flex items-center gap-2.5 rounded-xl py-2 pr-2.5 pl-2"
       style={{
         background: bg,
-        border: `1px solid ${isRunning ? 'rgba(232,163,61,.45)' : 'var(--s-hairline)'}`,
+        border: `1px solid ${isRunning ? 'var(--s-accent-line)' : 'var(--s-hairline)'}`,
       }}
     >
       <Ring
@@ -202,7 +202,7 @@ function SubtaskRow({
           className="hit-44 flex shrink-0 items-center gap-1 rounded-md px-2 py-[3px] text-2xs font-medium"
           style={
             done
-              ? { background: 'rgba(127,184,148,.14)', color: 'var(--s-success)' }
+              ? { background: 'var(--s-success-ghost)', color: 'var(--s-success-text)' }
               : { border: '1px solid var(--s-border)', color: 'var(--color-slate-400)' }
           }
         >
@@ -214,7 +214,7 @@ function SubtaskRow({
   )
 }
 
-/** Название — и всё: проект, раздел и спринт подзадача берёт у головной. */
+/** Название — и всё: значения групп подзадача берёт у спринта. */
 function AddSubtask({ parent }: { parent: Task }) {
   const createTask = useCreateTask()
   const { showError } = useToast()
@@ -228,8 +228,6 @@ function AddSubtask({ parent }: { parent: Task }) {
       {
         name: value,
         parent_id: parent.id,
-        project_id: parent.project_id,
-        section_id: parent.section_id,
         status_id: null,
         planned_hours: 0,
         start_date: null,

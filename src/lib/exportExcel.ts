@@ -194,34 +194,47 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     }
   }
 
-  /* ── Направления ───────────────────────────────────────────── */
-  const dirs = sheet(wb, 'Направления', [
-    { header: 'Направление', key: 'name', width: 24 },
-    { header: `${curCol}, ч`, key: 'hours', width: 13, fmt: HOURS },
-    { header: 'Доля', key: 'share', width: 9, fmt: '0%' },
-    { header: `${prevCol}, ч`, key: 'prev', width: 13, fmt: HOURS },
-    { header: 'Доля тогда', key: 'prevShare', width: 11, fmt: '0%' },
-    { header: 'Разница, ч', key: 'diff', width: 11, fmt: HOURS },
-    { header: 'Проектов', key: 'projects', width: 10 },
-  ])
-  for (const d of r.directions) {
-    dirs.addRow({
-      name: d.name,
-      hours: round2(d.hours),
-      share: d.share,
-      prev: round2(d.prevHours),
-      prevShare: d.prevShare,
-      diff: round2(d.hours - d.prevHours),
-      projects: d.projectCount,
-    })
+  /* ── Первая группа ─────────────────────────────────────────── */
+  // имена листов — из названий групп; Excel не принимает в них : \ / ? * [ ] и повторы
+  const taken = new Set(['Обзор', 'По дням', 'Спринты', 'Журнал', 'Записи'])
+  const sheetName = (name: string) => {
+    const base = name.replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 28) || 'Группа'
+    let out = base
+    for (let i = 2; taken.has(out); i++) out = `${base} ${i}`
+    taken.add(out)
+    return out
   }
-  filter(dirs, 7)
-  if (dirs.rowCount > 1) dataBar(dirs, `B2:B${dirs.rowCount}`)
+  if (r.outer) {
+    const dirCols: Col[] = [
+      { header: r.outer.item, key: 'name', width: 24 },
+      { header: `${curCol}, ч`, key: 'hours', width: 13, fmt: HOURS },
+      { header: 'Доля', key: 'share', width: 9, fmt: '0%' },
+      { header: `${prevCol}, ч`, key: 'prev', width: 13, fmt: HOURS },
+      { header: 'Доля тогда', key: 'prevShare', width: 11, fmt: '0%' },
+      { header: 'Разница, ч', key: 'diff', width: 11, fmt: HOURS },
+    ]
+    if (r.inner) dirCols.push({ header: r.inner.name, key: 'children', width: 12 })
+    const dirs = sheet(wb, sheetName(r.outer.name), dirCols)
+    for (const d of r.directions) {
+      dirs.addRow({
+        name: d.name,
+        hours: round2(d.hours),
+        share: d.share,
+        prev: round2(d.prevHours),
+        prevShare: d.prevShare,
+        diff: round2(d.hours - d.prevHours),
+        ...(r.inner ? { children: d.childCount } : {}),
+      })
+    }
+    filter(dirs, dirCols.length)
+    if (dirs.rowCount > 1) dataBar(dirs, `B2:B${dirs.rowCount}`)
+  }
 
-  /* ── Проекты ───────────────────────────────────────────────── */
-  const projects = sheet(wb, 'Проекты', [
-    { header: 'Направление', key: 'section', width: 22 },
-    { header: 'Проект', key: 'name', width: 24 },
+  /* ── Вторая группа внутри первой ───────────────────────────── */
+  if (r.outer && r.inner) {
+  const projects = sheet(wb, sheetName(r.inner.name), [
+    { header: r.outer.item, key: 'section', width: 22 },
+    { header: r.inner.item, key: 'name', width: 24 },
     { header: `${curCol}, ч`, key: 'hours', width: 13, fmt: HOURS },
     { header: 'Доля', key: 'share', width: 9, fmt: '0%' },
     { header: `${prevCol}, ч`, key: 'prev', width: 13, fmt: HOURS },
@@ -244,14 +257,19 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
   }
   filter(projects, 7)
   if (projects.rowCount > 1) dataBar(projects, `C2:C${projects.rowCount}`)
+  }
 
   /* ── Спринты ───────────────────────────────────────────────── */
   const groupName = { over: 'Вышли за план', inplan: 'В плане', noplan: 'Без плана' }
-  const sprints = sheet(wb, 'Спринты', [
-    { header: 'Группа', key: 'group', width: 15 },
+  // колонки групп — только тех, что есть
+  const dimCols = (): Col[] => [
+    ...(r.inner ? [{ header: r.inner.item, key: 'inner', width: 18 }] : []),
+    ...(r.outer ? [{ header: r.outer.item, key: 'outer', width: 20 }] : []),
+  ]
+  const sprintCols: Col[] = [
+    { header: 'Итог', key: 'group', width: 15 },
     { header: 'Спринт', key: 'name', width: 30 },
-    { header: 'Проект', key: 'project', width: 18 },
-    { header: 'Направление', key: 'section', width: 20 },
+    ...dimCols(),
     { header: 'План, ч', key: 'plan', width: 9, fmt: HOURS },
     { header: 'Факт за всё время, ч', key: 'factTotal', width: 13, fmt: HOURS },
     { header: '% плана', key: 'pct', width: 9, fmt: '0%' },
@@ -261,13 +279,14 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     { header: 'Срок с', key: 'start', width: 11, fmt: 'dd.mm.yyyy' },
     { header: 'Срок до', key: 'end', width: 11, fmt: 'dd.mm.yyyy' },
     { header: 'Срок прошёл', key: 'overdue', width: 11 },
-  ])
+  ]
+  const sprints = sheet(wb, 'Спринты', sprintCols)
   for (const s of r.sprints) {
     const row = sprints.addRow({
       group: groupName[s.group],
       name: s.name,
-      project: s.project,
-      section: s.section,
+      inner: s.inner,
+      outer: s.outer,
       plan: s.plan > 0 ? round2(s.plan) : null,
       factTotal: round2(s.factTotal),
       pct: s.pct !== null ? s.pct / 100 : null,
@@ -285,8 +304,10 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     if (s.overdue) row.getCell('overdue').font = { color: { argb: TERRA } }
     if (s.isFinal) row.getCell('status').font = { color: { argb: GREEN } }
   }
-  filter(sprints, 13)
-  if (sprints.rowCount > 1) dataBar(sprints, `I2:I${sprints.rowCount}`)
+  filter(sprints, sprintCols.length)
+  // «Факт за период» сдвигается вместе с колонками групп
+  const factCol = sprints.getColumn('factPeriod').letter
+  if (sprints.rowCount > 1) dataBar(sprints, `${factCol}2:${factCol}${sprints.rowCount}`)
 
   /* ── Журнал ────────────────────────────────────────────────── */
   const withComments = r.options.includeComments
@@ -294,8 +315,7 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     { header: 'Дата', key: 'date', width: 12, fmt: 'dd.mm.yyyy' },
     { header: 'День', key: 'weekday', width: 7 },
     { header: 'Задача', key: 'title', width: 40 },
-    { header: 'Проект', key: 'project', width: 18 },
-    { header: 'Направление', key: 'section', width: 20 },
+    ...dimCols(),
     { header: 'Часы', key: 'hours', width: 9, fmt: HOURS },
   ]
   if (withComments) journalCols.push({ header: 'Комментарии', key: 'comments', width: 60 })
@@ -306,8 +326,8 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
         date: excelDate(day.date),
         weekday: day.weekday,
         title: row.title,
-        project: row.project,
-        section: row.section,
+        inner: row.inner,
+        outer: row.outer,
         hours: round2(row.hours),
         ...(withComments ? { comments: row.comments.join(' · ') } : {}),
       })
@@ -318,12 +338,19 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
 
   /* ── Записи: каждая запись строкой — для сводных таблиц ────── */
   const records = wb.addWorksheet('Записи', { views: [{ state: 'frozen', ySplit: 1 }] })
-  const recordCols = [
+  // имена колонок таблицы должны быть разными — группа «Часы» не должна сломать файл
+  const fixed = new Set(['Дата', 'Неделя', 'День', 'Спринт', 'Подзадача', 'Часы', 'Источник', 'Начало', 'Конец'])
+  const groupCols = r.groupNames.map((name) => {
+    let out = name.trim() || 'Группа'
+    while (fixed.has(out)) out = `${out} (группа)`
+    fixed.add(out)
+    return { name: out, width: 20 }
+  })
+  const recordCols: { name: string; width: number; fmt?: string }[] = [
     { name: 'Дата', width: 12, fmt: 'dd.mm.yyyy' },
     { name: 'Неделя', width: 9 },
     { name: 'День', width: 7 },
-    { name: 'Направление', width: 20 },
-    { name: 'Проект', width: 18 },
+    ...groupCols,
     { name: 'Спринт', width: 30 },
     { name: 'Подзадача', width: 26 },
     { name: 'Часы', width: 9, fmt: HOURS },
@@ -346,8 +373,7 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
           excelDate(e.date),
           e.week,
           e.weekday,
-          e.section,
-          e.project,
+          ...e.dims,
           e.sprint,
           e.subtask,
           round2(e.hours),
@@ -355,13 +381,14 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
           e.start,
           e.end,
         ])
-      : [[null, null, null, null, null, null, null, null, null, null, null]],
+      : [recordCols.map(() => null)],
   })
   records.getRow(1).height = 22
   // формат столбцов таблица не наследует — проставляем ячейкам явно
+  const hoursCol = records.getColumn(recordCols.findIndex((c) => c.name === 'Часы') + 1).letter
   for (let i = 2; i <= records.rowCount; i++) {
     records.getCell(`A${i}`).numFmt = 'dd.mm.yyyy'
-    records.getCell(`H${i}`).numFmt = HOURS
+    records.getCell(`${hoursCol}${i}`).numFmt = HOURS
   }
   return wb
 }

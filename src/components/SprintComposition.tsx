@@ -43,7 +43,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
       {suggestion && (
         <div
           className="flex items-center gap-3 rounded-xl py-1.5 pr-1.5 pl-3"
-          style={{ background: 'rgba(127,184,148,.08)', border: '1px solid rgba(127,184,148,.28)' }}
+          style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
         >
           <span className="min-w-0 flex-1 text-xs leading-[1.4] text-slate-300">
             Закрыто {suggestion.done} из {suggestion.total} — по подзадачам это{' '}
@@ -53,7 +53,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
             type="button"
             onClick={() => onApplyStatus(suggestion.status.id)}
             className="h-9 shrink-0 rounded-lg px-3 text-xs font-semibold"
-            style={{ background: 'rgba(127,184,148,.16)', color: 'var(--s-success)' }}
+            style={{ background: 'var(--s-success-ghost)', color: 'var(--s-success-text)' }}
           >
             Поставить
           </button>
@@ -69,7 +69,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
         style={{ border: '1px solid var(--s-border)' }}
       >
         <span>
-          Следующий спринт
+          Новый период
           <span className="block text-2xs text-slate-600">
             {subtasks.some((t) => !isDone(t)) ? 'с незакрытыми подзадачами' : 'на следующий период'}
           </span>

@@ -44,7 +44,7 @@ const links = [
     to: '/settings',
     label: 'Ещё',
     match: (p: string) =>
-      p.startsWith('/settings') || p.startsWith('/sections') || p.startsWith('/projects') || p.startsWith('/statuses'),
+      ['/settings', '/groups', '/items', '/statuses', '/changelog', '/sections', '/projects'].some((x) => p.startsWith(x)),
     icon: (
       <span className="flex h-[18px] w-[18px] items-center justify-center gap-[3px]">
         <span className="h-[3px] w-[3px] rounded-full bg-current" />
