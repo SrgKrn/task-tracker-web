@@ -1,6 +1,7 @@
 import { buildGroupModel } from './groups'
 import { entryNote } from './notes'
 import { overlapsPeriod, toDateString } from './period'
+import { entryMinutes } from './time'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
 
 /**
@@ -382,7 +383,7 @@ export function buildReport(input: ReportInput): ReportData {
 
   const current = input.entries.filter((e) => e.effective_date >= from && e.effective_date <= to)
   const previous = input.entries.filter((e) => e.effective_date >= prev.from && e.effective_date <= prev.to)
-  const sumHours = (list: TimeEntry[]) => toHours(list.reduce((s, e) => s + e.duration_minutes, 0))
+  const sumHours = (list: TimeEntry[]) => toHours(list.reduce((s, e) => s + entryMinutes(e), 0))
   const total = sumHours(current)
   const prevTotal = sumHours(previous)
 
@@ -404,10 +405,10 @@ export function buildReport(input: ReportInput): ReportData {
   const byDay = new Map<string, { net: number; timer: number; added: number; removed: number }>()
   for (const e of current) {
     const b = byDay.get(e.effective_date) ?? { net: 0, timer: 0, added: 0, removed: 0 }
-    b.net += e.duration_minutes
-    if (e.entry_type === 'timer') b.timer += e.duration_minutes
-    else if (e.duration_minutes > 0) b.added += e.duration_minutes
-    else b.removed += e.duration_minutes
+    b.net += entryMinutes(e)
+    if (e.entry_type === 'timer') b.timer += entryMinutes(e)
+    else if (entryMinutes(e) > 0) b.added += entryMinutes(e)
+    else b.removed += entryMinutes(e)
     byDay.set(e.effective_date, b)
   }
   const dayPoints: DayPoint[] = days.map((date) => {
@@ -446,7 +447,7 @@ export function buildReport(input: ReportInput): ReportData {
   const projectOf = (e: TimeEntry) => valueId(taskById.get(e.task_id), innerGroup)
   const tally = (list: TimeEntry[], key: (e: TimeEntry) => string) => {
     const m = new Map<string, number>()
-    for (const e of list) m.set(key(e), (m.get(key(e)) ?? 0) + e.duration_minutes)
+    for (const e of list) m.set(key(e), (m.get(key(e)) ?? 0) + entryMinutes(e))
     return m
   }
   const secCur = tally(current, sectionOf)
@@ -461,9 +462,9 @@ export function buildReport(input: ReportInput): ReportData {
   for (const e of current) {
     const head = headOf(e.task_id)
     if (head && head.planned_hours <= 0) {
-      unplannedMinutes += e.duration_minutes
+      unplannedMinutes += entryMinutes(e)
       const key = valueId(head, outerGroup)
-      unplannedBySection.set(key, (unplannedBySection.get(key) ?? 0) + e.duration_minutes)
+      unplannedBySection.set(key, (unplannedBySection.get(key) ?? 0) + entryMinutes(e))
     }
   }
 
@@ -517,7 +518,7 @@ export function buildReport(input: ReportInput): ReportData {
   const headPeriodMinutes = new Map<string, number>()
   for (const e of current) {
     const head = headOf(e.task_id)
-    if (head) headPeriodMinutes.set(head.id, (headPeriodMinutes.get(head.id) ?? 0) + e.duration_minutes)
+    if (head) headPeriodMinutes.set(head.id, (headPeriodMinutes.get(head.id) ?? 0) + entryMinutes(e))
   }
   const closedIds = new Set(input.closedTaskIds)
   const sprints: SprintRow[] = tasks
@@ -570,12 +571,12 @@ export function buildReport(input: ReportInput): ReportData {
   const composition = { timer: 0, added: 0, removed: 0, sessions: 0, manualCount: 0 }
   for (const e of current) {
     if (e.entry_type === 'timer') {
-      composition.timer += toHours(e.duration_minutes)
+      composition.timer += toHours(entryMinutes(e))
       composition.sessions += 1
     } else {
       composition.manualCount += 1
-      if (e.duration_minutes > 0) composition.added += toHours(e.duration_minutes)
-      else composition.removed += toHours(e.duration_minutes)
+      if (entryMinutes(e) > 0) composition.added += toHours(entryMinutes(e))
+      else composition.removed += toHours(entryMinutes(e))
     }
   }
 
@@ -588,13 +589,13 @@ export function buildReport(input: ReportInput): ReportData {
     checks = {
       overnight: current
         .filter((e) => {
-          if (e.entry_type !== 'timer' || !e.started_at || !e.ended_at || e.duration_minutes < 180) return false
+          if (e.entry_type !== 'timer' || !e.started_at || !e.ended_at || entryMinutes(e) < 180) return false
           return toDateString(new Date(e.ended_at)) > toDateString(new Date(e.started_at))
         })
         .map((e) => ({
           date: e.effective_date,
           task: taskById.get(e.task_id)?.name.trim() ?? '',
-          hours: toHours(e.duration_minutes),
+          hours: toHours(entryMinutes(e)),
           endedAt: localTime(e.ended_at),
         }))
         .sort((a, b) => a.date.localeCompare(b.date)),
@@ -621,7 +622,7 @@ export function buildReport(input: ReportInput): ReportData {
   const dayTask = new Map<string, number>()
   for (const e of current) {
     const key = `${e.effective_date}|${e.task_id}`
-    dayTask.set(key, (dayTask.get(key) ?? 0) + e.duration_minutes)
+    dayTask.set(key, (dayTask.get(key) ?? 0) + entryMinutes(e))
   }
   // комментарий без часов в тот день тоже попадает в журнал — иначе он бы потерялся
   for (const key of commentsByKey.keys()) {
@@ -667,7 +668,7 @@ export function buildReport(input: ReportInput): ReportData {
         dims: input.groups.map((g) => valueName(task, g)),
         sprint: head?.name.trim() ?? 'Удалённая задача',
         subtask: task?.parent_id ? task.name.trim() : '',
-        hours: toHours(e.duration_minutes),
+        hours: toHours(entryMinutes(e)),
         source: (e.entry_type === 'timer' ? 'таймер' : 'правка') as EntryRecord['source'],
         start: e.entry_type === 'timer' ? localTime(e.started_at) : '',
         end: e.entry_type === 'timer' ? localTime(e.ended_at) : '',
@@ -712,7 +713,7 @@ export function buildReport(input: ReportInput): ReportData {
     dayNorm,
     weekdays,
     avgPerWeekday: weekdays > 0 ? total / weekdays : null,
-    daysWithEntries: new Set(current.filter((e) => e.duration_minutes > 0).map((e) => e.effective_date)).size,
+    daysWithEntries: new Set(current.filter((e) => entryMinutes(e) > 0).map((e) => e.effective_date)).size,
     closedCount: [...closedIds].filter((id) => headIds.has(id)).length,
     inWorkCount: sprints.length,
     overCount: overRows.length,

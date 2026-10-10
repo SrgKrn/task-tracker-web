@@ -50,9 +50,9 @@ function SourceRow({ src, title, onReconnect }: { src: CalendarSource; title: st
         <span className="min-w-0 truncate text-sm font-medium text-slate-100">{title}</span>
         <span className="shrink-0 font-mono text-2xs text-slate-500">{when(src.last_synced_at)}</span>
       </div>
-      {src.last_error && <span className="text-2xs leading-[1.45] text-red-400">{src.last_error}</span>}
+      {src.last_error && <span className="text-2xs leading-[1.45] text-terra-400">{src.last_error}</span>}
       {src.last_error && onReconnect && (
-        <button type="button" onClick={onReconnect} className="self-start text-xs text-sky-600">
+        <button type="button" onClick={onReconnect} className="self-start text-xs text-brass-600">
           Войти через Google заново
         </button>
       )}
@@ -243,7 +243,7 @@ export function CalendarCard() {
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className="self-start text-xs text-sky-600">
+          <button type="button" onClick={() => setAdding(true)} className="self-start text-xs text-brass-600">
             + Подключить по iCal-ссылке
           </button>
         )}
@@ -324,7 +324,7 @@ export function DriveCard() {
         Приложение видит только то, что вы сами выбрали в окне Google.
       </span>
       {isLoading && <span className="text-2xs text-slate-500">Проверяем…</span>}
-      {error && <span className="text-2xs text-red-400">Не удалось узнать статус: {describeError(error)}</span>}
+      {error && <span className="text-2xs text-terra-400">Не удалось узнать статус: {describeError(error)}</span>}
       {status && !status.configured && (
         <span className="text-2xs leading-[1.5] text-slate-400">
           Google Диск ещё не настроен на сервере — как только он будет готов, здесь появится кнопка «Подключить».
@@ -352,7 +352,7 @@ export function DriveCard() {
 
       {linked?.drive && (
         <>
-          <span className="text-2xs leading-[1.5] text-emerald-400">
+          <span className="text-2xs leading-[1.5] text-sage-400">
             Подключено{linked.email ? `: ${linked.email}` : ''}
           </span>
           <div

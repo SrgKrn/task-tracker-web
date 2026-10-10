@@ -1,6 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { toDateString } from '../period'
+import { applyTimerLocally, projectTimer, rollbackTimer } from '../timerLogic'
 import { supabase } from '../supabaseClient'
+import {
+  enqueueTimerAction,
+  flushTimerQueue,
+  isNetworkError,
+  pendingTimerActions,
+  sendTimerAction,
+  type TimerAction,
+} from '../timerQueue'
+import { entrySeconds } from '../time'
 import type { ActiveTimer, TimeEntry } from '../types'
 
 export function useTimeEntries(taskId: string | undefined) {
@@ -19,85 +29,122 @@ export function useTimeEntries(taskId: string | undefined) {
   })
 }
 
+async function currentUserId(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  if (!session) throw new Error('Нужно войти заново')
+  return session.user.id
+}
+
 export function useActiveTimer() {
   return useQuery({
     queryKey: ['active_timer'],
     queryFn: async () => {
       const { data, error } = await supabase.from('active_timers').select('*').maybeSingle()
       if (error) throw error
-      return data as ActiveTimer | null
+      const timer = data as ActiveTimer | null
+      const userId = timer?.user_id ?? (await currentUserId().catch(() => undefined))
+      return projectTimer(timer, userId ? pendingTimerActions(userId) : [])
     },
     // the display tick lives in the component; this just needs to stay fresh across screens
     refetchOnWindowFocus: true,
   })
 }
 
-/** Stops whatever timer is currently running (if any) by logging its elapsed time. */
-async function stopRunningTimer(current: ActiveTimer) {
-  const startedAt = new Date(current.started_at)
-  const endedAt = new Date()
-  const durationMinutes = Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000))
-
-  const { error: insertError } = await supabase.from('time_entries').insert({
-    task_id: current.task_id,
-    entry_type: 'timer',
-    started_at: current.started_at,
-    ended_at: endedAt.toISOString(),
-    duration_minutes: durationMinutes,
-    // сеанс относится к дню, когда его начали, в местном времени: смена, начатая
-    // в 23:40 и остановленная в 00:20, целиком принадлежит вчерашнему дню
-    effective_date: toDateString(startedAt),
-  })
-  if (insertError) throw insertError
-
-  const { error: deleteError } = await supabase.from('active_timers').delete().eq('user_id', current.user_id)
-  if (deleteError) throw deleteError
+function invalidateTimer(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['active_timer'] })
+  qc.invalidateQueries({ queryKey: ['tasks'] })
+  qc.invalidateQueries({ queryKey: ['time_entries'] })
+  qc.invalidateQueries({ queryKey: ['time_entries_range'] })
 }
 
-export function useStartTimer() {
+/**
+ * Отправить нажатие: сразу, если сеть есть и очередь пуста, иначе — в очередь. Обрыв сети
+ * посреди запроса тоже кладёт нажатие в очередь: на экране учёт уже показан.
+ * `queued` — нажатие ждёт сети.
+ */
+async function dispatch(action: TimerAction): Promise<{ queued: boolean }> {
+  if (!navigator.onLine || pendingTimerActions().length > 0) {
+    enqueueTimerAction(action)
+    void flushTimerQueue()
+    return { queued: true }
+  }
+  try {
+    await sendTimerAction(action)
+    return { queued: false }
+  } catch (e) {
+    if (!isNetworkError(e)) throw e
+    enqueueTimerAction(action)
+    return { queued: true }
+  }
+}
+
+type MutateOptions = { onError?: (error: unknown) => void; onSuccess?: () => void }
+
+function useTimerMutation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (taskId: string) => {
-      const { data: current, error } = await supabase.from('active_timers').select('*').maybeSingle()
-      if (error) throw error
-      if (current) {
-        if (current.task_id === taskId) return // already tracking this task
-        await stopRunningTimer(current as ActiveTimer)
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not signed in')
-
-      const { error: upsertError } = await supabase
-        .from('active_timers')
-        .upsert({ user_id: user.id, task_id: taskId, started_at: new Date().toISOString(), reminded_hours: 0 })
-      if (upsertError) throw upsertError
+    // без сети нажатие тоже должно сработать — оно ляжет в очередь
+    networkMode: 'always',
+    mutationFn: (action: TimerAction) => dispatch(action),
+    onMutate: async (action) => {
+      await qc.cancelQueries({ queryKey: ['active_timer'] })
+      return applyTimerLocally(qc, action, qc.getQueryData<ActiveTimer | null>(['active_timer']))
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['active_timer'] })
-      qc.invalidateQueries({ queryKey: ['tasks'] })
-      qc.invalidateQueries({ queryKey: ['time_entries'] })
+    onError: (_e, _action, snapshot) => {
+      if (snapshot) rollbackTimer(qc, snapshot)
+    },
+    onSettled: (result) => {
+      // пока нажатие в очереди, сервер ещё не знает о нём — оставляем то, что на экране
+      if (!result?.queued) invalidateTimer(qc)
     },
   })
 }
 
+/** Начать учёт по задаче; идущий по другой задаче закрывается тем же запросом. */
+export function useStartTimer() {
+  const m = useTimerMutation()
+  return {
+    isPending: m.isPending,
+    mutate: (taskId: string, options?: MutateOptions) => {
+      void currentUserId().then(
+        (userId) => m.mutate({ kind: 'start', userId, taskId, at: new Date().toISOString() }, options),
+        options?.onError,
+      )
+    },
+  }
+}
+
+/** Остановить идущий учёт. */
 export function useStopTimer() {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async () => {
-      const { data: current, error } = await supabase.from('active_timers').select('*').maybeSingle()
-      if (error) throw error
-      if (!current) return
-      await stopRunningTimer(current as ActiveTimer)
+  const m = useTimerMutation()
+  return {
+    isPending: m.isPending,
+    mutate: (_?: undefined, options?: MutateOptions) => {
+      const running = qc.getQueryData<ActiveTimer | null>(['active_timer'])
+      void currentUserId().then(
+        (userId) =>
+          m.mutate({ kind: 'stop', userId, at: new Date().toISOString(), startedAt: running?.started_at ?? null }, options),
+        options?.onError,
+      )
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['active_timer'] })
-      qc.invalidateQueries({ queryKey: ['tasks'] })
-      qc.invalidateQueries({ queryKey: ['time_entries'] })
-    },
-  })
+  }
+}
+
+/**
+ * Отправить очередь, когда вернулась сеть или открыли приложение. После отправки —
+ * перечитать учёт и записи: на экране окажется то, что записал сервер.
+ */
+export function useTimerQueueSync(onFailed: (messages: string[]) => void) {
+  const qc = useQueryClient()
+  return async () => {
+    if (!pendingTimerActions().length) return
+    const { sent, failed } = await flushTimerQueue()
+    if (sent || failed.length) invalidateTimer(qc)
+    if (failed.length) onFailed(failed)
+  }
 }
 
 export function useAdjustFactHours() {
@@ -120,7 +167,7 @@ export function useAdjustFactHours() {
       const { error } = await supabase.from('time_entries').insert({
         task_id: taskId,
         entry_type: 'manual_adjustment',
-        duration_minutes: deltaMinutes,
+        duration_seconds: deltaMinutes * 60,
         // комментарий к правке пишет сам пользователь — по нажатию на неё в таймлайне
         note: null,
         effective_date: effectiveDate ?? toDateString(new Date()),
@@ -149,14 +196,14 @@ export function useTrimSession() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ entry, minutes }: { entry: TimeEntry; minutes: number }) => {
-      const nextDuration = entry.duration_minutes - minutes
-      if (nextDuration < 0) throw new Error('Сессия короче, чем нужно отнять')
+      const nextSeconds = entrySeconds(entry) - minutes * 60
+      if (nextSeconds < 0) throw new Error('Сессия короче, чем нужно отнять')
       const endedAt = entry.ended_at
         ? new Date(new Date(entry.ended_at).getTime() - minutes * 60_000).toISOString()
         : null
       const { error } = await supabase
         .from('time_entries')
-        .update({ duration_minutes: nextDuration, ended_at: endedAt })
+        .update({ duration_seconds: nextSeconds, ended_at: endedAt })
         .eq('id', entry.id)
       if (error) throw error
     },

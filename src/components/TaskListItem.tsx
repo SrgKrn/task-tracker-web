@@ -35,8 +35,8 @@ interface TaskListItemProps {
   parentName?: string
 }
 
-/** ширина «ящика» с действиями, открываемого свайпом */
-const ACTIONS_WIDTH = 148
+/** ширина одной кнопки в «ящике» действий, открываемом свайпом */
+const ACTION_WIDTH = 74
 const OPEN_THRESHOLD = 56
 /** дальше квадратики сливаются в полосу и перестают считываться поштучно */
 const MAX_PIPS = 12
@@ -74,7 +74,13 @@ export function TaskListItem({
     if (expandable) autoExpandFor(task.id, runningChildId)
   }, [task.id, runningChildId, expandable])
 
-  const swipeable = !!onDuplicate || !!onDelete
+  const done = !!status?.is_final
+  // первая подзадача открытого спринта — из «ящика» свайпа, а не полосой под каждым спринтом
+  // «ящик» есть только там, где строке дали действия (список задач), — туда и кладём
+  const addSubtaskAction = expandable && !task.parent_id && !done && (!!onDuplicate || !!onDelete)
+  const actionCount = [onDuplicate, onDelete, addSubtaskAction].filter(Boolean).length
+  const actionsWidth = actionCount * ACTION_WIDTH
+  const swipeable = actionCount > 0
   const [offset, setOffset] = useState(0)
   // флаг жеста живёт в ref, а не в state: touchmove может прийти в том же кадре, что и
   // touchstart, когда состояние ещё не перерисовалось — и жест бы просто не начался
@@ -84,14 +90,13 @@ export function TaskListItem({
   const startOffset = useRef(0)
   const axisLocked = useRef<'x' | 'y' | null>(null)
 
-  const done = !!status?.is_final
   /*
-   * Полоса состава у спринта в списке. Раньше она появлялась только при уже существующих
-   * подзадачах — и первую подзадачу из списка добавить было нечем: у всех спринтов их ноль,
-   * и найти вход можно было только внутри карточки. Теперь полоса есть у каждого
-   * незакрытого спринта; у закрытого без подзадач раскладывать уже нечего.
+   * Полоса состава у спринта в списке. У каждого пустого спринта она висела строкой
+   * «+ ПОДЗАДАЧА» — в списке из двадцати спринтов это двадцать одинаковых полос. Теперь
+   * полоса есть у спринта с подзадачами (это кнопка раскрытия) и у пустого — только пока
+   * в него вводят первую подзадачу; начать ввод — свайпом строки, кнопка «Подзадача».
    */
-  const showComposition = expandable && !task.parent_id && (hasSubtasks || !done)
+  const showComposition = expandable && !task.parent_id && (hasSubtasks || addingHere)
   // пустой спринт раскрыт, только пока в него вводят первую подзадачу: запомненное
   // раскрытие пустых спринтов и давало «случайные» поля посреди списка
   const open = showComposition && ((hasSubtasks && (storedOpen || forceExpanded)) || addingHere)
@@ -136,7 +141,7 @@ export function TaskListItem({
       if (Math.abs(dx) < 8) return
       axisLocked.current = 'x'
     }
-    const next = Math.min(0, Math.max(-ACTIONS_WIDTH, startOffset.current + dx))
+    const next = Math.min(0, Math.max(-actionsWidth, startOffset.current + dx))
     setOffset(next)
   }
 
@@ -144,7 +149,7 @@ export function TaskListItem({
     if (!swipeable || !draggingRef.current) return
     draggingRef.current = false
     setAnimating(true)
-    setOffset((current) => (current < -OPEN_THRESHOLD ? -ACTIONS_WIDTH : 0))
+    setOffset((current) => (current < -OPEN_THRESHOLD ? -actionsWidth : 0))
   }
 
   const close = () => setOffset(0)
@@ -153,7 +158,21 @@ export function TaskListItem({
     <div className="flex flex-col gap-1.5">
       <div className="relative overflow-hidden rounded-[15px]">
         {swipeable && (
-          <div className="absolute inset-y-0 right-0 flex" style={{ width: ACTIONS_WIDTH }}>
+          <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
+            {addSubtaskAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  close()
+                  setOpen(true)
+                  startAdding(task.id)
+                }}
+                className="flex-1 text-xs font-medium"
+                style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+              >
+                Подзадача
+              </button>
+            )}
             {onDuplicate && (
               <button
                 type="button"
@@ -212,7 +231,7 @@ export function TaskListItem({
               {isRunning ? (
                 <StopGlyph />
               ) : done ? (
-                <Check size={14} className="text-emerald-400" />
+                <Check size={14} className="text-sage-400" />
               ) : (
                 <PlayGlyph />
               )}
@@ -248,7 +267,7 @@ export function TaskListItem({
               <span
                 title={meta}
                 className={`block truncate font-mono text-2xs leading-[1.4] ${
-                  overdue && !done ? 'text-red-400' : done ? 'text-slate-600' : 'text-slate-500'
+                  overdue && !done ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
                 }`}
               >
                 {meta}
@@ -256,7 +275,7 @@ export function TaskListItem({
             </Link>
 
             {showClock && activeTimer ? (
-              <span className="tabular shrink-0 font-mono text-sm font-semibold text-sky-600">
+              <span className="tabular shrink-0 font-mono text-sm font-semibold text-brass-600">
                 {formatClock(activeTimer.started_at)}
               </span>
             ) : done ? null : overdue ? (
@@ -336,7 +355,7 @@ function CompositionToggle({
         aria-expanded={open}
         aria-controls={`subtasks-${taskId}`}
         className={`-mb-[11px] mt-2 ml-11 flex h-10 items-center gap-2 text-left ${
-          open ? 'text-sky-600' : 'text-slate-500'
+          open ? 'text-brass-600' : 'text-slate-500'
         }`}
         style={{ borderTop: '1px solid var(--s-hairline)' }}
       >
@@ -358,7 +377,7 @@ function CompositionToggle({
       aria-expanded={open}
       aria-controls={`subtasks-${taskId}`}
       className={`-mb-[11px] mt-2 ml-11 flex h-10 items-center gap-2.5 text-left ${
-        open ? 'text-sky-600' : 'text-slate-500'
+        open ? 'text-brass-600' : 'text-slate-500'
       }`}
       style={{ borderTop: '1px solid var(--s-hairline)' }}
     >

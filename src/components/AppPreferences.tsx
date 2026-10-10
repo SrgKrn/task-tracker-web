@@ -70,7 +70,7 @@ export function NotificationsCard() {
             следующий час. Работает и при заблокированном экране.
           </span>
           {state && (
-            <span className={`text-2xs leading-[1.5] ${state === 'on' ? 'text-emerald-400' : 'text-slate-400'}`}>
+            <span className={`text-2xs leading-[1.5] ${state === 'on' ? 'text-sage-400' : 'text-slate-400'}`}>
               {STATE_TEXT[state]}
             </span>
           )}
@@ -128,7 +128,7 @@ export function NotificationsCard() {
               setLive(e.target.checked)
               setLiveNotificationEnabled(e.target.checked)
             }}
-            className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+            className="h-[18px] w-[18px] shrink-0 accent-brass-600"
           />
           <span className="flex min-w-0 flex-col">
             <span className="text-sm text-slate-300">Плашка «Идёт учёт»</span>
@@ -161,14 +161,14 @@ export function TelegramCard() {
             Учёт можно начать и остановить из Telegram, а комментарий — просто написать боту.
           </span>
           {isLoading && <span className="text-2xs text-slate-500">Проверяем…</span>}
-          {error && <span className="text-2xs text-red-400">Не удалось узнать статус: {describeError(error)}</span>}
+          {error && <span className="text-2xs text-terra-400">Не удалось узнать статус: {describeError(error)}</span>}
           {status && !status.configured && (
             <span className="text-2xs leading-[1.5] text-slate-400">
               Бот ещё не настроен — как только он появится, здесь будет кнопка «Подключить».
             </span>
           )}
           {linked && (
-            <span className="text-2xs leading-[1.5] text-emerald-400">
+            <span className="text-2xs leading-[1.5] text-sage-400">
               Подключено{linked.username ? `: @${linked.username}` : linked.firstName ? `: ${linked.firstName}` : ''}
             </span>
           )}
@@ -299,7 +299,7 @@ export function Toggle({
         type="checkbox"
         checked={on}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+        className="h-[18px] w-[18px] shrink-0 accent-brass-600"
       />
       <span className="flex min-w-0 flex-col">
         <span className="text-sm text-slate-300">{title}</span>

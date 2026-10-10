@@ -6,7 +6,7 @@ import { currentWeekRange, todayStr } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
-import { formatHoursRu } from '../lib/time'
+import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
 
 const DEFAULT_DAY_NORM = 8
@@ -27,11 +27,11 @@ function TaskWorkspaceEmpty() {
     () =>
       entries
         .filter((e) => e.effective_date === today)
-        .reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
+        .reduce((sum, e) => sum + entryMinutes(e), 0) / 60,
     [entries, today],
   )
   const weekFact = useMemo(
-    () => entries.reduce((sum, e) => sum + e.duration_minutes, 0) / 60,
+    () => entries.reduce((sum, e) => sum + entryMinutes(e), 0) / 60,
     [entries],
   )
 

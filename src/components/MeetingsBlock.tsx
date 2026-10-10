@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Close } from './Icon'
+import { Check, ChevronDown, Close } from './Icon'
 import { PickerField } from './PickerField'
 import { Overline } from './ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -28,6 +28,7 @@ function coveredBy(ev: CalendarEvent, sessions: { s: number; e: number }[]): boo
 /**
  * Встречи дня из подключённого календаря. Прошедшую — засчитать в задачу одной кнопкой
  * (задача подобрана по прошлому выбору или имени проекта в названии), идущую — начать учёт.
+ * Две и больше встречи свёрнуты до одной главной: пять встреч оттесняли задачи дня за экран.
  */
 export function MeetingsBlock({
   date,
@@ -89,8 +90,27 @@ export function MeetingsBlock({
     return list
   }, [entries, activeTimer, now])
 
+  const [expanded, setExpanded] = useState(false)
+
   const visible = events.filter((e) => e.status !== 'dismissed')
   if (visible.length === 0) return null
+
+  const startOf = (ev: CalendarEvent) => new Date(ev.starts_at).getTime()
+  const endOf = (ev: CalendarEvent) => new Date(ev.ends_at).getTime()
+  /** прошла, не засчитана и учёт в это время не шёл — ждёт решения */
+  const waiting = (ev: CalendarEvent) => ev.status === 'new' && endOf(ev) <= now && !coveredBy(ev, sessions)
+  /*
+   * Главная встреча — та, с которой есть что делать прямо сейчас: идущая, потом последняя
+   * прошедшая без учёта, потом ближайшая будущая. Если всё разобрано — последняя по времени.
+   */
+  const focus =
+    visible.find((ev) => ev.status === 'new' && startOf(ev) <= now && now < endOf(ev)) ??
+    [...visible].reverse().find(waiting) ??
+    visible.find((ev) => startOf(ev) > now) ??
+    visible[visible.length - 1]
+  const collapsed = visible.length >= 2 && !expanded
+  const shown = collapsed ? [focus] : visible
+  const waitingElsewhere = visible.filter((ev) => ev !== focus && waiting(ev)).length
 
   function log(ev: CalendarEvent, taskId: string) {
     logMeeting.mutate(
@@ -125,7 +145,7 @@ export function MeetingsBlock({
         className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
         style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
       >
-        {visible.map((ev) => {
+        {shown.map((ev) => {
           const start = new Date(ev.starts_at).getTime()
           const end = new Date(ev.ends_at).getTime()
           const past = end <= now
@@ -137,7 +157,7 @@ export function MeetingsBlock({
           return (
             <div key={ev.id} className="flex flex-col gap-2 px-3.5 py-3">
               <div className="flex items-baseline gap-2.5">
-                <span className={`tabular shrink-0 font-mono text-xs ${ongoing ? 'text-sky-600' : 'text-slate-500'}`}>
+                <span className={`tabular shrink-0 font-mono text-xs ${ongoing ? 'text-brass-600' : 'text-slate-500'}`}>
                   {clock(ev.starts_at)}–{clock(ev.ends_at)}
                 </span>
                 <span
@@ -174,7 +194,7 @@ export function MeetingsBlock({
                       type="button"
                       disabled={logMeeting.isPending}
                       onClick={() => log(ev, suggestion)}
-                      className="max-w-full truncate rounded-[9px] px-3 py-[7px] text-xs font-medium disabled:opacity-50"
+                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-xs font-medium disabled:opacity-50"
                       style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
                     >
                       Засчитать {formatHoursMinutes(minutes / 60)} в «{titleOf(suggestion)}»
@@ -182,6 +202,7 @@ export function MeetingsBlock({
                   )}
                   <PickerField
                     chip
+                    chipLarge
                     label="Задача"
                     items={options}
                     value={null}
@@ -199,7 +220,7 @@ export function MeetingsBlock({
                     <button
                       type="button"
                       onClick={() => startTimer.mutate(suggestion, { onError })}
-                      className="max-w-full truncate rounded-[9px] px-3 py-[7px] text-xs font-medium"
+                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-xs font-medium"
                       style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
                     >
                       ▶ Начать учёт в «{titleOf(suggestion)}»
@@ -207,6 +228,7 @@ export function MeetingsBlock({
                   ) : (
                     <PickerField
                       chip
+                      chipLarge
                       label="Задача"
                       items={options}
                       value={null}
@@ -220,6 +242,24 @@ export function MeetingsBlock({
             </div>
           )
         })}
+        {visible.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={!collapsed}
+            className="flex min-h-11 items-center justify-between gap-2 px-3.5 text-left text-xs text-slate-500"
+          >
+            <span>
+              {collapsed ? `Все встречи дня · ${visible.length}` : 'Свернуть'}
+              {collapsed && waitingElsewhere > 0 && (
+                <span className="text-brass-600"> · ещё {waitingElsewhere} ждут учёта</span>
+              )}
+            </span>
+            <span className="flex transition-transform duration-200" style={{ transform: collapsed ? undefined : 'rotate(180deg)' }}>
+              <ChevronDown size={14} />
+            </span>
+          </button>
+        )}
       </div>
     </div>
   )

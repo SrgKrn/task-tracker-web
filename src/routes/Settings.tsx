@@ -400,7 +400,7 @@ function ExportSection() {
               type="checkbox"
               checked={options[o.key]}
               onChange={(e) => setOption(o.key, e.target.checked)}
-              className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+              className="h-[18px] w-[18px] shrink-0 accent-brass-600"
             />
             <span className="flex min-w-0 flex-col">
               <span className="text-sm text-slate-300">{o.title}</span>
@@ -566,7 +566,7 @@ export function Settings() {
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="flex min-h-[52px] items-center px-3.5 text-left text-sm text-red-400"
+          className="flex min-h-[52px] items-center px-3.5 text-left text-sm text-terra-400"
         >
           Выйти
         </button>

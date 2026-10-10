@@ -6,7 +6,20 @@ import type { Status, Task } from './types'
  * поэтому дерево собирается на клиенте, а не отдельными запросами на каждый спринт.
  */
 
-/** подзадачи по id спринта; внутри — в порядке создания, новые внизу, у кнопки «+ Подзадача» */
+/**
+ * Подзадачи по сроку: ближайший — первым, без срока — в конце. При равном сроке и без
+ * срока — в порядке создания, поэтому новая подзадача без даты встаёт внизу, у «+ Подзадача».
+ */
+export function compareSubtasks(a: Task, b: Task): number {
+  if (a.end_date !== b.end_date) {
+    if (!a.end_date) return 1
+    if (!b.end_date) return -1
+    return a.end_date.localeCompare(b.end_date)
+  }
+  return a.created_at.localeCompare(b.created_at)
+}
+
+/** подзадачи по id спринта, внутри — по сроку (compareSubtasks) */
 export function childrenByParent(tasks: Task[]): Map<string, Task[]> {
   const map = new Map<string, Task[]>()
   for (const t of tasks) {
@@ -15,7 +28,7 @@ export function childrenByParent(tasks: Task[]): Map<string, Task[]> {
     if (list) list.push(t)
     else map.set(t.parent_id, [t])
   }
-  for (const list of map.values()) list.sort((a, b) => a.created_at.localeCompare(b.created_at))
+  for (const list of map.values()) list.sort(compareSubtasks)
   return map
 }
 

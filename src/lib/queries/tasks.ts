@@ -15,9 +15,13 @@ export function useTasks() {
 }
 
 export function useTask(id: string | undefined) {
+  const qc = useQueryClient()
   return useQuery({
     queryKey: ['tasks', id],
     enabled: !!id,
+    // задача уже есть в загруженном списке — показываем её сразу: плашка учёта и карточка
+    // не ждут отдельного запроса, а без сети не остаются пустыми
+    placeholderData: () => qc.getQueryData<Task[]>(['tasks'])?.find((t) => t.id === id),
     queryFn: async () => {
       // maybeSingle: удалённая задача возвращает null, а не ошибку — карточке нужно
       // отличать «ещё грузится» от «больше не существует», чтобы увести на список
@@ -75,7 +79,21 @@ export function useUpdateTask() {
       const { error } = await supabase.from('tasks').update(fields).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_data, variables) => {
+    // поля карточки сохраняются сами по изменению — значение должно встать сразу, а не
+    // после ответа сервера; отказ возвращает прежнее
+    onMutate: async ({ id, fields }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const list = qc.getQueryData<Task[]>(['tasks'])
+      const one = qc.getQueryData<Task>(['tasks', id])
+      if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (t.id === id ? { ...t, ...fields } : t)))
+      if (one) qc.setQueryData<Task>(['tasks', id], { ...one, ...fields })
+      return { list, one }
+    },
+    onError: (_e, { id }, snapshot) => {
+      if (snapshot?.list) qc.setQueryData(['tasks'], snapshot.list)
+      if (snapshot?.one) qc.setQueryData(['tasks', id], snapshot.one)
+    },
+    onSettled: (_data, _error, variables) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['tasks', variables.id] })
       // смена статуса пишет событие триггером — сводка должна пересчитать «задач закрыто»

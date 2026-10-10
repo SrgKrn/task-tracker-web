@@ -126,7 +126,7 @@ export function AttachmentsBlock({
               type="button"
               onClick={onPickDrive}
               disabled={addDrive.isPending}
-              className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-sky-600 disabled:opacity-50"
+              className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-brass-600 disabled:opacity-50"
             >
               <Drive size={14} />
               Из Диска
@@ -136,7 +136,7 @@ export function AttachmentsBlock({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={upload.isPending}
-          className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-sky-600 disabled:opacity-50"
+          className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-brass-600 disabled:opacity-50"
         >
           <Plus size={14} />
           {progress ? `Загружаем ${progress.done + 1 > progress.total ? progress.total : progress.done + 1} из ${progress.total}…` : 'Добавить'}

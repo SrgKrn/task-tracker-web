@@ -31,6 +31,26 @@ export function todayStr(): string {
   return toDateString(new Date())
 }
 
+/** YYYY-MM-DD на n дней позже (раньше — при отрицательном n). */
+export function addDays(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00`)
+  d.setDate(d.getDate() + n)
+  return toDateString(d)
+}
+
+/** Ближайшая пятница после dateStr; в саму пятницу — следующая. */
+export function nextFriday(dateStr: string): string {
+  const dow = new Date(`${dateStr}T00:00:00`).getDay()
+  return addDays(dateStr, (5 - dow + 7) % 7 || 7)
+}
+
+/** «пт, 17 окт» — короткая дата для кнопок. */
+export function formatShortDate(dateStr: string): string {
+  return new Date(`${dateStr}T00:00:00`)
+    .toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })
+    .replace('.', '')
+}
+
 /** [пн, вс] текущей недели — под столбики недельного ритма на «Сегодня». */
 export function currentWeekRange(): { from: string; to: string; days: string[] } {
   const now = new Date()

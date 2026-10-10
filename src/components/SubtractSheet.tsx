@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Sheet } from './ui'
-import { formatHoursMinutes } from '../lib/time'
+import { entryMinutes, formatHoursMinutes } from '../lib/time'
 import type { ActiveTimer, TimeEntry } from '../lib/types'
 
 export type SubtractSource =
@@ -65,7 +65,7 @@ export function SubtractSheet({
   const maxMinutes = Math.max(15, Math.round(factHours * 60) + runningMinutes)
   const step = (delta: number) => setMinutes((m) => Math.min(maxMinutes, Math.max(15, m + delta)))
 
-  const sessionFits = !!lastSession && lastSession.duration_minutes >= minutes
+  const sessionFits = !!lastSession && entryMinutes(lastSession) >= minutes
   const runningFits = !!activeTimer && runningMinutes >= minutes
   const shiftedStart = activeTimer
     ? new Date(new Date(activeTimer.started_at).getTime() + minutes * 60_000).toISOString()
@@ -123,8 +123,8 @@ export function SubtractSheet({
             title="Из последней сессии таймера"
             detail={
               sessionFits
-                ? `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)}: ${formatHoursMinutes(lastSession.duration_minutes / 60)} → ${formatHoursMinutes((lastSession.duration_minutes - minutes) / 60)}`
-                : `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)} длилась ${formatHoursMinutes(lastSession.duration_minutes / 60)} — меньше, чем нужно отнять`
+                ? `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)}: ${formatHoursMinutes(entryMinutes(lastSession) / 60)} → ${formatHoursMinutes((entryMinutes(lastSession) - minutes) / 60)}`
+                : `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)} длилась ${formatHoursMinutes(entryMinutes(lastSession) / 60)} — меньше, чем нужно отнять`
             }
             disabled={!sessionFits}
             onClick={() => lastSession && onConfirm(minutes, { kind: 'session', entry: lastSession })}

@@ -11,12 +11,15 @@ import {
 import { useSetEntryNote, useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
 import { entryNote } from '../lib/notes'
+import { entrySeconds, formatDuration, plural } from '../lib/time'
 import type { Comment, TimeEntry } from '../lib/types'
 import { ArrowUp, Comment as CommentIcon, MoreDots } from './Icon'
 
+const ADJUSTMENTS: [string, string, string] = ['правка', 'правки', 'правок']
+
 type TimelineRow =
   | { kind: 'timer'; at: string; entry: TimeEntry }
-  | { kind: 'adjustment'; at: string; entry: TimeEntry }
+  | { kind: 'adjustment'; at: string; entry: TimeEntry; count: number; seconds: number }
   | { kind: 'comment'; at: string; comment: Comment }
   | { kind: 'file'; at: string; file: AttachmentWithUrl }
 
@@ -29,14 +32,6 @@ function formatDateTime(iso: string): string {
   })
 }
 
-function formatMinutes(minutes: number): string {
-  const sign = minutes < 0 ? '−' : ''
-  const abs = Math.abs(minutes)
-  const h = Math.floor(abs / 60)
-  const m = abs % 60
-  return `${sign}${h > 0 ? `${h} ч ` : ''}${m} мин`
-}
-
 function clock(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : ''
 }
@@ -47,7 +42,7 @@ function entrySummary(entry: TimeEntry): string {
     .toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
     .replace('.', '')
   const span = entry.entry_type === 'timer' && entry.started_at ? `, ${clock(entry.started_at)}–${clock(entry.ended_at)}` : ''
-  return `${day}${span} · ${formatMinutes(entry.duration_minutes)}`
+  return `${day}${span} · ${formatDuration(entrySeconds(entry))}`
 }
 
 export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning: boolean }) {
@@ -57,12 +52,37 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
   const { data: comments = [] } = useComments(taskId)
   const { data: files = [] } = useAttachments({ taskIds: [taskId] })
 
+  /*
+   * Ручные правки за день — одной строкой с суммой: пять нажатий «+15 мин» давали пять
+   * одинаковых строк «Ручная правка: 15 мин». Правка со своим комментарием остаётся
+   * отдельной строкой, чтобы комментарий было к чему показать. Нажатие на общую строку
+   * открывает комментарий к последней правке дня.
+   */
+  const adjustmentsByDay = new Map<string, TimeEntry[]>()
+  for (const e of entries) {
+    if (e.entry_type !== 'manual_adjustment' || entryNote(e)) continue
+    adjustmentsByDay.set(e.effective_date, [...(adjustmentsByDay.get(e.effective_date) ?? []), e])
+  }
+  const adjustmentRows = [...adjustmentsByDay.values()].map((list): TimelineRow => {
+    const latest = list.reduce((a, b) => (b.created_at > a.created_at ? b : a))
+    return {
+      kind: 'adjustment',
+      at: latest.created_at,
+      entry: latest,
+      count: list.length,
+      seconds: list.reduce((sum, e) => sum + entrySeconds(e), 0),
+    }
+  })
+
   const rows: TimelineRow[] = [
-    ...entries.map((entry): TimelineRow =>
-      entry.entry_type === 'timer'
-        ? { kind: 'timer', at: entry.created_at, entry }
-        : { kind: 'adjustment', at: entry.created_at, entry },
-    ),
+    ...entries
+      .filter((e) => e.entry_type === 'timer' || entryNote(e))
+      .map((entry): TimelineRow =>
+        entry.entry_type === 'timer'
+          ? { kind: 'timer', at: entry.created_at, entry }
+          : { kind: 'adjustment', at: entry.created_at, entry, count: 1, seconds: entrySeconds(entry) },
+      ),
+    ...adjustmentRows,
     ...comments.map((comment): TimelineRow => ({ kind: 'comment', at: comment.created_at, comment })),
     // файл — тоже событие в истории задачи: видно, когда пришёл договор или макет
     ...files.map((file): TimelineRow => ({ kind: 'file', at: file.created_at, file })),
@@ -94,7 +114,11 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                     onClick={() => setNoting(entry)}
                     className="self-start text-left text-sm leading-[1.35] text-slate-300"
                   >
-                    {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}: {formatMinutes(entry.duration_minutes)}
+                    {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}:{' '}
+                    {formatDuration(row.kind === 'adjustment' ? row.seconds : entrySeconds(entry))}
+                    {row.kind === 'adjustment' && row.count > 1 && (
+                      <span className="text-slate-500"> · {plural(row.count, ADJUSTMENTS)} за день</span>
+                    )}
                   </button>
                 ) : row.kind === 'comment' ? (
                   // свой комментарий — нажатием править или удалить
@@ -109,7 +133,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                 ) : (
                   <p className="text-sm leading-[1.35] text-slate-300">
                     {row.kind === 'file' && (
-                      <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
+                      <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brass-600">
                         Файл «{row.file.name}»
                       </a>
                     )}
@@ -197,7 +221,7 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
         style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
       />
       {entryNote(entry) && (
-        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-xs text-red-400">
+        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-xs text-terra-400">
           Удалить комментарий
         </button>
       )}
@@ -292,7 +316,7 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
               }),
           })
         }}
-        className="-my-1 self-start py-1 text-xs text-red-400"
+        className="-my-1 self-start py-1 text-xs text-terra-400"
       >
         Удалить комментарий
       </button>

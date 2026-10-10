@@ -80,15 +80,18 @@ export function Segmented<T extends string>({
   options,
   onChange,
   className = '',
+  stretch = false,
 }: {
   value: T
   options: { value: T; label: string }[]
   onChange: (value: T) => void
   className?: string
+  /** вкладки на всю ширину: каждая — равная доля, крупная цель для пальца */
+  stretch?: boolean
 }) {
   return (
     <div
-      className={`flex shrink-0 gap-0.5 rounded-[11px] p-0.5 ${className}`}
+      className={`flex shrink-0 gap-0.5 rounded-[11px] p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
       style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
       role="tablist"
     >
@@ -101,7 +104,7 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className="min-h-8 rounded-[9px] px-2.5 text-xs"
+            className={`rounded-[9px] px-2.5 text-xs ${stretch ? 'min-h-9 flex-1' : 'min-h-8'}`}
             style={{
               background: active ? 'var(--s-accent)' : 'transparent',
               color: active ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
@@ -258,7 +261,7 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
 
 /** Единый стиль поля ввода из макета. */
 export const fieldClass =
-  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 focus:border-sky-600'
+  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 focus:border-brass-600'
 
 /** Заглушка-плейсхолдер на время первой загрузки — вместо пустого экрана. */
 export function Skeleton({ className = '', rounded = '15px' }: { className?: string; rounded?: string }) {

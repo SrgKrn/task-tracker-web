@@ -1,63 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
-
-const tabs = [
-  {
-    to: '/',
-    label: 'Сегодня',
-    match: (p: string) => p === '/',
-    icon: (
-      <span className="relative block h-[19px] w-[19px] rounded-full border-2 border-current">
-        <span
-          className="absolute h-1 w-1 rounded-full bg-current"
-          style={{ top: -2, left: '50%', marginLeft: -2 }}
-        />
-      </span>
-    ),
-  },
-  {
-    to: '/tasks',
-    label: 'Задачи',
-    match: (p: string) => p.startsWith('/tasks'),
-    icon: (
-      <span className="flex h-[19px] w-[19px] flex-col justify-center gap-1">
-        <span className="h-0.5 rounded-sm bg-current" />
-        <span className="h-0.5 rounded-sm bg-current" />
-        <span className="h-0.5 w-[60%] rounded-sm bg-current" />
-      </span>
-    ),
-  },
-  {
-    to: '/dashboard',
-    label: 'Сводка',
-    match: (p: string) => p === '/dashboard',
-    icon: (
-      <span className="flex h-[19px] w-[19px] items-end gap-[3px]">
-        <span className="h-[9px] flex-1 rounded-[1px] bg-current" />
-        <span className="h-[15px] flex-1 rounded-[1px] bg-current" />
-        <span className="h-[12px] flex-1 rounded-[1px] bg-current" />
-      </span>
-    ),
-  },
-  {
-    to: '/settings',
-    label: 'Ещё',
-    match: (p: string) =>
-      ['/settings', '/groups', '/items', '/statuses', '/changelog', '/sections', '/projects'].some((x) => p.startsWith(x)),
-    icon: (
-      <span className="flex h-[19px] w-[19px] items-center justify-center gap-[3px]">
-        <span className="h-[3px] w-[3px] rounded-full bg-current" />
-        <span className="h-[3px] w-[3px] rounded-full bg-current" />
-        <span className="h-[3px] w-[3px] rounded-full bg-current" />
-      </span>
-    ),
-  },
-]
+import { NAV_TABS, type NavTab } from './navTabs'
 
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
-  const [today, tasks, summary, more] = tabs
+  const [today, tasks, summary, more] = NAV_TABS
 
-  const item = (tab: (typeof tabs)[number]) => {
+  const item = (tab: NavTab) => {
     const active = tab.match(location.pathname)
     return (
       <Link
@@ -66,7 +14,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         className="flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-2xs font-medium"
         style={{ color: active ? 'var(--s-accent-text)' : 'var(--s-tab-idle)' }}
       >
-        {tab.icon}
+        <tab.Icon size={20} />
         {tab.label}
       </Link>
     )

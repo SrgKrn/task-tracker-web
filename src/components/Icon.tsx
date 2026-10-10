@@ -75,3 +75,32 @@ export const Calendar = (p: IconProps) =>
   svg(<><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17" /><path d="M8 3v4M16 3v4" /></>, p)
 export const Drive = (p: IconProps) =>
   svg(<><path d="m8.5 4-6 10.5L5.5 20h13l3-5.5-6-10.5Z" /><path d="m8.5 4 6.5 11h6.5" /><path d="M2.5 14.5h13L12 20" /></>, p)
+
+/* ── вкладки навигации: те же формы, что были собраны из span, но векторами ── */
+
+/** «Сегодня» — кольцо дня с отметкой начала сверху */
+export const TabToday = (p: IconProps) =>
+  svg(<><circle cx="12" cy="13" r="8" strokeWidth={2.25} /><circle cx="12" cy="4.5" r="1.6" fill="currentColor" stroke="none" /></>, p)
+/** «Задачи» — две полные строки и короткая */
+export const TabTasks = (p: IconProps) =>
+  svg(<><path d="M4 7h16" strokeWidth={2.25} /><path d="M4 12h16" strokeWidth={2.25} /><path d="M4 17h9" strokeWidth={2.25} /></>, p)
+/** «Сводка» — три столбика разной высоты */
+export const TabSummary = (p: IconProps) =>
+  svg(
+    <>
+      <rect x="3.5" y="12" width="4.5" height="8.5" rx="1" fill="currentColor" stroke="none" />
+      <rect x="9.75" y="4.5" width="4.5" height="16" rx="1" fill="currentColor" stroke="none" />
+      <rect x="16" y="8.5" width="4.5" height="12" rx="1" fill="currentColor" stroke="none" />
+    </>,
+    p,
+  )
+/** «Ещё» — три точки */
+export const TabMore = (p: IconProps) =>
+  svg(
+    <>
+      <circle cx="6" cy="12" r="1.75" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="12" r="1.75" fill="currentColor" stroke="none" />
+    </>,
+    p,
+  )

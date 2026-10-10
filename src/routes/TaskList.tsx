@@ -142,9 +142,12 @@ export function TaskList() {
     return map
   }, [heads, model])
 
-  const activeCount = heads.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final)).length
+  // количество и часы — по одному набору: открытым головным задачам. Раньше количество
+  // было по открытым, а часы по всем, и выходило «12 активных · 333,7 / 290 ч»
+  const activeHeads = heads.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final))
+  const activeCount = activeHeads.length
   // план считаем только по головным: план подзадач — это раскладка плана спринта, а не добавка к нему
-  const totalPlan = heads.reduce((a, t) => a + t.planned_hours, 0)
+  const totalPlan = activeHeads.reduce((a, t) => a + t.planned_hours, 0)
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
@@ -152,7 +155,7 @@ export function TaskList() {
         <div className="flex flex-col gap-0.5">
           <Overline className="tracking-[.14em]">
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
-            <FactSum tasks={heads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
+            <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
           </Overline>
           <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
         </div>
@@ -230,7 +233,7 @@ export function TaskList() {
                     setPeriodFrom('')
                     setPeriodTo('')
                   }}
-                  className="shrink-0 text-xs text-sky-600"
+                  className="shrink-0 text-xs text-brass-600"
                 >
                   Сброс
                 </button>
@@ -338,7 +341,7 @@ export function TaskList() {
                 {tasks.length === 0 ? (
                   <>
                     Задач пока нет.{' '}
-                    <Link to="/tasks/new" className="text-sky-600">
+                    <Link to="/tasks/new" className="text-brass-600">
                       Создать первую
                     </Link>
                   </>

@@ -28,7 +28,7 @@ export interface TaskFormValues {
 interface TaskFormProps {
   initial: TaskFormValues
   statuses: Status[]
-  submitLabel: string
+  submitLabel?: string
   /** карточка редактирует существующую задачу — название и статус живут в её шапке */
   compact?: boolean
   /**
@@ -36,7 +36,13 @@ interface TaskFormProps {
    * берёт у спринта (это держит база), и показывать их на выбор было бы враньём.
    */
   sprints?: PickerOption[]
-  onSubmit: (values: TaskFormValues) => void
+  onSubmit?: (values: TaskFormValues) => void
+  /**
+   * Автосохранение карточки: каждое поле сохраняется само при изменении, кнопки нет.
+   * Значения тогда берутся из initial (это сама задача), а не из своего состояния —
+   * «Вернуть» из уведомления и правки с другого устройства видны сразу.
+   */
+  onFieldChange?: (patch: Partial<TaskFormValues>) => void
 }
 
 export function TaskForm({
@@ -46,8 +52,10 @@ export function TaskForm({
   compact = false,
   sprints,
   onSubmit,
+  onFieldChange,
 }: TaskFormProps) {
-  const [values, setValues] = useState<TaskFormValues>(initial)
+  const [draft, setValues] = useState<TaskFormValues>(initial)
+  const values = onFieldChange ? initial : draft
   const [editingPlan, setEditingPlan] = useState(false)
 
   const { showError } = useToast()
@@ -56,6 +64,19 @@ export function TaskForm({
   const createStatus = useCreateStatus()
 
   function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
+    if (onFieldChange) {
+      if (JSON.stringify(value) === JSON.stringify(initial[key])) return
+      // обязательную группу нельзя оставить пустой — и сохранять такое незачем
+      if (key === 'item_ids') {
+        const missing = missingRequired(model, value as string[])
+        if (missing.length > 0) {
+          showError(`Выберите: ${missing.map((g) => g.item_name.toLowerCase()).join(', ')}`)
+          return
+        }
+      }
+      onFieldChange({ [key]: value } as Partial<TaskFormValues>)
+      return
+    }
     setValues((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -71,6 +92,7 @@ export function TaskForm({
     // В компактном режиме поля имени тут нет — им владеет заголовок карточки.
     // Если всё равно отправить своё values.name, форма затрёт свежее переименование
     // тем значением, с которым она смонтировалась.
+    if (!onSubmit) return
     if (compact) {
       const { name: _ownedByHeader, ...rest } = values
       onSubmit({ ...rest, name: initial.name })
@@ -170,18 +192,20 @@ export function TaskForm({
           type="checkbox"
           checked={values.is_daily}
           onChange={(e) => set('is_daily', e.target.checked)}
-          className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+          className="h-[18px] w-[18px] shrink-0 accent-brass-600"
         />
         Ежедневная — всегда в списке дня
       </label>
 
-      <button
-        type="submit"
-        className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold lg:w-auto lg:self-start lg:px-8"
-        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
-      >
-        {submitLabel}
-      </button>
+      {!onFieldChange && (
+        <button
+          type="submit"
+          className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold lg:w-auto lg:self-start lg:px-8"
+          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        >
+          {submitLabel}
+        </button>
+      )}
     </form>
   )
 }

@@ -162,7 +162,7 @@ function SubtaskRow({
         {isRunning ? (
           <StopGlyph size={7} />
         ) : done ? (
-          <Check size={11} className="text-emerald-400" />
+          <Check size={11} className="text-sage-400" />
         ) : (
           <PlayGlyph size={6} />
         )}
@@ -178,7 +178,7 @@ function SubtaskRow({
         </span>
         <span
           className={`block truncate font-mono text-2xs leading-[1.4] ${
-            overdue ? 'text-red-400' : done ? 'text-slate-600' : 'text-slate-500'
+            overdue ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
           }`}
         >
           {hours}
@@ -187,7 +187,7 @@ function SubtaskRow({
       </Link>
 
       {isRunning && activeTimer ? (
-        <span className="tabular shrink-0 font-mono text-xs font-semibold text-sky-600">
+        <span className="tabular shrink-0 font-mono text-xs font-semibold text-brass-600">
           {formatClock(activeTimer.started_at)}
         </span>
       ) : canClose ? (

@@ -121,7 +121,7 @@ export function PicklistAdmin<T extends Item>({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           placeholder={placeholder}
-          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)] focus:border-sky-600"
+          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)] focus:border-brass-600"
         />
         <button
           onClick={handleCreate}
@@ -179,7 +179,7 @@ export function PicklistAdmin<T extends Item>({
                     onChange={(e) => setEditingValue(e.target.value)}
                     onBlur={commitEdit}
                     onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                    className="w-full min-w-0 rounded-lg border border-sky-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
+                    className="w-full min-w-0 rounded-lg border border-brass-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
                   />
                 ) : (
                   <button
@@ -196,7 +196,7 @@ export function PicklistAdmin<T extends Item>({
               {onOpen && (
                 <button
                   onClick={() => onOpen(item)}
-                  className="hit-44 shrink-0 px-1 text-slate-400 active:text-sky-600"
+                  className="hit-44 shrink-0 px-1 text-slate-400 active:text-brass-600"
                   aria-label="Открыть задачи"
                 >
                   <ArrowRight size={15} className="mx-auto" />
@@ -209,7 +209,7 @@ export function PicklistAdmin<T extends Item>({
                     type="checkbox"
                     checked={finalOf(item)}
                     onChange={(e) => onToggleFinal(item, e.target.checked)}
-                    className="accent-sky-600"
+                    className="accent-brass-600"
                   />
                   Финальный
                 </label>
@@ -218,7 +218,7 @@ export function PicklistAdmin<T extends Item>({
               {archivedOf && onToggleArchived && (
                 <button
                   onClick={() => onToggleArchived(item, !archived)}
-                  className="-my-2.5 shrink-0 py-2.5 text-xs text-slate-500 active:text-sky-600"
+                  className="-my-2.5 shrink-0 py-2.5 text-xs text-slate-500 active:text-brass-600"
                 >
                   {archived ? 'Вернуть' : 'В архив'}
                 </button>
@@ -226,7 +226,7 @@ export function PicklistAdmin<T extends Item>({
 
               <button
                 onClick={() => setDeletingItem(item)}
-                className="hit-44 shrink-0 px-1 text-red-400 active:text-red-500"
+                className="hit-44 shrink-0 px-1 text-terra-400 active:text-terra-500"
                 aria-label="Удалить"
               >
                 <Close size={15} className="mx-auto" />

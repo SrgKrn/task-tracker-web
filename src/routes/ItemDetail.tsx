@@ -15,7 +15,7 @@ import { useItemActivity } from '../lib/queries/itemActivity'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { formatHoursMinutes, formatHoursRu } from '../lib/time'
+import { entryMinutes, formatHoursMinutes, formatHoursRu } from '../lib/time'
 import { childrenByParent } from '../lib/tree'
 import type { GroupItem, Status, Task } from '../lib/types'
 
@@ -86,7 +86,7 @@ export function ItemDetail() {
         {parent && parentGroup && (
           <span className="text-xs text-slate-500">
             {parentGroup.item_name}:{' '}
-            <Link to={`/items/${parent.id}`} className="text-sky-600">
+            <Link to={`/items/${parent.id}`} className="text-brass-600">
               {parent.name}
             </Link>
           </span>
@@ -208,7 +208,7 @@ function DriveFolder({ item }: { item: GroupItem }) {
       className="flex items-center gap-3 rounded-xl py-2 pr-2 pl-3"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
-      <span className="text-sky-600">
+      <span className="text-brass-600">
         <Drive size={16} />
       </span>
       <a
@@ -378,9 +378,9 @@ function ItemHistory({
       const at = e.ended_at ?? e.created_at
       const cur = byDayTask.get(key)
       if (cur) {
-        cur.minutes += e.duration_minutes
+        cur.minutes += entryMinutes(e)
         if (at > cur.at) cur.at = at
-      } else byDayTask.set(key, { minutes: e.duration_minutes, at, taskId: e.task_id, day: e.effective_date })
+      } else byDayTask.set(key, { minutes: entryMinutes(e), at, taskId: e.task_id, day: e.effective_date })
     }
     for (const v of byDayTask.values()) {
       if (v.minutes === 0) continue

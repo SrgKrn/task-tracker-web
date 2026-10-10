@@ -94,6 +94,8 @@ export interface TimeEntry {
   entry_type: 'timer' | 'manual_adjustment'
   started_at: string | null
   ended_at: string | null
+  /** длительность с точностью до секунды; минуты — округлённая копия для старых клиентов */
+  duration_seconds: number
   duration_minutes: number
   note: string | null
   /**

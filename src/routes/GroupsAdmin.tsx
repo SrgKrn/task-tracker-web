@@ -302,7 +302,7 @@ export function GroupPage() {
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="h-11 rounded-[14px] text-sm font-medium text-red-400"
+              className="h-11 rounded-[14px] text-sm font-medium text-terra-400"
               style={{ border: '1px solid var(--s-danger-line)' }}
             >
               Удалить группу
@@ -361,7 +361,7 @@ function GroupSettings({ group, model }: { group: Group; model: GroupModel }) {
         type="checkbox"
         checked={group[key]}
         onChange={(e) => update.mutate({ id: group.id, fields: { [key]: e.target.checked } }, { onError })}
-        className="h-[18px] w-[18px] shrink-0 accent-sky-600"
+        className="h-[18px] w-[18px] shrink-0 accent-brass-600"
       />
       <span className="flex min-w-0 flex-col">
         <span className="text-sm text-slate-300">{title}</span>

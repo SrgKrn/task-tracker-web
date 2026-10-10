@@ -41,6 +41,31 @@ export function elapsedHours(startedAt: string): number {
   return elapsedSeconds(startedAt) / 3600
 }
 
+/**
+ * Секунды записи. Записи до перехода на секунды (и из старых клиентов) знают только
+ * минуты — тогда минуты × 60.
+ */
+export function entrySeconds(entry: { duration_seconds?: number | null; duration_minutes: number }): number {
+  return entry.duration_seconds ?? entry.duration_minutes * 60
+}
+
+/** Минуты записи без округления: суммы считаются точно, округляется только показ. */
+export function entryMinutes(entry: { duration_seconds?: number | null; duration_minutes: number }): number {
+  return entrySeconds(entry) / 60
+}
+
+/** «1 ч 5 мин», «38 мин», «20 с» — короткая сессия не превращается в «0 мин». */
+export function formatDuration(seconds: number): string {
+  const sign = seconds < 0 ? '−' : ''
+  const abs = Math.abs(Math.round(seconds))
+  if (abs < 60) return `${sign}${abs} с`
+  const total = Math.round(abs / 60)
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h > 0 && m === 0) return `${sign}${h} ч`
+  return `${sign}${h > 0 ? `${h} ч ` : ''}${m} мин`
+}
+
 export function formatHours(hours: number): string {
   return hours.toFixed(2)
 }

@@ -1,21 +1,29 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
-import { EmptyState, Logo, Overline, TaskRowSkeleton } from '../components/ui'
+import { EmptyState, Logo, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
-import { currentWeekRange, formatTodayLabel, todayStr } from '../lib/period'
+import { PlayGlyph } from '../components/Ring'
+import {
+  addDays,
+  currentWeekRange,
+  formatShortDate,
+  formatTodayLabel,
+  nextFriday,
+  todayStr,
+} from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
-import { TASKS, elapsedHours, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
+import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
@@ -43,6 +51,10 @@ export function Today() {
   useTicker(!!activeTimer)
 
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
+  const [postponing, setPostponing] = useState<Task | null>(null)
+  // «Недавние» — две недели учёта: задачи, к которым возвращаются, но не на сегодня
+  const recentFrom = useMemo(() => addDays(today, -13), [today])
+  const { data: recentEntries = [] } = useTimeEntriesInRange(recentFrom, today)
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
@@ -53,7 +65,7 @@ export function Today() {
     const map = new Map<string, number>()
     for (const e of weekEntries) {
       const day = e.effective_date
-      map.set(day, (map.get(day) ?? 0) + e.duration_minutes / 60)
+      map.set(day, (map.get(day) ?? 0) + entryMinutes(e) / 60)
     }
     return map
   }, [weekEntries])
@@ -86,6 +98,57 @@ export function Today() {
       }),
     [tasks, activeTimer, trackedTodayTaskIds, today, childrenOf],
   )
+
+  const isDone = useCallback((t: Task) => !!(t.status_id && statusById.get(t.status_id)?.is_final), [statusById])
+  /*
+   * Счётчик под «Сегодня» раньше считал все строки, включая уже закрытые, — «5 задач на
+   * день» при трёх, которые осталось сделать. Теперь открытые идут первыми и считаются
+   * отдельно от готовых: число совпадает с тем, что видно.
+   */
+  const openToday = todayTasks.filter((t) => !isDone(t))
+  const doneToday = todayTasks.length - openToday.length
+  const todayRows = [...openToday, ...todayTasks.filter(isDone)]
+  const todayCountLabel =
+    openToday.length > 0
+      ? `${plural(openToday.length, TASKS)} на день${doneToday ? ` · ${doneToday} готово` : ''}`
+      : doneToday > 0
+        ? `всё на день готово · ${doneToday}`
+        : 'задач на день нет'
+
+  /** Недавние: последние задачи с учётом, открытые и не из списка на сегодня. */
+  const recentTasks = useMemo(() => {
+    const shown = new Set(todayTasks.map((t) => t.id))
+    const ids: string[] = []
+    const sorted = [...recentEntries]
+      .filter((e) => e.entry_type === 'timer')
+      .sort((a, b) => (b.started_at ?? b.created_at).localeCompare(a.started_at ?? a.created_at))
+    for (const e of sorted) {
+      const t = taskById.get(e.task_id)
+      if (!t || ids.includes(t.id) || shown.has(t.id) || isDone(t)) continue
+      const parent = t.parent_id ? taskById.get(t.parent_id) : undefined
+      if (parent && isDone(parent)) continue
+      ids.push(t.id)
+      if (ids.length >= 4) break
+    }
+    return ids.map((id) => taskById.get(id)!)
+  }, [recentEntries, todayTasks, taskById, isDone])
+
+  /** срок переносится с отменой: «Вернуть» ставит прежний */
+  function postpone(task: Task, date: string, label: string) {
+    setPostponing(null)
+    const previous = task.end_date
+    updateTask.mutate(
+      { id: task.id, fields: { end_date: date } },
+      {
+        onError,
+        onSuccess: () =>
+          showSuccess(`Срок — ${label}`, {
+            label: 'Вернуть',
+            onAction: () => updateTask.mutate({ id: task.id, fields: { end_date: previous } }, { onError }),
+          }),
+      },
+    )
+  }
 
   const overdueTasks = useMemo(
     () => tasks.filter((t) => isOverdue(t, t.status_id ? statusById.get(t.status_id) : undefined)),
@@ -145,7 +208,7 @@ export function Today() {
                 style={{ background: 'var(--s-accent-muted)' }}
               />
               <span className="font-mono text-xs text-[var(--s-faint-text)]">
-                {todayTasks.length > 0 ? `${plural(todayTasks.length, TASKS)} на день` : 'задач на день нет'}
+                {todayCountLabel}
               </span>
             </span>
           </div>
@@ -190,11 +253,11 @@ export function Today() {
             const isToday = day === today
             return (
               <span key={day} className="flex flex-1 flex-col items-center gap-px">
-                <span className={`font-mono text-2xs ${isToday ? 'text-sky-600' : 'text-slate-600'}`}>
+                <span className={`font-mono text-2xs ${isToday ? 'text-brass-600' : 'text-slate-600'}`}>
                   {WEEKDAYS[i]}
                 </span>
                 <span
-                  className={`tabular font-mono text-2xs ${isToday ? 'text-sky-600' : 'text-slate-500'}`}
+                  className={`tabular font-mono text-2xs ${isToday ? 'text-brass-600' : 'text-slate-500'}`}
                 >
                   {fact > 0 ? formatHoursRu(fact) : '—'}
                 </span>
@@ -215,7 +278,7 @@ export function Today() {
       <div className="flex flex-col gap-[9px] px-5 pt-5 pb-2">
         <div className="flex items-baseline justify-between">
           <Overline>На сегодня</Overline>
-          <Link to="/tasks" className="-my-3.5 py-3.5 pl-3 text-xs text-sky-600">
+          <Link to="/tasks" className="-my-3.5 py-3.5 pl-3 text-xs text-brass-600">
             <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
           </Link>
         </div>
@@ -229,7 +292,7 @@ export function Today() {
         )}
 
         {!isLoading &&
-          todayTasks.map((task) => (
+          todayRows.map((task) => (
             <TaskListItem
               key={task.id}
               task={task}
@@ -251,7 +314,7 @@ export function Today() {
         {!isLoading && todayTasks.length === 0 && (
           <EmptyState>
             На сегодня ничего не запланировано.{' '}
-            <Link to="/tasks" className="text-sky-600">
+            <Link to="/tasks" className="text-brass-600">
               Выбрать задачу
             </Link>
           </EmptyState>
@@ -283,7 +346,7 @@ export function Today() {
                     }}
                     ariaLabel="Начать учёт"
                   >
-                    <span className="tabular font-mono text-2xs font-medium text-red-400">{pct}%</span>
+                    <span className="tabular font-mono text-2xs font-medium text-terra-400">{pct}%</span>
                   </Ring>
 
                   {/* мета в одну строку с обрезкой: раньше она переносилась, наезжала на
@@ -297,7 +360,7 @@ export function Today() {
                     </p>
                     {/* срок идёт первым: именно он объясняет, почему задача в этом блоке,
                         и при обрезке должен уцелеть, а не название проекта */}
-                    <span className="block truncate font-mono text-xs text-red-400">
+                    <span className="block truncate font-mono text-xs text-terra-400">
                       срок {task.end_date?.slice(8, 10)}.{task.end_date?.slice(5, 7)}
                       {category ? ` · ${category}` : ''}
                     </span>
@@ -305,10 +368,8 @@ export function Today() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      updateTask.mutate({ id: task.id, fields: { end_date: today } }, { onError })
-                    }
-                    className="-my-3 shrink-0 py-3 pl-2 text-xs font-medium text-red-400"
+                    onClick={() => setPostponing(task)}
+                    className="-my-3 shrink-0 py-3 pl-2 text-xs font-medium text-terra-400"
                   >
                     Перенести
                   </button>
@@ -318,6 +379,67 @@ export function Today() {
           </div>
         )}
       </div>
+
+      {/* недавние: продолжить то, чем занимались, одним касанием кольца */}
+      {!isLoading && recentTasks.length > 0 && (
+        <div className="flex flex-col gap-[9px] px-5 pt-3 pb-2">
+          <Overline>Недавние</Overline>
+          <div
+            className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
+            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          >
+            {recentTasks.map((task) => {
+              const parent = task.parent_id ? taskById.get(task.parent_id) : undefined
+              const meta = [parent?.name, model.listLabel(parent ?? task)].filter(Boolean).join(' · ')
+              return (
+                <div key={task.id} className="flex items-center gap-3 px-3 py-2">
+                  <Ring
+                    size={30}
+                    pct={0}
+                    state="idle"
+                    centerBg="var(--s-surface)"
+                    onClick={() => {
+                      tap()
+                      startTimer.mutate(task.id, { onError })
+                    }}
+                    ariaLabel={`Начать учёт: ${task.name}`}
+                  >
+                    <PlayGlyph />
+                  </Ring>
+                  <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 py-1">
+                    <span className="block truncate text-sm text-slate-100">{task.name}</span>
+                    {meta && <span className="block truncate font-mono text-2xs text-slate-500">{meta}</span>}
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <Sheet open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">
+        {postponing && (
+          <div className="flex flex-col gap-2 pb-2">
+            <p className="truncate text-sm text-slate-400">{postponing.name}</p>
+            {[
+              { date: today, label: 'сегодня', title: 'На сегодня' },
+              { date: addDays(today, 1), label: 'завтра', title: 'На завтра' },
+              { date: nextFriday(today), label: formatShortDate(nextFriday(today)), title: `На пятницу, ${formatShortDate(nextFriday(today)).replace(/^[^,]+, /, '')}` },
+            ].map((o) => (
+              <button
+                key={o.date}
+                type="button"
+                onClick={() => postpone(postponing, o.date, o.label)}
+                className="flex h-12 items-center justify-between rounded-[14px] px-4 text-sm font-medium text-slate-100"
+                style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
+              >
+                {o.title}
+                <span className="font-mono text-xs text-slate-500">{formatShortDate(o.date)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Sheet>
 
       <ConfirmDialog
         open={deletingTask !== null}

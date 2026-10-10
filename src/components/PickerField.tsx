@@ -23,6 +23,8 @@ interface PickerFieldProps {
   hint?: string
   /** маленький чип вместо поля с подписью — для строк списков */
   chip?: boolean
+  /** чип-кнопка действия, а не метка: крупнее, чтобы попадать пальцем */
+  chipLarge?: boolean
 }
 
 /**
@@ -43,6 +45,7 @@ export function PickerField({
   emptyLabel,
   hint,
   chip = false,
+  chipLarge = false,
 }: PickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -80,7 +83,9 @@ export function PickerField({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex max-w-full items-center gap-1 rounded-[7px] px-2 py-[3px] text-2xs"
+          className={`flex max-w-full items-center gap-1 ${
+            chipLarge ? 'min-h-9 rounded-[9px] px-3 py-2 text-xs' : 'rounded-[7px] px-2 py-[3px] text-2xs'
+          }`}
           style={{
             background: selected ? 'var(--s-accent-ghost)' : 'transparent',
             border: `1px ${selected ? 'solid' : 'dashed'} var(--s-border-strong-2)`,
@@ -136,7 +141,7 @@ export function PickerField({
               style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
             >
               {noneLabel}
-              {value === null && <Check size={16} className="text-sky-600" />}
+              {value === null && <Check size={16} className="text-brass-600" />}
             </button>
           )}
           {filtered.map((item) => (
@@ -151,7 +156,7 @@ export function PickerField({
               style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
             >
               <span className="min-w-0 truncate">{item.name}</span>
-              {value === item.id && <Check size={16} className="shrink-0 text-sky-600" />}
+              {value === item.id && <Check size={16} className="shrink-0 text-brass-600" />}
             </button>
           ))}
           {filtered.length === 0 && !creating && (

@@ -221,7 +221,7 @@ export function Login() {
 
           {error && (
             <p
-              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-red-400"
+              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-terra-400"
               style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
               role="alert"
             >
@@ -230,7 +230,7 @@ export function Login() {
           )}
           {info && (
             <p
-              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-emerald-400"
+              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-sage-400"
               style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
               role="status"
             >

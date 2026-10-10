@@ -49,13 +49,13 @@ export function ActiveTimerBar() {
 
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         {/* в одну строку: название спринта длиннее подписи и переносом раздувало док вдвое */}
-        <span className="block truncate font-mono text-2xs uppercase tracking-[.12em] text-sky-700">
+        <span className="block truncate font-mono text-2xs uppercase tracking-[.12em] text-brass-700">
           Идёт учёт{parent ? ` · ${parent.name}` : label ? ` · ${label}` : ''}
         </span>
         <span className="block truncate text-sm font-medium text-slate-100">{task.name}</span>
       </Link>
 
-      <Link to={`/tasks/${task.id}`} className="tabular shrink-0 font-mono text-lg font-semibold text-sky-600">
+      <Link to={`/tasks/${task.id}`} className="tabular shrink-0 font-mono text-lg font-semibold text-brass-600">
         {formatClock(activeTimer.started_at)}
       </Link>
     </div>

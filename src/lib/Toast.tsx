@@ -32,9 +32,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, tone: Toast['tone'], action?: ToastAction) => {
       const id = nextId++
       setToasts((prev) => [...prev, { id, message, tone, action }])
-      // короче предыдущих 4с: тост наверху не должен задерживать взгляд на экране,
-      // но с кнопкой отмены нужно успеть до неё дотянуться
-      setTimeout(() => dismiss(id), action ? 5000 : 2200)
+      // «готово» — коротко, чтобы не задерживать взгляд; с кнопкой отмены — успеть до
+      // неё дотянуться; ошибку — успеть прочитать: за 2 с её не замечали вовсе
+      setTimeout(() => dismiss(id), tone === 'error' ? 7000 : action ? 5000 : 2200)
     },
     [dismiss],
   )
@@ -52,8 +52,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`toast-pop flex max-w-[88vw] items-center gap-2.5 rounded-full px-3.5 py-2 text-xs leading-tight backdrop-blur-sm ${
-              t.action ? 'pointer-events-auto' : ''
+            role={t.tone === 'error' ? 'alert' : 'status'}
+            className={`toast-pop flex max-w-[92vw] items-center gap-2.5 backdrop-blur-sm ${
+              t.tone === 'error'
+                ? 'pointer-events-auto rounded-2xl py-2.5 pr-1.5 pl-3.5 text-sm font-medium leading-snug shadow-lg'
+                : `rounded-full px-3.5 py-2 text-xs leading-tight ${t.action ? 'pointer-events-auto' : ''}`
             }`}
             style={
               t.tone === 'error'
@@ -80,6 +83,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 className="shrink-0 font-semibold underline underline-offset-2"
               >
                 {t.action.label}
+              </button>
+            )}
+            {t.tone === 'error' && (
+              <button
+                type="button"
+                onClick={() => dismiss(t.id)}
+                aria-label="Закрыть"
+                className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none opacity-70"
+              >
+                ×
               </button>
             )}
           </div>
@@ -115,7 +128,7 @@ export function describeError(error: unknown): string {
   if (message.includes('violates foreign key constraint')) {
     return 'Нельзя удалить: используется в других записях.'
   }
-  if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+  if (/Failed to fetch|NetworkError|Load failed|Network request failed/i.test(message)) {
     return 'Нет связи с сервером — ничего не изменилось. Повторите, когда сеть вернётся.'
   }
   return 'Не удалось сохранить изменение. Попробуйте ещё раз.'

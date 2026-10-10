@@ -47,7 +47,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
         >
           <span className="min-w-0 flex-1 text-xs leading-[1.4] text-slate-300">
             Закрыто {suggestion.done} из {suggestion.total} — по подзадачам это{' '}
-            <span className="font-medium text-emerald-400">{suggestion.status.label}</span>
+            <span className="font-medium text-sage-400">{suggestion.status.label}</span>
           </span>
           <button
             type="button"
@@ -134,7 +134,7 @@ function PlanAllocation({
       <p className="font-mono text-2xs leading-[1.5] text-slate-500">
         {over ? (
           // перебор не запрещаем: так бывает, но видно это должно быть сразу
-          <span className="text-red-400">разложено на {formatHoursMinutes(-left)} больше плана</span>
+          <span className="text-terra-400">разложено на {formatHoursMinutes(-left)} больше плана</span>
         ) : (
           status
         )}

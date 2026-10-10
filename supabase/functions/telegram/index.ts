@@ -219,17 +219,18 @@ Deno.serve(async (req) => {
     if (!taken?.length) return null
     const started = new Date(timer.started_at)
     const ended = new Date()
-    const minutes = Math.max(0, Math.round((ended.getTime() - started.getTime()) / 60_000))
+    // секунды: короткая сессия не пропадает в «0 мин»; минуты база посчитает сама
+    const seconds = Math.max(0, Math.floor((ended.getTime() - started.getTime()) / 1000))
     await db.from('time_entries').insert({
       user_id: userId,
       task_id: timer.task_id,
       entry_type: 'timer',
       started_at: timer.started_at,
       ended_at: ended.toISOString(),
-      duration_minutes: minutes,
+      duration_seconds: seconds,
       effective_date: localDate(started, timezone),
     })
-    return minutes
+    return seconds / 60
   }
 
   /** начать учёт; идущий по другой задаче — сначала остановить */
@@ -322,7 +323,8 @@ Deno.serve(async (req) => {
       .eq('status', 'new')
       .select('id')
     if (!claimed?.length) return { error: 'Эта встреча уже разобрана' }
-    const minutes = Math.round((new Date(ev.ends_at).getTime() - new Date(ev.starts_at).getTime()) / 60_000)
+    const seconds = Math.round((new Date(ev.ends_at).getTime() - new Date(ev.starts_at).getTime()) / 1000)
+    const minutes = seconds / 60
     const { data: entry } = await db
       .from('time_entries')
       .insert({
@@ -331,7 +333,7 @@ Deno.serve(async (req) => {
         entry_type: 'timer',
         started_at: ev.starts_at,
         ended_at: ev.ends_at,
-        duration_minutes: minutes,
+        duration_seconds: seconds,
         note: ev.title,
         effective_date: localDate(new Date(ev.starts_at), timezone),
       })
@@ -360,15 +362,15 @@ Deno.serve(async (req) => {
   async function dailyDigest(userId: string, timezone: string, date: string) {
     const world = await loadWorld(db, userId)
     const [{ data: entries }, { data: running }, { data: settings }] = await Promise.all([
-      db.from('time_entries').select('task_id, duration_minutes').eq('user_id', userId).eq('effective_date', date),
+      db.from('time_entries').select('task_id, duration_seconds').eq('user_id', userId).eq('effective_date', date),
       db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle(),
       db.from('user_settings').select('planned_hours_per_day').eq('user_id', userId).maybeSingle(),
     ])
-    const total = (entries ?? []).reduce((s, e) => s + e.duration_minutes, 0)
+    const total = (entries ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
     const byHead = new Map<string, number>()
     for (const e of entries ?? []) {
       const head = world.headOf(e.task_id)
-      byHead.set(head, (byHead.get(head) ?? 0) + e.duration_minutes)
+      byHead.set(head, (byHead.get(head) ?? 0) + e.duration_seconds / 60)
     }
     const { from, to } = dayBounds(date, timezone)
     const { data: events } = await db
@@ -453,15 +455,15 @@ Deno.serve(async (req) => {
     const prevMonday = shift(monday, -7)
     const prevSame = shift(date, -7)
     const [{ data: cur }, { data: prev }] = await Promise.all([
-      db.from('time_entries').select('task_id, duration_minutes').eq('user_id', userId).gte('effective_date', monday).lte('effective_date', date),
-      db.from('time_entries').select('duration_minutes').eq('user_id', userId).gte('effective_date', prevMonday).lte('effective_date', prevSame),
+      db.from('time_entries').select('task_id, duration_seconds').eq('user_id', userId).gte('effective_date', monday).lte('effective_date', date),
+      db.from('time_entries').select('duration_seconds').eq('user_id', userId).gte('effective_date', prevMonday).lte('effective_date', prevSame),
     ])
-    const total = (cur ?? []).reduce((s, e) => s + e.duration_minutes, 0)
-    const prevTotal = (prev ?? []).reduce((s, e) => s + e.duration_minutes, 0)
+    const total = (cur ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
+    const prevTotal = (prev ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
     const byGroup = new Map<string, number>()
     for (const e of cur ?? []) {
       const key = world.mainValue(e.task_id)
-      byGroup.set(key, (byGroup.get(key) ?? 0) + e.duration_minutes)
+      byGroup.set(key, (byGroup.get(key) ?? 0) + e.duration_seconds / 60)
     }
     const m = new Date(`${monday}T12:00:00Z`)
     const d = new Date(`${date}T12:00:00Z`)

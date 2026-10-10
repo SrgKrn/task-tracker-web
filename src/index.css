@@ -7,7 +7,7 @@
  *
  * Токены заданы дважды: как семантические CSS-переменные (--s-*) для нестандартных мест
  * вроде conic-gradient колец, и через перемапливание шкал Tailwind — чтобы обычные утилиты
- * (bg-slate-800, text-sky-600) сразу давали цвета из палитры.
+ * (bg-slate-800, text-brass-600) сразу давали цвета из палитры.
  */
 @theme {
   --font-sans: "Instrument Sans", system-ui, sans-serif;
@@ -27,16 +27,16 @@
   --color-slate-900: #0d0d0f; /* bg */
 
   /* латунь — единственный акцент */
-  --color-sky-400: #f0b45c;
-  --color-sky-500: #f0b968;
-  --color-sky-600: #e8a33d;
-  --color-sky-700: #c98a2e; /* accent-dim: надпись «идёт учёт» */
+  --color-brass-400: #f0b45c;
+  --color-brass-500: #f0b968;
+  --color-brass-600: #e8a33d;
+  --color-brass-700: #c98a2e; /* accent-dim: надпись «идёт учёт» */
 
   /* терракота — просрочка, переработка, удаление */
-  --color-red-400: #d97256;
-  --color-red-500: #c1583f;
-  --color-red-800: #5a2a1c;
-  --color-red-950: #2a140d;
+  --color-terra-400: #d97256;
+  --color-terra-500: #c1583f;
+  --color-terra-800: #5a2a1c;
+  --color-terra-950: #2a140d;
 
   /*
    * Типографическая шкала: семь ступеней вместо девятнадцати произвольных кеглей.
@@ -60,9 +60,9 @@
   --text-2xl--line-height: 1.1;
 
   /* зелень — финальные статусы и подтверждения */
-  --color-emerald-400: #7fb894;
-  --color-emerald-600: #5f9e6f;
-  --color-emerald-700: #4d8259;
+  --color-sage-400: #7fb894;
+  --color-sage-600: #5f9e6f;
+  --color-sage-700: #4d8259;
 }
 
 :root {
@@ -158,21 +158,21 @@
   --color-slate-800: #ffffff;
   --color-slate-900: #f6f5f2;
 
-  --color-sky-400: #a8711f;
-  --color-sky-500: #9a6618;
-  --color-sky-600: #94631a;
-  --color-sky-700: #7d5414;
+  --color-brass-400: #a8711f;
+  --color-brass-500: #9a6618;
+  --color-brass-600: #94631a;
+  --color-brass-700: #7d5414;
 
   /* красный и зелёный подобраны под белое: чистые, читаемые (текст ≥ 4,5:1 на белом, на фоне
      и на своей подложке), без бурого и болотного налёта прежних тонов */
-  --color-red-400: #c03a23;
-  --color-red-500: #a3301b;
-  --color-red-800: #f4cdc2;
-  --color-red-950: #fdeee9;
+  --color-terra-400: #c03a23;
+  --color-terra-500: #a3301b;
+  --color-terra-800: #f4cdc2;
+  --color-terra-950: #fdeee9;
 
-  --color-emerald-400: #1f7a47;
-  --color-emerald-600: #2f9a5c;
-  --color-emerald-700: #257a4a;
+  --color-sage-400: #1f7a47;
+  --color-sage-600: #2f9a5c;
+  --color-sage-700: #257a4a;
 
   --s-bg: #f6f5f2;
   --s-surface: #ffffff;
