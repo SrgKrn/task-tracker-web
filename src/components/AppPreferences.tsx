@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Bell, Send } from './Icon'
 import { Segmented } from './ui'
 import { describeError, UserError, useToast } from '../lib/Toast'
 import { liveNotificationEnabled, setLiveNotificationEnabled, usePush } from '../lib/push'
@@ -14,7 +13,6 @@ export function ThemeCard() {
   return (
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-100">Оформление</span>
         <span className="text-2xs leading-[1.5] text-slate-500">
           Светлая тема — в палитре PDF-отчёта. На iPhone цвет строки с часами и батареей
           обновится при следующем запуске приложения.
@@ -66,11 +64,7 @@ export function NotificationsCard() {
   return (
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-sky-600">
-          <Bell size={17} />
-        </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-sm font-medium text-slate-100">Уведомления</span>
           <span className="text-2xs leading-[1.5] text-slate-500">
             Если учёт идёт больше часа — придёт вопрос «вы всё ещё работаете?», потом каждый
             следующий час. Работает и при заблокированном экране.
@@ -161,11 +155,7 @@ export function TelegramCard() {
   return (
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-sky-600">
-          <Send size={17} />
-        </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-sm font-medium text-slate-100">Telegram</span>
           <span className="text-2xs leading-[1.5] text-slate-500">
             Бот пришлёт предупреждение, если учёт идёт дольше часа, — и даст остановить его прямо из
             чата. Работает вместе с пуш-уведомлениями или вместо них.

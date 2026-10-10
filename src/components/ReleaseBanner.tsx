@@ -29,12 +29,6 @@ export function ReleaseBanner() {
 
   if (!unseen || freshAccount || location.pathname === '/changelog') return null
 
-  const more = LATEST_RELEASE.changes.length - 2
-  const highlights = LATEST_RELEASE.changes
-    .slice(0, 2)
-    .map((c) => c.title.toLowerCase())
-    .join(', ')
-
   return (
     <div
       role="status"
@@ -56,8 +50,7 @@ export function ReleaseBanner() {
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-semibold text-slate-100">Вышла версия {LATEST_RELEASE.version}</span>
           <span className="text-xs leading-[1.45] text-slate-400">
-            {highlights.charAt(0).toUpperCase() + highlights.slice(1)}
-            {more > 0 ? ` и ещё ${more}` : ''}. Ознакомьтесь с изменениями.
+            {LATEST_RELEASE.title}. Ознакомьтесь с изменениями.
           </span>
         </div>
         <button

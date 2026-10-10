@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Overline, Sheet, SheetActions } from './ui'
 import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
-import { useAddComment, useComments } from '../lib/queries/comments'
+import {
+  useAddComment,
+  useComments,
+  useDeleteComment,
+  useRestoreComment,
+  useUpdateComment,
+} from '../lib/queries/comments'
 import { useSetEntryNote, useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
 import { entryNote } from '../lib/notes'
 import type { Comment, TimeEntry } from '../lib/types'
-import { ArrowUp, Comment as CommentIcon } from './Icon'
+import { ArrowUp, Comment as CommentIcon, MoreDots } from './Icon'
 
 type TimelineRow =
   | { kind: 'timer'; at: string; entry: TimeEntry }
@@ -46,6 +52,7 @@ function entrySummary(entry: TimeEntry): string {
 
 export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning: boolean }) {
   const [noting, setNoting] = useState<TimeEntry | null>(null)
+  const [editing, setEditing] = useState<Comment | null>(null)
   const { data: entries = [] } = useTimeEntries(taskId)
   const { data: comments = [] } = useComments(taskId)
   const { data: files = [] } = useAttachments({ taskIds: [taskId] })
@@ -89,15 +96,24 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                   >
                     {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}: {formatMinutes(entry.duration_minutes)}
                   </button>
+                ) : row.kind === 'comment' ? (
+                  // свой комментарий — нажатием править или удалить
+                  <button
+                    type="button"
+                    onClick={() => setEditing(row.comment)}
+                    className="self-start text-left text-sm leading-[1.35] text-slate-300"
+                    style={{ overflowWrap: 'anywhere' }}
+                  >
+                    {row.comment.body}
+                  </button>
                 ) : (
-                <p className="text-sm leading-[1.35] text-slate-300">
-                  {row.kind === 'comment' && row.comment.body}
-                  {row.kind === 'file' && (
-                    <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
-                      Файл «{row.file.name}»
-                    </a>
-                  )}
-                </p>
+                  <p className="text-sm leading-[1.35] text-slate-300">
+                    {row.kind === 'file' && (
+                      <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-sky-600">
+                        Файл «{row.file.name}»
+                      </a>
+                    )}
+                  </p>
                 )}
                 {/* комментарий к самой сессии — под ней, нажатием правится */}
                 {entry && note && (
@@ -126,7 +142,18 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                   <CommentIcon size={14} />
                 </button>
               )}
-              {!entry && <span className="w-5 shrink-0" />}
+              {row.kind === 'comment' && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(row.comment)}
+                  aria-label="Изменить или удалить комментарий"
+                  className="hit-44 -my-0.5 flex h-5 w-5 shrink-0 items-center justify-center"
+                  style={{ color: 'var(--s-placeholder)' }}
+                >
+                  <MoreDots size={14} />
+                </button>
+              )}
+              {!entry && row.kind !== 'comment' && <span className="w-5 shrink-0" />}
             </div>
           )
         })}
@@ -134,6 +161,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
       </div>
 
       <EntryNoteSheet entry={noting} onClose={() => setNoting(null)} />
+      <CommentSheet comment={editing} onClose={() => setEditing(null)} />
     </div>
   )
 }
@@ -221,5 +249,61 @@ export function CommentBar({ taskId }: { taskId: string }) {
         <ArrowUp size={16} className="mx-auto" />
       </button>
     </div>
+  )
+}
+
+/** Комментарий отдельной строкой: поправить текст или удалить — с возможностью вернуть. */
+function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: () => void }) {
+  const update = useUpdateComment()
+  const remove = useDeleteComment()
+  const restore = useRestoreComment()
+  const { showError, showSuccess } = useToast()
+  const onError = (e: unknown) => showError(describeError(e))
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    if (comment) setDraft(comment.body)
+  }, [comment])
+
+  if (!comment) return null
+  const changed = draft.trim() !== comment.body.trim()
+
+  return (
+    <Sheet open onClose={onClose} title="Комментарий">
+      <span className="-mt-2 font-mono text-xs text-slate-500">{formatDateTime(comment.created_at)}</span>
+      <textarea
+        autoFocus
+        rows={4}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="resize-none rounded-[14px] px-3.5 py-3 text-sm leading-[1.5] text-slate-100"
+        style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          onClose()
+          remove.mutate(comment, {
+            onError,
+            onSuccess: () =>
+              showSuccess('Комментарий удалён', {
+                label: 'Вернуть',
+                onAction: () => restore.mutate(comment, { onError }),
+              }),
+          })
+        }}
+        className="-my-1 self-start py-1 text-xs text-red-400"
+      >
+        Удалить комментарий
+      </button>
+      <SheetActions
+        onCancel={onClose}
+        onConfirm={() =>
+          update.mutate({ comment, body: draft.trim() }, { onError, onSuccess: onClose })
+        }
+        confirmLabel="Сохранить"
+        confirmDisabled={update.isPending || !changed || !draft.trim()}
+      />
+    </Sheet>
   )
 }

@@ -11,6 +11,10 @@ import { ToastProvider } from './lib/Toast'
 const queryClient = new QueryClient()
 startUpdateWatcher()
 
+// Safari на iPhone приближает страницу щипком, даже когда масштаб запрещён в viewport.
+// Приложению это не нужно: всё и так подогнано под экран, а вернуть масштаб назад неудобно
+document.addEventListener('gesturestart', (e) => e.preventDefault())
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

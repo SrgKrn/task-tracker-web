@@ -68,12 +68,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
         className="-mb-1 flex min-h-11 items-center justify-between gap-2 self-stretch rounded-xl px-3 text-left text-xs text-slate-400"
         style={{ border: '1px solid var(--s-border)' }}
       >
-        <span>
-          Новый период
-          <span className="block text-2xs text-slate-600">
-            {subtasks.some((t) => !isDone(t)) ? 'с незакрытыми подзадачами' : 'на следующий период'}
-          </span>
-        </span>
+        <span>Новый период</span>
         <ArrowRight size={15} />
       </button>
     </div>

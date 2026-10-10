@@ -239,6 +239,13 @@ body,
   height: 100%;
 }
 
+/* без приближения двойным касанием: быстрые нажатия на «+15 мин» не должны увеличивать страницу */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background-color: var(--s-bg);
   color: var(--s-text);

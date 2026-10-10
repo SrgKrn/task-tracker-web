@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { NotificationsCard, TelegramCard, ThemeCard } from '../components/AppPreferences'
 import { DatePicker } from '../components/DatePicker'
-import { ArrowRight } from '../components/Icon'
+import { ArrowLeft, Bell, Check, ChevronRight, Download, Send, Sparkle } from '../components/Icon'
 import { Overline, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
+import { usePush, type PushState } from '../lib/push'
+import { useTelegramStatus } from '../lib/telegram'
+import { useTheme, type ThemeChoice } from '../lib/theme'
 import type { ReportOptions } from '../lib/report'
 import { useGroupItems, useGroups } from '../lib/queries/groups'
 import { loadReport } from '../lib/queries/report'
@@ -17,75 +20,101 @@ import { useTasks } from '../lib/queries/tasks'
 import { useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
-import { plural } from '../lib/time'
+import { formatHoursRu } from '../lib/time'
 
 function firstOfMonthStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-const SectionIcon = (
-  <span className="h-3.5 w-3.5 rotate-45 rounded-[3px]" style={{ border: '1.5px solid var(--s-accent)' }} />
-)
-const ProjectIcon = (
-  <span className="h-3 w-[15px] rounded-[3px]" style={{ border: '1.5px solid var(--s-accent)' }} />
-)
-const StatusIcon = (
-  <span className="h-3.5 w-3.5 rounded-full" style={{ border: '1.5px solid var(--s-accent)' }} />
-)
-const BuilderIcon = (
+/* ── меню «Ещё» ─────────────────────────────────────────────────── */
+
+/** Плитка со значком слева от строки меню: тон отличает статусы от групп и прочего. */
+function Glyph({ children, tone = 'accent' }: { children: React.ReactNode; tone?: 'accent' | 'success' | 'neutral' }) {
+  const bg = tone === 'success' ? 'var(--s-success-ghost)' : tone === 'neutral' ? 'var(--s-tag)' : 'var(--s-accent-ghost)'
+  const fg = tone === 'success' ? 'var(--s-success-text)' : tone === 'neutral' ? 'var(--s-text-soft)' : 'var(--s-accent-text)'
+  return (
+    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]" style={{ background: bg, color: fg }}>
+      {children}
+    </span>
+  )
+}
+
+const GroupsGlyph = (
   <span className="relative h-3.5 w-3.5">
-    <span className="absolute top-0 left-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid var(--s-accent)' }} />
-    <span className="absolute right-0 bottom-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid var(--s-accent)' }} />
+    <span className="absolute top-0 left-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid currentColor' }} />
+    <span className="absolute right-0 bottom-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid currentColor' }} />
   </span>
 )
-const HistoryIcon = (
-  <span className="flex h-3.5 w-3.5 flex-col justify-between py-[1px]">
-    <span className="h-[1.5px] w-full rounded-full" style={{ background: 'var(--s-accent)' }} />
-    <span className="h-[1.5px] w-3/4 rounded-full" style={{ background: 'var(--s-accent)' }} />
-    <span className="h-[1.5px] w-1/2 rounded-full" style={{ background: 'var(--s-accent)' }} />
+const StatusGlyph = <Check size={15} />
+const ThemeGlyph = (
+  <span
+    className="h-3.5 w-3.5 rounded-full"
+    style={{ border: '1.5px solid currentColor', background: 'linear-gradient(90deg, currentColor 50%, transparent 50%)' }}
+  />
+)
+const PlanGlyph = (
+  <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ border: '1.5px solid currentColor' }}>
+    <span className="h-1 w-1 rounded-full bg-current" />
   </span>
 )
 
-/** Заголовок блока на экране «Ещё»: раньше двенадцать карточек шли сплошной лентой. */
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
+/** Группа строк меню — одна карточка, строки разделены линией, а не отдельными плашками. */
+function MenuGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-4 flex flex-col gap-[9px]">
+    <section className="mt-5 flex flex-col gap-2">
       <Overline className="px-0.5">{title}</Overline>
-      {children}
+      <div
+        className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
+        style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      >
+        {children}
+      </div>
     </section>
   )
 }
 
-function NavCard({
+function MenuRow({
   to,
-  icon,
+  glyph,
   title,
-  hint,
+  value,
 }: {
   to: string
-  icon: React.ReactNode
+  glyph: React.ReactNode
   title: string
-  hint: string
+  value?: string
 }) {
   return (
-    <Link
-      to={to}
-      className="flex items-center gap-3.5 rounded-2xl p-3.5"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-    >
-      <span
-        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]"
-        style={{ background: 'var(--s-accent-ghost)' }}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium leading-[1.3] text-slate-100">{title}</span>
-        <span className="block text-2xs leading-[1.4] text-slate-500">{hint}</span>
-      </span>
-      <ArrowRight size={16} className="text-slate-600" />
+    <Link to={to} className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 lg:hover:bg-[var(--s-surface-active)]">
+      {glyph}
+      <span className="min-w-0 flex-1 truncate text-sm text-slate-100">{title}</span>
+      {value && <span className="max-w-[45%] truncate text-xs text-slate-500">{value}</span>}
+      <ChevronRight size={15} className="shrink-0 text-slate-600" />
     </Link>
+  )
+}
+
+/** Экран одного пункта «Ещё»: назад в меню, заголовок и сама настройка. */
+function SettingsPage({ title, children }: { title: string; children: React.ReactNode }) {
+  const navigate = useNavigate()
+  // меню могли прокрутить вниз — экран пункта открываем с начала
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+  return (
+    <div className="safe-top mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
+      <button
+        type="button"
+        onClick={() => navigate('/settings')}
+        className="-my-2.5 mb-1 flex items-center gap-2 self-start py-2.5 text-sm text-slate-400"
+      >
+        <ArrowLeft size={15} />
+        Ещё
+      </button>
+      <h1 className="mb-2 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
+      {children}
+    </div>
   )
 }
 
@@ -108,7 +137,6 @@ function BudgetForm() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-100">Общий план часов</span>
         <span className="text-2xs leading-[1.5] text-slate-500">
           Норма дня для кольца на «Сегодня» и сравнение с фактом в сводке. Приоритет у дневной цели.
         </span>
@@ -269,7 +297,6 @@ function ExportSection() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-100">Экспорт отчёта</span>
         <span className="text-2xs leading-[1.5] text-slate-500">
           Итоги и ритм, разрезы по группам, спринты против плана, журнал по дням. PDF — чтобы
           читать и отправлять, Excel — чтобы разбирать самому.
@@ -340,92 +367,151 @@ function ExportSection() {
   )
 }
 
-const VALUES: [string, string, string] = ['значение', 'значения', 'значений']
+const THEME_LABEL: Record<ThemeChoice, string> = { dark: 'Тёмная', light: 'Светлая', system: 'Как в системе' }
+const PUSH_LABEL: Record<PushState, string> = {
+  on: 'Включены',
+  off: 'Выключены',
+  denied: 'Запрещены',
+  'needs-install': 'Нужна установка',
+  unsupported: 'Недоступны',
+}
 
+/**
+ * «Ещё» — меню: раньше все настройки лежали на одной странице, и она была перегружена.
+ * Справа у пунктов — текущее значение, чтобы не открывать каждый ради проверки.
+ */
 export function Settings() {
   const { session } = useAuth()
   const model = useGroupModel()
   const { data: statuses = [] } = useStatuses()
+  const theme = useTheme()
+  const push = usePush()
+  const { data: telegram } = useTelegramStatus()
+  const { data: userSettings } = useUserSettings()
+
+  const plan = userSettings?.planned_hours_per_day
+    ? `${formatHoursRu(Number(userSettings.planned_hours_per_day))} ч в день`
+    : userSettings?.planned_hours_per_month
+      ? `${formatHoursRu(Number(userSettings.planned_hours_per_month))} ч в месяц`
+      : 'Не задан'
+  const tg = telegram?.linked
+    ? telegram.linked.username
+      ? `@${telegram.linked.username}`
+      : 'Подключён'
+    : telegram?.configured
+      ? 'Не подключён'
+      : undefined
 
   return (
-    <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-2 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
       <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
 
-      <Block title="Группы">
-        {model.groups.map((g, i) => {
-          const parent = g.parent_group_id ? model.groupById.get(g.parent_group_id) : undefined
-          const count = model.itemsOf(g.id).filter((x) => !x.archived).length
-          return (
-            <NavCard
-              key={g.id}
-              to={`/groups/${g.id}`}
-              icon={i % 2 === 0 ? SectionIcon : ProjectIcon}
-              title={g.name}
-              hint={[plural(count, VALUES), parent ? `входит в «${parent.name}»` : null].filter(Boolean).join(' · ')}
-            />
-          )
-        })}
-        <NavCard to="/statuses" icon={StatusIcon} title="Статусы" hint={`Этапы задачи и что считается готовым · ${statuses.length}`} />
-        <NavCard
+      <MenuGroup title="Группы">
+        <MenuRow
           to="/groups"
-          icon={BuilderIcon}
-          title="Конструктор групп"
-          hint="Добавить свою группу, связать группы, поменять порядок или удалить"
+          glyph={<Glyph>{GroupsGlyph}</Glyph>}
+          title="Группы"
+          value={model.groups.map((g) => g.name).join(', ') || 'Нет групп'}
         />
-      </Block>
+      </MenuGroup>
 
-      <Block title="Настройки">
-        <ThemeCard />
-        <NotificationsCard />
-      </Block>
+      {/* статусы — не группа, а этап задачи: отдельным блоком и другим цветом */}
+      <MenuGroup title="Этапы задач">
+        <MenuRow to="/statuses" glyph={<Glyph tone="success">{StatusGlyph}</Glyph>} title="Статусы" value={String(statuses.length)} />
+      </MenuGroup>
 
-      <Block title="Интеграции">
-        <TelegramCard />
-      </Block>
+      <MenuGroup title="Настройки">
+        <MenuRow to="/settings/appearance" glyph={<Glyph>{ThemeGlyph}</Glyph>} title="Оформление" value={THEME_LABEL[theme]} />
+        <MenuRow
+          to="/settings/notifications"
+          glyph={<Glyph><Bell size={15} /></Glyph>}
+          title="Уведомления"
+          value={push.state ? PUSH_LABEL[push.state] : undefined}
+        />
+      </MenuGroup>
 
-      <Block title="Планы и аналитика">
-        <BudgetForm />
-        <ExportSection />
-      </Block>
+      <MenuGroup title="Интеграции">
+        <MenuRow to="/settings/telegram" glyph={<Glyph><Send size={15} /></Glyph>} title="Telegram" value={tg} />
+      </MenuGroup>
 
-      <Block title="Аккаунт">
-        <div
-          className="flex items-center gap-3 rounded-2xl px-3.5 py-3.5"
-          style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
-        >
+      <MenuGroup title="Планы и аналитика">
+        <MenuRow to="/settings/plan" glyph={<Glyph>{PlanGlyph}</Glyph>} title="План часов" value={plan} />
+        <MenuRow to="/settings/export" glyph={<Glyph><Download size={15} /></Glyph>} title="Экспорт отчёта" value="PDF и Excel" />
+      </MenuGroup>
+
+      <MenuGroup title="О приложении">
+        <MenuRow
+          to="/changelog"
+          glyph={<Glyph tone="neutral"><Sparkle size={15} /></Glyph>}
+          title="История изменений"
+          value={`Версия ${LATEST_RELEASE.version}`}
+        />
+      </MenuGroup>
+
+      <MenuGroup title="Аккаунт">
+        <div className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5">
           <span
-            className="h-[34px] w-[34px] shrink-0 rounded-full"
+            className="h-[30px] w-[30px] shrink-0 rounded-full"
             style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-slate-100">{session?.user.email}</span>
+            <span className="block truncate text-sm text-slate-100">{session?.user.email}</span>
             <span className="block font-mono text-2xs text-slate-500">синхронизация включена</span>
           </span>
         </div>
-        <NavCard
-          to="/changelog"
-          icon={HistoryIcon}
-          title="История изменений"
-          hint={`Что нового в версии ${LATEST_RELEASE.version} и раньше`}
-        />
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="h-11 rounded-[14px] text-sm font-medium text-red-400"
-          style={{ border: '1px solid var(--s-danger-line)' }}
+          className="flex min-h-[52px] items-center px-3.5 text-left text-sm text-red-400"
         >
           Выйти
         </button>
-        <span className="pb-1 text-center font-mono text-2xs text-slate-600">
-          Версия {LATEST_RELEASE.version} · сборка от{' '}
-          {new Date(BUILD_TIME).toLocaleString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </span>
-      </Block>
+      </MenuGroup>
+
+      <span className="mt-4 pb-1 text-center font-mono text-2xs text-slate-600">
+        Версия {LATEST_RELEASE.version} · сборка от{' '}
+        {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+      </span>
     </div>
+  )
+}
+
+export function AppearanceSettings() {
+  return (
+    <SettingsPage title="Оформление">
+      <ThemeCard />
+    </SettingsPage>
+  )
+}
+
+export function NotificationSettings() {
+  return (
+    <SettingsPage title="Уведомления">
+      <NotificationsCard />
+    </SettingsPage>
+  )
+}
+
+export function TelegramSettings() {
+  return (
+    <SettingsPage title="Telegram">
+      <TelegramCard />
+    </SettingsPage>
+  )
+}
+
+export function PlanSettings() {
+  return (
+    <SettingsPage title="План часов">
+      <BudgetForm />
+    </SettingsPage>
+  )
+}
+
+export function ExportSettings() {
+  return (
+    <SettingsPage title="Экспорт отчёта">
+      <ExportSection />
+    </SettingsPage>
   )
 }

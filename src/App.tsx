@@ -7,7 +7,14 @@ import { Changelog } from './routes/Changelog'
 import { GroupPage, GroupsAdmin } from './routes/GroupsAdmin'
 import { ItemDetail } from './routes/ItemDetail'
 import { NewTask } from './routes/NewTask'
-import { Settings } from './routes/Settings'
+import {
+  AppearanceSettings,
+  ExportSettings,
+  NotificationSettings,
+  PlanSettings,
+  Settings,
+  TelegramSettings,
+} from './routes/Settings'
 import { StatusesAdmin } from './routes/StatusesAdmin'
 import { TaskDetail } from './routes/TaskDetail'
 import { TaskWorkspace } from './routes/TaskWorkspace'
@@ -45,6 +52,11 @@ export default function App() {
         <Route path="/projects/:id" element={<LegacyItemRedirect />} />
         <Route path="/statuses" element={<StatusesAdmin />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/appearance" element={<AppearanceSettings />} />
+        <Route path="/settings/notifications" element={<NotificationSettings />} />
+        <Route path="/settings/telegram" element={<TelegramSettings />} />
+        <Route path="/settings/plan" element={<PlanSettings />} />
+        <Route path="/settings/export" element={<ExportSettings />} />
         <Route path="/changelog" element={<Changelog />} />
       </Route>
     </Routes>
