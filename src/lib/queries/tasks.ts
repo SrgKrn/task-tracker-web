@@ -68,6 +68,7 @@ export type TaskFieldsInput = Partial<
     | 'start_date'
     | 'end_date'
     | 'is_daily'
+    | 'plan_date'
     | 'parent_id'
   >
 >
@@ -99,6 +100,32 @@ export function useUpdateTask() {
       // смена статуса пишет событие триггером — сводка должна пересчитать «задач закрыто»
       qc.invalidateQueries({ queryKey: ['task_status_events_closed'] })
     },
+  })
+}
+
+/**
+ * Выбор задач на день одним запросом: ids получают дату плана, null — снимаются с плана.
+ * Список меняется сразу, отказ возвращает прежнее.
+ */
+export function useSetPlanDate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ids, date }: { ids: string[]; date: string | null }) => {
+      if (ids.length === 0) return
+      const { error } = await supabase.from('tasks').update({ plan_date: date }).in('id', ids)
+      if (error) throw error
+    },
+    onMutate: async ({ ids, date }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const list = qc.getQueryData<Task[]>(['tasks'])
+      const set = new Set(ids)
+      if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (set.has(t.id) ? { ...t, plan_date: date } : t)))
+      return { list }
+    },
+    onError: (_e, _v, snapshot) => {
+      if (snapshot?.list) qc.setQueryData(['tasks'], snapshot.list)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   })
 }
 

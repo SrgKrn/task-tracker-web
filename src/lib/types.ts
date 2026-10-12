@@ -66,6 +66,8 @@ export interface Task {
   end_date: string | null
   /** ежедневная (рутинная) задача — всегда попадает в «Сегодня» */
   is_daily: boolean
+  /** день, на который задача выбрана в «Сегодня»; прошедшая дата — уже не в плане */
+  plan_date: string | null
   /** id задачи-оригинала, если эта создана кнопкой «Дублировать» */
   duplicated_from: string | null
   /**

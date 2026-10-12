@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DayPlanSheet } from '../components/DayPlanSheet'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
-import { EmptyState, Logo, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
+import { Logo, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { PlayGlyph } from '../components/Ring'
@@ -20,10 +21,11 @@ import {
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
+import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
+import { isInDay, planSections } from '../lib/dayPlan'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
@@ -44,6 +46,7 @@ export function Today() {
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const updateTask = useUpdateTask()
+  const setPlanDate = useSetPlanDate()
   const duplicateTask = useDuplicateTask()
   const deleteTask = useDeleteTask()
   const { showError, showSuccess } = useToast()
@@ -52,6 +55,7 @@ export function Today() {
 
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [postponing, setPostponing] = useState<Task | null>(null)
+  const [planning, setPlanning] = useState(false)
   // «Недавние» — две недели учёта: задачи, к которым возвращаются, но не на сегодня
   const recentFrom = useMemo(() => addDays(today, -13), [today])
   const { data: recentEntries = [] } = useTimeEntriesInRange(recentFrom, today)
@@ -80,23 +84,14 @@ export function Today() {
   const dayNorm = userSettings?.planned_hours_per_day ?? DEFAULT_DAY_NORM
 
   /*
-   * День — это то, чем занимаются сегодня. Спринт живёт месяц, и по сроку он попадал сюда
-   * каждый день: список не менялся неделями. Спринт с подзадачами уступает место своим
-   * подзадачам — у них короткие сроки. Сам он остаётся, только если учёт идёт или шёл
-   * сегодня прямо по нему. Спринт без подзадач ведёт себя как обычная задача.
+   * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
+   * или шёл учёт: начатая «не из плана» задача подтягивается сама. Раньше сюда падало всё,
+   * чей срок захватывает сегодня, — спринты и длинные задачи висели в списке неделями, и он
+   * не отвечал на вопрос «чем я занимаюсь сегодня». Срок теперь только подсказывает выбор.
    */
   const todayTasks = useMemo(
-    () =>
-      tasks.filter((t: Task) => {
-        if (t.is_daily) return true
-        if (activeTimer?.task_id === t.id) return true
-        if (trackedTodayTaskIds.has(t.id)) return true
-        if (childrenOf.has(t.id)) return false
-        const startsBy = !t.start_date || t.start_date <= today
-        const endsAfter = !t.end_date || t.end_date >= today
-        return !!(t.start_date || t.end_date) && startsBy && endsAfter
-      }),
-    [tasks, activeTimer, trackedTodayTaskIds, today, childrenOf],
+    () => tasks.filter((t: Task) => isInDay(t, today, activeTimer?.task_id, trackedTodayTaskIds)),
+    [tasks, activeTimer, trackedTodayTaskIds, today],
   )
 
   const isDone = useCallback((t: Task) => !!(t.status_id && statusById.get(t.status_id)?.is_final), [statusById])
@@ -134,6 +129,12 @@ export function Today() {
         onStopTimer={() => stopTimer.mutate(undefined, { onError })}
         onDuplicate={() => duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })}
         onDelete={() => setDeletingTask(task)}
+        // снять можно только то, что выбрано: учёт и ежедневные задачи держат её в дне сами
+        onUnplan={
+          task.plan_date === today && !lockedIds.has(task.id)
+            ? () => setPlanDate.mutate({ ids: [task.id], date: null }, { onError })
+            : undefined
+        }
         subtasks={childrenOf.get(task.id)}
         expandable={false}
         subtasksBelow={subtasksBelow}
@@ -143,23 +144,48 @@ export function Today() {
     )
   }
 
-  /** Недавние: последние задачи с учётом, открытые и не из списка на сегодня. */
-  const recentTasks = useMemo(() => {
-    const shown = new Set(todayTasks.map((t) => t.id))
+  /** задачи с учётом за две недели, свежие первыми — для «Недавних» и подсказок выбора */
+  const recentTaskIds = useMemo(() => {
     const ids: string[] = []
     const sorted = [...recentEntries]
       .filter((e) => e.entry_type === 'timer')
       .sort((a, b) => (b.started_at ?? b.created_at).localeCompare(a.started_at ?? a.created_at))
-    for (const e of sorted) {
-      const t = taskById.get(e.task_id)
-      if (!t || ids.includes(t.id) || shown.has(t.id) || isDone(t)) continue
+    for (const e of sorted) if (!ids.includes(e.task_id)) ids.push(e.task_id)
+    return ids
+  }, [recentEntries])
+
+  /** Недавние: последние задачи с учётом, открытые и не из списка на сегодня. */
+  const recentTasks = useMemo(() => {
+    const shown = new Set(todayTasks.map((t) => t.id))
+    const ids: string[] = []
+    for (const taskId of recentTaskIds) {
+      const t = taskById.get(taskId)
+      if (!t || shown.has(t.id) || isDone(t)) continue
       const parent = t.parent_id ? taskById.get(t.parent_id) : undefined
       if (parent && isDone(parent)) continue
       ids.push(t.id)
       if (ids.length >= 4) break
     }
     return ids.map((id) => taskById.get(id)!)
-  }, [recentEntries, todayTasks, taskById, isDone])
+  }, [recentTaskIds, todayTasks, taskById, isDone])
+
+  /* выбор на день: что предложить и что уже выбрано */
+  // расчёт дешёвый, а ручная мемоизация с Set'ами мешала компилятору React оптимизировать экран
+  const lockedIds = new Set(trackedTodayTaskIds)
+  if (activeTimer) lockedIds.add(activeTimer.task_id)
+  for (const t of tasks) if (t.is_daily) lockedIds.add(t.id)
+  const sections = planSections({ tasks, childrenOf, isDone, today, recentTaskIds, lockedIds })
+  const plannedIds = new Set(sections.find((s) => s.key === 'planned')?.tasks.map((t) => t.id) ?? [])
+  const suggestedCount = sections
+    .filter((s) => s.key === 'carry' || s.key === 'due')
+    .reduce((n, s) => n + s.tasks.length, 0)
+  const planMeta = useCallback(
+    (t: Task) => {
+      const parent = t.parent_id ? taskById.get(t.parent_id) : undefined
+      return [parent?.name, model.listLabel(parent ?? t)].filter(Boolean).join(' · ')
+    },
+    [taskById, model],
+  )
 
   /** срок переносится с отменой: «Вернуть» ставит прежний */
   function postpone(task: Task, date: string, label: string) {
@@ -306,9 +332,20 @@ export function Today() {
       <div className="flex flex-col gap-[9px] px-5 pt-5 pb-2">
         <div className="flex items-baseline justify-between">
           <Overline>На сегодня</Overline>
-          <Link to="/tasks" className="-my-3.5 py-3.5 pl-3 text-xs text-brass-600">
-            <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
-          </Link>
+          <div className="flex items-center gap-4">
+            {todayTasks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPlanning(true)}
+                className="-my-3.5 py-3.5 text-xs font-medium text-brass-600"
+              >
+                Выбрать
+              </button>
+            )}
+            <Link to="/tasks" className="-my-3.5 py-3.5 text-xs text-brass-600">
+              <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
+            </Link>
+          </div>
         </div>
 
         {isLoading && (
@@ -338,13 +375,24 @@ export function Today() {
             )
           })}
 
+        {/* день ещё не спланирован: главное действие экрана — выбрать, не листая весь список */}
         {!isLoading && todayTasks.length === 0 && (
-          <EmptyState>
-            На сегодня ничего не запланировано.{' '}
-            <Link to="/tasks" className="text-brass-600">
-              Выбрать задачу
-            </Link>
-          </EmptyState>
+          <button
+            type="button"
+            onClick={() => setPlanning(true)}
+            className="flex min-h-[72px] items-center gap-3.5 rounded-[18px] px-4 py-3 text-left"
+            style={{ background: 'var(--s-accent-ghost)', border: '1px solid var(--s-accent)' }}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold text-slate-100">Что делаем сегодня?</span>
+              <span className="block text-xs text-[var(--s-text-soft)]">
+                {suggestedCount > 0
+                  ? `Отметьте задачи на день — ${suggestedCount} уже предложено`
+                  : 'Отметьте задачи на день — это займёт полминуты'}
+              </span>
+            </span>
+            <ArrowRight size={18} className="text-brass-600" />
+          </button>
         )}
 
         {overdueTasks.length > 0 && (
@@ -442,6 +490,22 @@ export function Today() {
             })}
           </div>
         </div>
+      )}
+
+      {planning && (
+        <DayPlanSheet
+          open
+          onClose={() => setPlanning(false)}
+          sections={sections}
+          planned={plannedIds}
+          today={today}
+          metaOf={planMeta}
+          onSave={({ add, remove }) => {
+            setPlanning(false)
+            if (add.length) setPlanDate.mutate({ ids: add, date: today }, { onError })
+            if (remove.length) setPlanDate.mutate({ ids: remove, date: null }, { onError })
+          }}
+        />
       )}
 
       <Sheet open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">

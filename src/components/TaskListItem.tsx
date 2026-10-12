@@ -24,6 +24,8 @@ interface TaskListItemProps {
   /** свайп влево открывает эти действия; без них строка не свайпается */
   onDuplicate?: () => void
   onDelete?: () => void
+  /** «Не сегодня»: снять с плана дня («Сегодня») */
+  onUnplan?: () => void
   /** подзадачи спринта: их часы входят в факт строки, а сам состав раскрывается под ней */
   subtasks?: Task[]
   /** false — факт считается с подзадачами, но раскрыть состав здесь нельзя («Сегодня») */
@@ -55,6 +57,7 @@ export function TaskListItem({
   onStopTimer,
   onDuplicate,
   onDelete,
+  onUnplan,
   subtasks,
   expandable = true,
   forceExpanded = false,
@@ -84,7 +87,7 @@ export function TaskListItem({
   // первая подзадача открытого спринта — из «ящика» свайпа, а не полосой под каждым спринтом
   // «ящик» есть только там, где строке дали действия (список задач), — туда и кладём
   const addSubtaskAction = expandable && !task.parent_id && !done && (!!onDuplicate || !!onDelete)
-  const actionCount = [onDuplicate, onDelete, addSubtaskAction].filter(Boolean).length
+  const actionCount = [onUnplan, onDuplicate, onDelete, addSubtaskAction].filter(Boolean).length
   const actionsWidth = actionCount * ACTION_WIDTH
   const swipeable = actionCount > 0
   const [offset, setOffset] = useState(0)
@@ -178,6 +181,19 @@ export function TaskListItem({
                 style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
               >
                 Подзадача
+              </button>
+            )}
+            {onUnplan && (
+              <button
+                type="button"
+                onClick={() => {
+                  close()
+                  onUnplan()
+                }}
+                className="flex-1 text-xs font-medium"
+                style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+              >
+                Не сегодня
               </button>
             )}
             {onDuplicate && (
