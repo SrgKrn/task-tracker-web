@@ -10,6 +10,7 @@ import {
   sendTimerAction,
   type TimerAction,
 } from '../timerQueue'
+import { entryNote } from '../notes'
 import { entrySeconds } from '../time'
 import type { ActiveTimer, TimeEntry } from '../types'
 
@@ -155,12 +156,15 @@ export function useAdjustFactHours() {
       currentFactHours,
       newFactHours,
       effectiveDate,
+      note,
     }: {
       taskId: string
       currentFactHours: number
       newFactHours: number
       /** день, к которому относится правка; по умолчанию — сегодня */
       effectiveDate?: string
+      /** комментарий к правке — виден в истории задачи под ней */
+      note?: string | null
     }) => {
       const deltaMinutes = Math.round((newFactHours - currentFactHours) * 60)
       if (deltaMinutes === 0) return
@@ -168,8 +172,8 @@ export function useAdjustFactHours() {
         task_id: taskId,
         entry_type: 'manual_adjustment',
         duration_seconds: deltaMinutes * 60,
-        // комментарий к правке пишет сам пользователь — по нажатию на неё в таймлайне
-        note: null,
+        // комментарий пишется сразу из окна правки; позже его можно поправить в истории
+        note: note?.trim() || null,
         effective_date: effectiveDate ?? toDateString(new Date()),
       })
       if (error) throw error
@@ -188,22 +192,29 @@ function invalidateTime(qc: ReturnType<typeof useQueryClient>, taskId?: string) 
 }
 
 /**
- * Укорачивает уже записанную сессию таймера — конец сдвигается раньше. Так исправляют
- * забытый таймер: минуты уходят из того дня, когда сессия шла, а не из дня правки.
+ * Уменьшает уже записанную запись: у сессии таймера сдвигается конец — так исправляют
+ * забытый таймер, минуты уходят из того дня, когда сессия шла, а не из дня правки; у
+ * ручной правки меняется сама величина.
  * `minutes` отрицательное — вернуть сессии длину (отмена).
  */
 export function useTrimSession() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ entry, minutes }: { entry: TimeEntry; minutes: number }) => {
+    mutationFn: async ({ entry, minutes, note }: { entry: TimeEntry; minutes: number; note?: string }) => {
       const nextSeconds = entrySeconds(entry) - minutes * 60
-      if (nextSeconds < 0) throw new Error('Сессия короче, чем нужно отнять')
+      // сессию в минус не увести; ручную правку можно — это тоже правка
+      if (entry.entry_type === 'timer' && nextSeconds < 0) throw new Error('Сессия короче, чем нужно отнять')
       const endedAt = entry.ended_at
         ? new Date(new Date(entry.ended_at).getTime() - minutes * 60_000).toISOString()
         : null
       const { error } = await supabase
         .from('time_entries')
-        .update({ duration_seconds: nextSeconds, ended_at: endedAt })
+        .update({
+          duration_seconds: nextSeconds,
+          ended_at: endedAt,
+          // комментарий к обрезке — к самой сессии; прежний комментарий сессии сохраняется
+          ...(note?.trim() ? { note: [entryNote(entry), note.trim()].filter(Boolean).join(' · ') } : {}),
+        })
         .eq('id', entry.id)
       if (error) throw error
     },

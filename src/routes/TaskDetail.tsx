@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { AttachmentsBlock } from '../components/AttachmentsBlock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
-import { DurationSheet } from '../components/DurationSheet'
+import { AddTimeSheet, DurationSheet } from '../components/DurationSheet'
 import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
 import { SubtractSheet, type SubtractSource } from '../components/SubtractSheet'
 import { NextSprintSheet } from '../components/NextSprintSheet'
@@ -33,8 +33,10 @@ import {
   useStartTimer,
   useStopTimer,
   useTimeEntries,
+  useSetEntryNote,
   useTrimSession,
 } from '../lib/queries/timer'
+import { useAddComment } from '../lib/queries/comments'
 import { elapsedHours, entrySeconds, formatClock, formatHoursMinutes, formatHoursRu, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 
@@ -58,6 +60,8 @@ export function TaskDetail() {
   const stopTimer = useStopTimer()
   const adjustFactHours = useAdjustFactHours()
   const trimSession = useTrimSession()
+  const setEntryNote = useSetEntryNote()
+  const addComment = useAddComment()
   const shiftActiveTimer = useShiftActiveTimer()
   const { data: entries = [] } = useTimeEntries(id)
   const createNextSprint = useCreateNextSprint()
@@ -72,6 +76,8 @@ export function TaskDetail() {
   const [editingFact, setEditingFact] = useState(false)
   // сколько минут отнять — окно выбора «отдельной правкой или из сессии»
   const [subtracting, setSubtracting] = useState<number | null>(null)
+  // окно «Добавить время»: сколько и комментарий к правке
+  const [adding, setAdding] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draftName, setDraftName] = useState('')
   // день, к которому относится ручная правка. По умолчанию сегодня — быстрый случай
@@ -200,14 +206,14 @@ export function TaskDetail() {
     )
   }
 
-  /** записывает новое значение факта; шаг кнопок ±15 мин, окно задаёт точное число */
-  function setFact(next: number) {
+  /** записывает новое значение факта; note — комментарий к правке, виден в истории */
+  function setFact(next: number, note?: string) {
     if (!task) return
     const from = task.fact_hours
     const target = Math.max(0, next)
     if (Math.abs(target - from) < 1 / 120) return // меньше полуминуты — не пишем запись
     adjustFactHours.mutate(
-      { taskId: task.id, currentFactHours: from, newFactHours: target, effectiveDate: adjustDate },
+      { taskId: task.id, currentFactHours: from, newFactHours: target, effectiveDate: adjustDate, note },
       {
         onError,
         onSuccess: () =>
@@ -230,18 +236,18 @@ export function TaskDetail() {
   }
 
   /** отнять время выбранным способом — с отменой из уведомления */
-  function subtract(minutes: number, source: SubtractSource) {
+  function subtract(minutes: number, source: SubtractSource, note: string) {
     setSubtracting(null)
     if (!task) return
     const label = formatHoursMinutes(minutes / 60)
     if (source.kind === 'separate') {
-      setFact(task.fact_hours - minutes / 60)
+      setFact(task.fact_hours - minutes / 60, note)
       return
     }
     if (source.kind === 'session') {
       const entry = source.entry
       trimSession.mutate(
-        { entry, minutes },
+        { entry, minutes, note },
         {
           onError,
           onSuccess: () => {
@@ -253,9 +259,14 @@ export function TaskDetail() {
                 ? new Date(new Date(entry.ended_at).getTime() - minutes * 60_000).toISOString()
                 : null,
             }
-            showSuccess(`Сессия короче на ${label}`, {
+            showSuccess(entry.entry_type === 'timer' ? `Сессия короче на ${label}` : `Последняя правка меньше на ${label}`, {
               label: 'Вернуть',
-              onAction: () => trimSession.mutate({ entry: trimmed, minutes: -minutes }, { onError }),
+              onAction: () =>
+                trimSession.mutate(
+                  { entry: trimmed, minutes: -minutes },
+                  // вместе с длиной вернуть и прежний комментарий сессии
+                  { onError, onSuccess: () => note && setEntryNote.mutate({ entry, note: entry.note ?? '' }, { onError }) },
+                ),
             })
           },
         },
@@ -268,6 +279,8 @@ export function TaskDetail() {
       {
         onError,
         onSuccess: () => {
+          // записи у идущей сессии ещё нет — комментарий ложится в историю задачи
+          if (note) addComment.mutate({ taskId: task.id, body: `−${label} из идущей сессии: ${note}` }, { onError })
           const shifted = {
             ...timer,
             started_at: new Date(new Date(timer.started_at).getTime() + minutes * 60_000).toISOString(),
@@ -481,7 +494,8 @@ export function TaskDetail() {
                 {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
                     иначе накрутила бы несколько правок от одного и того же исходного значения */}
                 <span className="flex gap-1.5">
-                  {/* минус открывает выбор: отдельной правкой или из сессии таймера */}
+                  {/* минус открывает окно: сколько отнять, откуда (отдельной правкой или из сессии
+                      таймера) и комментарий к правке */}
                   <button
                     type="button"
                     onClick={() => setSubtracting(15)}
@@ -492,13 +506,13 @@ export function TaskDetail() {
                   >
                     −
                   </button>
-                  {/* ровно +15 минут к тому, что есть. Раньше итог округлялся до четверти часа:
-                      с 2 ч 20 мин плюс давал 2 ч 30 мин, то есть добавлял 10 минут */}
+                  {/* плюс открывает окно: сколько добавить и комментарий. Раньше кнопка молча
+                      прибавляла ровно 15 минут — час набирался четырьмя нажатиями */}
                   <button
                     type="button"
-                    onClick={() => setFact(task.fact_hours + 0.25)}
+                    onClick={() => setAdding(true)}
                     disabled={adjustFactHours.isPending}
-                    aria-label="Прибавить 15 минут"
+                    aria-label="Добавить время"
                     className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
                     style={{ border: '1px solid var(--s-border-strong-2)' }}
                   >
@@ -601,6 +615,16 @@ export function TaskDetail() {
           const less = Math.round((task.fact_hours - value) * 60)
           if (less > 0) setSubtracting(less)
           else setFact(value)
+        }}
+      />
+
+      <AddTimeSheet
+        open={adding}
+        adjustDateLabel={new Date(`${adjustDate}T00:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+        onCancel={() => setAdding(false)}
+        onConfirm={(minutes, note) => {
+          setAdding(false)
+          setFact(task.fact_hours + minutes / 60, note)
         }}
       />
 

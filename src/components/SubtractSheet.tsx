@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AdjustmentNote, DurationInput, draftFromMinutes, draftMinutes, type DurationDraft } from './DurationInput'
 import { Sheet } from './ui'
 import { entryMinutes, formatHoursMinutes } from '../lib/time'
 import type { ActiveTimer, TimeEntry } from '../lib/types'
 
 export type SubtractSource =
   | { kind: 'separate' }
+  /** из последней записи задачи: сессии таймера или ручной правки */
   | { kind: 'session'; entry: TimeEntry }
   | { kind: 'running'; timer: ActiveTimer }
 
@@ -14,14 +16,15 @@ interface SubtractSheetProps {
   minutes: number
   /** факт задачи в часах: больше него отнять нельзя */
   factHours: number
-  /** записи задачи: из них берётся последняя сессия таймера */
+  /** записи задачи: из них берётся последняя — сессия таймера или ручная правка */
   entries: TimeEntry[]
   /** идёт ли сейчас учёт по этой задаче */
   activeTimer: ActiveTimer | null | undefined
   /** день, в который ляжет отдельная правка — как в поле «Засчитать в день» */
   adjustDateLabel: string
   onCancel: () => void
-  onConfirm: (minutes: number, source: SubtractSource) => void
+  /** note — комментарий к правке, ляжет в историю задачи */
+  onConfirm: (minutes: number, source: SubtractSource, note: string) => void
 }
 
 function clock(iso: string | null): string {
@@ -48,24 +51,37 @@ export function SubtractSheet({
   onCancel,
   onConfirm,
 }: SubtractSheetProps) {
-  const [minutes, setMinutes] = useState(initial)
+  const [draft, setDraft] = useState<DurationDraft>(() => draftFromMinutes(initial))
+  const [note, setNote] = useState('')
 
   useEffect(() => {
-    if (open) setMinutes(initial)
+    if (!open) return
+    setDraft(draftFromMinutes(initial))
+    setNote('')
   }, [open, initial])
 
-  const lastSession = useMemo(() => {
-    const sessions = entries.filter((e) => e.entry_type === 'timer' && e.ended_at)
-    return sessions.sort((a, b) => (b.ended_at ?? '').localeCompare(a.ended_at ?? ''))[0] ?? null
-  }, [entries])
+  // сколько отнять — вводится, а не листается по 15 минут
+  const minutes = draftMinutes(draft) ?? 0
+
+  /*
+   * Последняя запись задачи — какая бы ни была: сессия таймера или ручная правка. Часто
+   * нужно поправить именно её: «добавил лишние полчаса» или «таймер шёл дольше, чем работал».
+   */
+  const lastEntry = useMemo(
+    () => [...entries].sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null,
+    [entries],
+  )
+  const lastIsSession = lastEntry?.entry_type === 'timer'
 
   const runningMinutes = activeTimer
     ? Math.floor((Date.now() - new Date(activeTimer.started_at).getTime()) / 60_000)
     : 0
-  const maxMinutes = Math.max(15, Math.round(factHours * 60) + runningMinutes)
-  const step = (delta: number) => setMinutes((m) => Math.min(maxMinutes, Math.max(15, m + delta)))
+  const maxMinutes = Math.round(factHours * 60) + runningMinutes
+  const tooMuch = minutes > maxMinutes
+  const nothing = minutes <= 0
 
-  const sessionFits = !!lastSession && entryMinutes(lastSession) >= minutes
+  // сессию короче нуля не сделать; ручную правку можно увести и в минус — это тоже правка
+  const lastFits = !!lastEntry && (!lastIsSession || entryMinutes(lastEntry) >= minutes)
   const runningFits = !!activeTimer && runningMinutes >= minutes
   const shiftedStart = activeTimer
     ? new Date(new Date(activeTimer.started_at).getTime() + minutes * 60_000).toISOString()
@@ -73,38 +89,20 @@ export function SubtractSheet({
 
   return (
     <Sheet open={open} onClose={onCancel} title="Отнять время">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-400">Сколько</span>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => step(-15)}
-            aria-label="Меньше на 15 минут"
-            className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
-          >
-            −
-          </button>
-          <span className="tabular min-w-[96px] text-center font-mono text-lg font-semibold text-slate-100">
-            {formatHoursMinutes(minutes / 60)}
-          </span>
-          <button
-            type="button"
-            onClick={() => step(15)}
-            aria-label="Больше на 15 минут"
-            className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-base text-slate-300"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
-          >
-            +
-          </button>
-        </div>
-      </div>
+      <DurationInput autoFocus value={draft} onChange={setDraft} />
+      <AdjustmentNote value={note} onChange={setNote} />
+      {(nothing || tooMuch) && (
+        <span className="font-mono text-2xs text-terra-400">
+          {nothing ? 'укажите, сколько отнять' : `больше, чем записано: всего ${formatHoursMinutes(maxMinutes / 60)}`}
+        </span>
+      )}
 
       <div className="flex flex-col gap-2">
         <Choice
           title="Отдельной правкой"
           detail={`запись −${formatHoursMinutes(minutes / 60)} за ${adjustDateLabel}`}
-          onClick={() => onConfirm(minutes, { kind: 'separate' })}
+          disabled={nothing || tooMuch}
+          onClick={() => onConfirm(minutes, { kind: 'separate' }, note.trim())}
         />
 
         {activeTimer ? (
@@ -115,21 +113,19 @@ export function SubtractSheet({
                 ? `идёт с ${clock(activeTimer.started_at)} — начало сдвинется на ${clock(shiftedStart)}`
                 : `идёт всего ${formatHoursMinutes(runningMinutes / 60)} — отнять столько не выйдет`
             }
-            disabled={!runningFits}
-            onClick={() => onConfirm(minutes, { kind: 'running', timer: activeTimer })}
-          />
-        ) : lastSession ? (
-          <Choice
-            title="Из последней сессии таймера"
-            detail={
-              sessionFits
-                ? `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)}: ${formatHoursMinutes(entryMinutes(lastSession) / 60)} → ${formatHoursMinutes((entryMinutes(lastSession) - minutes) / 60)}`
-                : `${dayShort(lastSession.effective_date)}, ${clock(lastSession.started_at)}–${clock(lastSession.ended_at)} длилась ${formatHoursMinutes(entryMinutes(lastSession) / 60)} — меньше, чем нужно отнять`
-            }
-            disabled={!sessionFits}
-            onClick={() => lastSession && onConfirm(minutes, { kind: 'session', entry: lastSession })}
+            disabled={!runningFits || nothing}
+            onClick={() => onConfirm(minutes, { kind: 'running', timer: activeTimer }, note.trim())}
           />
         ) : null}
+
+        {lastEntry && (
+          <Choice
+            title="Из последней записи"
+            detail={lastEntryDetail(lastEntry, minutes, lastFits)}
+            disabled={!lastFits || nothing}
+            onClick={() => onConfirm(minutes, { kind: 'session', entry: lastEntry }, note.trim())}
+          />
+        )}
       </div>
 
       <button
@@ -142,6 +138,20 @@ export function SubtractSheet({
       </button>
     </Sheet>
   )
+}
+
+/** «сессия 9 окт, 14:40–15:18: 38 мин → 23 мин» или «правка за 9 окт: +2 ч → +1 ч 45 мин» */
+function lastEntryDetail(entry: TimeEntry, minutes: number, fits: boolean): string {
+  const before = entryMinutes(entry)
+  const after = before - minutes
+  const signed = (m: number) => `${m < 0 ? '−' : '+'}${formatHoursMinutes(Math.abs(m) / 60)}`
+  if (entry.entry_type === 'timer') {
+    const what = `сессия ${dayShort(entry.effective_date)}, ${clock(entry.started_at)}–${clock(entry.ended_at)}`
+    return fits
+      ? `${what}: ${formatHoursMinutes(before / 60)} → ${formatHoursMinutes(after / 60)}`
+      : `${what} длилась ${formatHoursMinutes(before / 60)} — меньше, чем нужно отнять`
+  }
+  return `правка за ${dayShort(entry.effective_date)}: ${signed(before)} → ${signed(after)}`
 }
 
 function Choice({
