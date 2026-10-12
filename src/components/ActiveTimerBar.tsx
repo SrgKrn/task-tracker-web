@@ -29,6 +29,7 @@ export function ActiveTimerBar() {
 
   return (
     <div
+      data-top-bar
       className="safe-top mx-4 mt-2 mb-2 flex items-center gap-3 rounded-[20px] px-[14px] py-[11px]"
       style={{ background: 'var(--s-timer-bg)', border: '1px solid var(--s-accent-line)' }}
     >

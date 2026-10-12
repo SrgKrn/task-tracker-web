@@ -115,6 +115,34 @@ export function Today() {
         ? `всё на день готово · ${doneToday}`
         : 'задач на день нет'
 
+  /*
+   * Подзадача, чей спринт тоже в списке дня, встаёт под него; остальные — на верхний
+   * уровень со строкой «↳ спринт» над названием.
+   */
+  const inToday = new Set(todayRows.map((t) => t.id))
+  const topRows = todayRows.filter((t) => !(t.parent_id && inToday.has(t.parent_id)))
+  const nestedOf = (id: string) => todayRows.filter((t) => t.parent_id === id)
+
+  function renderRow(task: Task, subtasksBelow: boolean) {
+    return (
+      <TaskListItem
+        task={task}
+        status={task.status_id ? statusById.get(task.status_id) : undefined}
+        label={model.listLabel(task)}
+        activeTimer={activeTimer}
+        onStartTimer={() => startTimer.mutate(task.id, { onError })}
+        onStopTimer={() => stopTimer.mutate(undefined, { onError })}
+        onDuplicate={() => duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })}
+        onDelete={() => setDeletingTask(task)}
+        subtasks={childrenOf.get(task.id)}
+        expandable={false}
+        subtasksBelow={subtasksBelow}
+        // под своим спринтом строка «↳ спринт» лишняя — вложенность видна и так
+        parentName={task.parent_id && !inToday.has(task.parent_id) ? taskById.get(task.parent_id)?.name : undefined}
+      />
+    )
+  }
+
   /** Недавние: последние задачи с учётом, открытые и не из списка на сегодня. */
   const recentTasks = useMemo(() => {
     const shown = new Set(todayTasks.map((t) => t.id))
@@ -292,24 +320,23 @@ export function Today() {
         )}
 
         {!isLoading &&
-          todayRows.map((task) => (
-            <TaskListItem
-              key={task.id}
-              task={task}
-              status={task.status_id ? statusById.get(task.status_id) : undefined}
-              label={model.listLabel(task)}
-              activeTimer={activeTimer}
-              onStartTimer={() => startTimer.mutate(task.id, { onError })}
-              onStopTimer={() => stopTimer.mutate(undefined, { onError })}
-              onDuplicate={() =>
-                duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })
-              }
-              onDelete={() => setDeletingTask(task)}
-              subtasks={childrenOf.get(task.id)}
-              expandable={false}
-              parentName={task.parent_id ? taskById.get(task.parent_id)?.name : undefined}
-            />
-          ))}
+          topRows.map((task) => {
+            const below = nestedOf(task.id)
+            return (
+              <div key={task.id} className="flex flex-col gap-1.5">
+                {renderRow(task, below.length > 0)}
+                {/* подзадачи спринта — под ним, с линией вложенности: рядом с ним на равных
+                    они читались как отдельные задачи с тем же учётом */}
+                {below.length > 0 && (
+                  <div className="ml-4 flex flex-col gap-1.5 pl-3" style={{ borderLeft: '2px solid var(--s-hairline-2)' }}>
+                    {below.map((sub) => (
+                      <div key={sub.id}>{renderRow(sub, false)}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
 
         {!isLoading && todayTasks.length === 0 && (
           <EmptyState>

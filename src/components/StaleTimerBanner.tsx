@@ -27,6 +27,7 @@ export function StaleTimerBanner() {
 
   return (
     <div
+      data-top-bar
       className="safe-top flex items-center justify-between gap-3 px-5 py-2 text-sm text-brass-600"
       style={{ background: 'var(--s-timer-bg)', borderBottom: '1px solid var(--s-accent-line)' }}
     >

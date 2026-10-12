@@ -263,6 +263,16 @@ input[type="number"] {
   padding-top: env(safe-area-inset-top);
 }
 
+/*
+ * Плашка сверху (учёт, «нет сети») уже отступила от «чёлки» iPhone — шапке страницы под
+ * ней второй такой отступ не нужен: между ними висела пустая полоса в полэкрана пальца.
+ * Плашка бывает и в липком блоке, и просто перед страницей (в карточке задачи).
+ */
+.app-top:has([data-top-bar]) ~ .app-content .safe-top,
+[data-top-bar] ~ .app-content .safe-top {
+  padding-top: 0.5rem;
+}
+
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }

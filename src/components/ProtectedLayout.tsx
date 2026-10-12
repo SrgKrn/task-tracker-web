@@ -44,13 +44,13 @@ function SignedIn() {
 
       <div className="min-w-0 flex-1">
         {/* статус трекинга — наверху и всегда на виду при прокрутке, а не внизу у таб-бара */}
-        <div className="sticky top-0 z-40">
+        <div className="app-top sticky top-0 z-40">
           <NetworkBanner />
           <StaleTimerBanner />
           {!onTaskCard && <ActiveTimerBar />}
         </div>
         {onTaskCard && <ActiveTimerBar />}
-        <div className="pb-24 lg:pb-0">
+        <div className="app-content pb-24 lg:pb-0">
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <Suspense fallback={null}>
             <Outlet />

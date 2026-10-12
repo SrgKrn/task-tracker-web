@@ -30,7 +30,27 @@ export const CHANGE_LABEL: Record<ChangeKind, string> = {
 
 export const RELEASES: Release[] = [
   {
-    version: '20',
+    version: '0.20.1',
+    date: '2026-10-12',
+    title: 'Подзадачи на «Сегодня» — под своим спринтом',
+    changes: [
+      {
+        kind: 'fixed',
+        title: 'Подзадачи видны как часть спринта',
+        text:
+          'Если спринт и его подзадача оба в списке дня, подзадача стоит под спринтом с отступом и линией, а часы ' +
+          'идущего учёта — только у неё. Подзадача без своего спринта в списке показывает его название над своим.',
+        where: '«Сегодня»',
+      },
+      {
+        kind: 'fixed',
+        title: 'Без пустой полосы под плашкой учёта',
+        text: 'На iPhone между плашкой идущего учёта и шапкой экрана больше нет пустого места.',
+      },
+    ],
+  },
+  {
+    version: '0.20',
     date: '2026-10-11',
     title: 'Надёжный учёт, вкладки в карточке, темп в сводке',
     changes: [
@@ -92,7 +112,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '19',
+    version: '0.19',
     date: '2026-10-11',
     title: 'Telegram, Google Календарь и Google Диск',
     changes: [
@@ -144,7 +164,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '18.1',
+    version: '0.18.1',
     date: '2026-10-10',
     title: '«Ещё» стало меню, комментарии можно удалять, страница не приближается',
     changes: [
@@ -187,7 +207,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '18',
+    version: '0.18',
     date: '2026-10-10',
     title: 'Конструктор групп, комментарии к сессиям и «Ещё» по блокам',
     changes: [
@@ -257,7 +277,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '17',
+    version: '0.17',
     date: '2026-10-09',
     title: 'Светлая тема, файлы, карточка проекта, напоминания и Telegram',
     changes: [
@@ -299,7 +319,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '16',
+    version: '0.16',
     date: '2026-10-01',
     title: 'Отчёт за период',
     changes: [
@@ -314,7 +334,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: '15',
+    version: '0.15',
     date: '2026-09-13',
     title: 'Подзадачи внутри спринтов',
     changes: [

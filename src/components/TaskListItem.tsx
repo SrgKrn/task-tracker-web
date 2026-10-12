@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
 import { Tag } from './ui'
-import { Check, ChevronDown, Plus } from './Icon'
+import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
@@ -33,6 +33,11 @@ interface TaskListItemProps {
   hideDoneSubtasks?: boolean
   /** у подзадачи вне своего спринта: чья она, иначе «Созвон» непонятно к чему относится */
   parentName?: string
+  /**
+   * Подзадачи спринта показаны прямо под строкой («Сегодня»): часы идущего учёта — у
+   * подзадачи, по которой он идёт, а не дважды.
+   */
+  subtasksBelow?: boolean
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -55,6 +60,7 @@ export function TaskListItem({
   forceExpanded = false,
   hideDoneSubtasks = false,
   parentName,
+  subtasksBelow = false,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -114,7 +120,8 @@ export function TaskListItem({
   // мета держится в одну строку: раньше приписка «просрочено» переносила её на вторую
   // и строка становилась на треть выше соседних. Состояние показываем тегом справа —
   // там для него есть отдельное место, и оно не спорит с группами за ширину.
-  const category = parentName ? [label, parentName].filter(Boolean).join(' · ') : label
+  // спринт подзадачи — отдельной строкой над названием, а не хвостом меты, где его обрезало
+  const category = label
   // «1,8 / 0 ч» выглядело как ошибка: у задачи без плана нет знаменателя
   const hours = hasPlan
     ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
@@ -122,7 +129,7 @@ export function TaskListItem({
   const meta = `${hours}${category ? ` · ${category}` : ''}`
 
   // часы справа: у раскрытого спринта они уже тикают в строке подзадачи — второй раз не нужны
-  const showClock = isRunning && !!activeTimer && (isRunningSelf || !open)
+  const showClock = isRunning && !!activeTimer && (isRunningSelf || (!open && !subtasksBelow))
 
   function onTouchStart(e: React.TouchEvent) {
     if (!swipeable) return
@@ -248,6 +255,12 @@ export function TaskListItem({
                 }
               }}
             >
+              {parentName && (
+                <span className="flex min-w-0 items-center gap-1 text-2xs leading-[1.4] text-slate-500">
+                  <CornerDownRight size={11} />
+                  <span className="truncate">{parentName}</span>
+                </span>
+              )}
               {/* две строки вместо одной: тег статуса справа оставлял имени ~190px,
                   и половина названий обрывалась на середине прямо на главном экране */}
               <p
