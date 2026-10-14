@@ -1,6 +1,6 @@
 import { buildGroupModel } from './groups'
 import { entryNote } from './notes'
-import { overlapsPeriod, toDateString } from './period'
+import { formatDayMonth, overlapsPeriod, toDateString } from './period'
 import { entryMinutes } from './time'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
 
@@ -35,6 +35,7 @@ export interface ReportInput {
   firstEntryDate: string | null
   perDay: number | null
   perMonth: number | null
+  /** момент сборки; его дата — «сегодня», по ней видно, что период ещё идёт */
   generatedAt: Date
   options: ReportOptions
 }
@@ -156,14 +157,15 @@ export interface ReportData {
   inner: ReportDim | null
   /** все группы — колонки листа «Записи» */
   groupNames: string[]
-  /** «август» или «прошлый период» — то, с чем сравниваем, в подписях колонок */
+  /** «август», «1–15 сент» (период ещё идёт) или «прошлый период» — то, с чем сравниваем, в подписях колонок */
   prevName: string
-  /** «к августу», «к прошлому периоду» */
+  /** «к августу», «к 15 сент», «к прошлому периоду» */
   prevDative: string
-  /** «с августом», «с прошлым периодом» */
+  /** «с августом», «с 1–15 сентября», «с прошлым периодом» */
   prevWith: string
   /** «сентябрь» или «этот период» — подпись текущего в легендах */
   curName: string
+  /** отрезок, с которым сравниваем: пока период идёт — урезанный до прошедшего числа дней */
   prevFrom: string
   prevTo: string
   /** учёт начат внутри прошлого периода — сравнение с ним завышает рост */
@@ -251,7 +253,9 @@ export function isoWeek(iso: string): number {
 
 /**
  * С чем сравнивать. Целый месяц — с прошлым целым месяцем, хотя дней в них может быть
- * разное число: сентябрь с августом сравнивают именно так. Любой другой отрезок —
+ * разное число: сентябрь с августом сравнивают именно так. Начало месяца (с 1-го по какое-то
+ * число того же месяца — так экспорт ставит период по умолчанию) — с теми же числами прошлого
+ * месяца: 1–15 октября с 1–15 сентября, а не с 16–30 сентября. Любой другой отрезок —
  * с отрезком той же длины прямо перед ним.
  */
 export function previousPeriod(from: string, to: string): { from: string; to: string } {
@@ -260,8 +264,36 @@ export function previousPeriod(from: string, to: string): { from: string; to: st
     const prevFrom = toDateString(new Date(d.getFullYear(), d.getMonth() - 1, 1))
     return { from: prevFrom, to: lastDayOfMonth(prevFrom) }
   }
+  if (from.endsWith('-01') && from.slice(0, 7) === to.slice(0, 7)) {
+    const d = parseDate(from)
+    const prevFrom = toDateString(new Date(d.getFullYear(), d.getMonth() - 1, 1))
+    const prevLast = lastDayOfMonth(prevFrom)
+    const sameDay = addDays(prevFrom, parseDate(to).getDate() - 1)
+    return { from: prevFrom, to: sameDay < prevLast ? sameDay : prevLast }
+  }
   const length = daysOf(from, to).length
   return { from: addDays(from, -length), to: addDays(from, -1) }
+}
+
+/**
+ * Отрезок прошлого периода, с которым сравниваем на самом деле. Пока период идёт (сегодня
+ * внутри него), от прошлого берём столько же дней, сколько прошло, но не дальше его конца:
+ * 1–15 октября — с 1–15 сентября, а не с целым сентябрём, иначе в середине месяца всегда
+ * выходит ненастоящий минус. Так же считает «Сводка».
+ */
+export function comparisonPeriod(
+  from: string,
+  to: string,
+  today: string,
+): { from: string; to: string; partial: boolean } {
+  const prev = previousPeriod(from, to)
+  // начало прошлого месяца (1–15 сент) называем числами, как и урезанный отрезок
+  const monthStart = (p: { from: string; to: string }) =>
+    p.from.endsWith('-01') && p.to < lastDayOfMonth(p.from)
+  if (today < from || today >= to) return { ...prev, partial: monthStart(prev) }
+  const elapsed = daysOf(from, today).length
+  const cut = addDays(prev.from, elapsed - 1)
+  return cut < prev.to ? { from: prev.from, to: cut, partial: true } : { ...prev, partial: monthStart(prev) }
 }
 
 /** «Сентябрь 2026», «1–14 сентября 2026», «28 сентября – 4 октября 2026» */
@@ -357,12 +389,31 @@ function localTime(iso: string | null): string {
 
 export function buildReport(input: ReportInput): ReportData {
   const { from, to, tasks, statuses, options } = input
-  const prev = previousPeriod(from, to)
+  const today = toDateString(input.generatedAt)
+  const prev = comparisonPeriod(from, to, today)
   const whole = isWholeMonth(from, to)
   const prevMonth = parseDate(prev.from).getMonth()
-  const prevName = whole ? MONTHS_NOM[prevMonth] : 'прошлый период'
-  const prevDative = whole ? MONTHS_DAT[prevMonth] : 'прошлому периоду'
-  const prevWith = whole ? MONTHS_INS[prevMonth] : 'прошлым периодом'
+  const sameMonth = prev.from.slice(0, 7) === prev.to.slice(0, 7)
+  // период ещё идёт — называем отрезок прошлого числами: «к 15 сент», а не «к сентябрю»
+  const prevName = prev.partial
+    ? prev.from === prev.to
+      ? formatDayMonth(prev.to, today)
+      : sameMonth
+        ? `${parseDate(prev.from).getDate()}–${formatDayMonth(prev.to, today)}`
+        : `${formatDayMonth(prev.from, today)} – ${formatDayMonth(prev.to, today)}`
+    : whole
+      ? MONTHS_NOM[prevMonth]
+      : 'прошлый период'
+  const prevDative = prev.partial ? formatDayMonth(prev.to, today) : whole ? MONTHS_DAT[prevMonth] : 'прошлому периоду'
+  const prevWith = prev.partial
+    ? prev.from === prev.to
+      ? dayMonth(prev.to)
+      : sameMonth
+        ? `${parseDate(prev.from).getDate()}–${dayMonth(prev.to)}`
+        : `${dayMonth(prev.from)} – ${dayMonth(prev.to)}`
+    : whole
+      ? MONTHS_INS[prevMonth]
+      : 'прошлым периодом'
   const curName = whole ? MONTHS_NOM[parseDate(from).getMonth()] : 'этот период'
 
   const taskById = new Map(tasks.map((t) => [t.id, t]))
