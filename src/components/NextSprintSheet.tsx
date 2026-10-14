@@ -122,7 +122,7 @@ export function NextSprintSheet({
           type="button"
           onClick={() => setEditingPlan(true)}
           className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left"
-          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
           <span className="tabular font-mono text-base text-text">
             {plan > 0 ? formatHoursMinutes(plan) : 'не задан'}
@@ -157,8 +157,8 @@ export function NextSprintSheet({
                     className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-xs"
                     style={
                       checked
-                        ? { background: 'var(--s-accent)', color: 'var(--s-on-accent)' }
-                        : { border: '1.5px solid var(--s-border-strong-2)' }
+                        ? { background: 'var(--accent)', color: 'var(--on-accent)' }
+                        : { border: '1.5px solid var(--border-strong)' }
                     }
                   >
                     {checked && <Check size={12} />}

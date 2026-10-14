@@ -5,7 +5,7 @@ import { liveNotificationEnabled, setLiveNotificationEnabled, usePush } from '..
 import { useTelegramActions, useTelegramLink, useTelegramStatus } from '../lib/telegram'
 import { setTheme, useTheme, type ThemeChoice } from '../lib/theme'
 
-const card = { background: 'var(--s-surface)', border: '1px solid var(--s-border)' }
+const card = { background: 'var(--surface)', border: '1px solid var(--border)' }
 
 /** Оформление: тёмная, светлая или как в системе. Настройка этого устройства. */
 export function ThemeCard() {
@@ -85,7 +85,7 @@ export function NotificationsCard() {
               disabled={busy}
               onClick={() => run(push.enable, 'Уведомления включены')}
               className="h-11 flex-1 rounded-sm text-base font-semibold disabled:opacity-50"
-              style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+              style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
             >
               Включить
             </button>
@@ -188,8 +188,8 @@ export function TelegramCard() {
             }}
             className="flex h-11 items-center justify-center rounded-sm text-base font-semibold"
             style={{
-              background: link ? 'var(--s-accent)' : 'var(--s-disabled-bg)',
-              color: link ? 'var(--s-on-accent)' : 'var(--s-disabled-fg)',
+              background: link ? 'var(--accent)' : 'var(--surface-sunken)',
+              color: link ? 'var(--on-accent)' : 'var(--text-disabled)',
             }}
           >
             {link ? 'Подключить Telegram' : 'Готовим ссылку…'}
@@ -247,7 +247,7 @@ export function TelegramCard() {
           </div>
           <p
             className="rounded-sm px-3 py-2.5 text-xs leading-[1.6] text-text-secondary"
-            style={{ background: 'var(--s-surface-2)', border: '1px solid var(--divider)' }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--divider)' }}
           >
             В чате с ботом: <span className="font-mono text-text-secondary">/timer</span> — начать или остановить учёт,{' '}
             <span className="font-mono text-text-secondary">/today</span> и <span className="font-mono text-text-secondary">/week</span>{' '}

@@ -1,16 +1,12 @@
 @import "tailwindcss";
-/* Дизайн-система: tokens.css — первым и вне слоёв, затем утилиты Tailwind v4 на её токенах,
-   доменные токены Semternity и временный слой совместимости со старыми именами (до 0.27). */
+/* Дизайн-система: tokens.css — первым и вне слоёв, затем утилиты Tailwind v4 на её токенах
+   и доменные токены Semternity. Старые имена (--s-*, slate/brass/terra/sage) убраны в 0.27;
+   их возврат ловит scripts/check-tokens.mjs в npm run lint. */
 @import "./design-system/tokens.css";
 @import "./design-system/tokens.v4.css";
 @import "./design-system/semternity.css";
-@import "./design-system/compat.css";
 
-/*
- * Шкала шрифтов пакета: xs 12 · sm 13 · base 14 · md 16 · lg 20 · xl 24 · 2xl 32.
- * В 0.22 классы переименованы на ступень вверх (text-sm 14 → text-base 14 и т. д.),
- * поэтому размеры на экране почти не изменились.
- */
+/* Шкала шрифтов пакета: xs 12 · sm 13 · base 14 · md 16 · lg 20 · xl 24 · 2xl 32. */
 
 html,
 body,

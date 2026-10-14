@@ -130,7 +130,7 @@ export function GroupsAdmin() {
         type="button"
         onClick={() => setCreating(true)}
         className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-sm text-base font-semibold"
-        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
       >
         <Plus size={15} />
         Новая группа
@@ -336,7 +336,7 @@ export function GroupPage() {
               type="button"
               onClick={() => setConfirmingDelete(true)}
               className="h-11 rounded-sm text-base font-medium text-danger-text"
-              style={{ border: '1px solid var(--s-danger-line)' }}
+              style={{ border: '1px solid var(--danger-line)' }}
             >
               Удалить группу
             </button>
@@ -362,7 +362,7 @@ export function GroupPage() {
               className="flex flex-col items-center gap-1.5 rounded-md py-2 active:bg-surface-sunken"
             >
               <span
-                className="flex h-10 w-10 items-center justify-center rounded-full text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-text-inverse"
                 style={{ background: `var(--${c})` }}
               >
                 {coloring?.color === c && <Check size={18} />}
@@ -442,7 +442,7 @@ function GroupSettings({ group, model }: { group: Group; model: GroupModel }) {
   return (
     <div
       className="mb-5 flex flex-col gap-3 rounded-md p-3.5"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <Overline>Настройки группы</Overline>
       <div className="grid grid-cols-2 gap-[9px]">

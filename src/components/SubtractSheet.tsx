@@ -171,7 +171,7 @@ function Choice({
       onClick={onClick}
       disabled={disabled}
       className="flex min-h-[60px] flex-col justify-center gap-0.5 rounded-sm px-3.5 py-2.5 text-left disabled:opacity-45"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border-strong)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)' }}
     >
       <span className="text-base font-medium text-text">{title}</span>
       <span className="text-sm leading-[1.45] text-text-secondary">{detail}</span>

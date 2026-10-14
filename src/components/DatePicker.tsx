@@ -123,7 +123,7 @@ export function DatePicker({
               type="button"
               onClick={() => shiftMonth(-1)}
               className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
-              style={{ border: '1px solid var(--s-border)' }}
+              style={{ border: '1px solid var(--border)' }}
               aria-label="Предыдущий месяц"
             >
               <ChevronLeft size={16} className="mx-auto" />
@@ -135,7 +135,7 @@ export function DatePicker({
               type="button"
               onClick={() => shiftMonth(1)}
               className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
-              style={{ border: '1px solid var(--s-border)' }}
+              style={{ border: '1px solid var(--border)' }}
               aria-label="Следующий месяц"
             >
               <ChevronRight size={16} className="mx-auto" />
@@ -165,12 +165,12 @@ export function DatePicker({
                   }}
                   className="tabular flex h-9 items-center justify-center rounded-sm font-mono text-sm"
                   style={{
-                    background: selected ? 'var(--s-accent)' : 'transparent',
+                    background: selected ? 'var(--accent)' : 'transparent',
                     color: selected
-                      ? 'var(--s-on-accent)'
+                      ? 'var(--on-accent)'
                       : isToday
-                        ? 'var(--s-accent)'
-                        : 'var(--color-slate-300)',
+                        ? 'var(--accent)'
+                        : 'var(--text-secondary)',
                     fontWeight: selected || isToday ? 600 : 400,
                   }}
                 >
@@ -180,15 +180,15 @@ export function DatePicker({
             })}
           </div>
 
-          <div className="mt-2.5 flex gap-2" style={{ borderTop: '1px solid var(--s-hairline)' }}>
+          <div className="mt-2.5 flex gap-2" style={{ borderTop: '1px solid var(--divider)' }}>
             <button
               type="button"
               onClick={() => {
                 onChange(today)
                 setOpen(false)
               }}
-              className="mt-2.5 flex-1 rounded-sm py-1.5 text-sm text-slate-300"
-              style={{ border: '1px solid var(--s-border)' }}
+              className="mt-2.5 flex-1 rounded-sm py-1.5 text-sm text-text-secondary"
+              style={{ border: '1px solid var(--border)' }}
             >
               Сегодня
             </button>
@@ -198,8 +198,8 @@ export function DatePicker({
                 onChange(null)
                 setOpen(false)
               }}
-              className="mt-2.5 flex-1 rounded-sm py-1.5 text-sm text-slate-500"
-              style={{ border: '1px solid var(--s-border)' }}
+              className="mt-2.5 flex-1 rounded-sm py-1.5 text-sm text-text-secondary"
+              style={{ border: '1px solid var(--border)' }}
             >
               Очистить
             </button>

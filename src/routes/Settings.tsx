@@ -140,7 +140,7 @@ function BudgetForm() {
   return (
     <div
       className="flex flex-col gap-3 rounded-md p-3.5"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs leading-[1.5] text-text-secondary">
@@ -183,7 +183,7 @@ function BudgetForm() {
           )
         }
         className="h-11 rounded-sm text-base font-semibold"
-        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
       >
         Сохранить
       </button>
@@ -346,7 +346,7 @@ function ExportSection() {
   return (
     <div
       className="flex flex-col gap-3 rounded-md p-3.5"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs leading-[1.5] text-text-secondary">

@@ -29,10 +29,10 @@ export function StaleTimerBanner() {
     <div
       data-top-bar
       className="safe-top-bar flex items-center justify-between gap-3 px-5 pb-2 text-base text-accent-text"
-      style={{ background: 'var(--s-timer-bg)', borderBottom: '1px solid var(--s-accent-line)' }}
+      style={{ background: 'var(--timer-bg)', borderBottom: '1px solid var(--timer-border)' }}
     >
       <span>Таймер идёт уже {hours} ч — забыли остановить?</span>
-      <button onClick={() => setDismissedFor(activeTimer.started_at)} className="shrink-0 text-slate-400">
+      <button onClick={() => setDismissedFor(activeTimer.started_at)} className="shrink-0 text-text-secondary">
         <Close size={15} />
       </button>
     </div>

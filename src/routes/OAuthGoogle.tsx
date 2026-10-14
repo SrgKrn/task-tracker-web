@@ -45,18 +45,18 @@ export function OAuthGoogle() {
   return (
     <div className="safe-top-page mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-5 px-6 text-center">
       <Logo size={40} />
-      <p className={`text-md leading-[1.5] ${state.kind === 'error' ? 'text-terra-400' : 'text-slate-100'}`}>{state.text}</p>
+      <p className={`text-md leading-[1.5] ${state.kind === 'error' ? 'text-danger-text' : 'text-text'}`}>{state.text}</p>
       {state.kind !== 'working' && (
         <>
           {state.kind === 'ok' && (
-            <p className="text-base leading-[1.5] text-slate-500">
+            <p className="text-base leading-[1.5] text-text-secondary">
               Если это окно открылось поверх приложения — закройте его и вернитесь в Semternity.
             </p>
           )}
           <Link
             to={service === 'calendar' ? '/settings/calendar' : '/settings/drive'}
-            className="flex h-11 items-center rounded-[14px] px-6 text-base font-semibold"
-            style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+            className="flex h-11 items-center rounded-sm px-6 text-base font-semibold"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
           >
             Открыть Semternity
           </Link>

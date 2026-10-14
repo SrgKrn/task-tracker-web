@@ -206,13 +206,13 @@ export function TaskForm({
         <button
           type="button"
           onClick={() => setEditingPlan(true)}
-          className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left"
-          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <span className="tabular font-mono text-base text-slate-100">
+          <span className="tabular font-mono text-base text-text">
             {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
           </span>
-          <ChevronDown size={14} className="text-slate-600" />
+          <ChevronDown size={14} className="text-text-secondary" />
         </button>
       </div>
 
@@ -270,12 +270,12 @@ export function TaskForm({
       />
 
       {/* вся строка — цель нажатия: голый чекбокс был 13×13 */}
-      <label className="-my-1 flex min-h-11 items-center gap-2.5 text-base text-slate-400">
+      <label className="-my-1 flex min-h-11 items-center gap-2.5 text-base text-text-secondary">
         <input
           type="checkbox"
           checked={values.is_daily}
           onChange={(e) => set('is_daily', e.target.checked)}
-          className="h-[18px] w-[18px] shrink-0 accent-brass-600"
+          className="h-[18px] w-[18px] shrink-0 accent-accent"
         />
         Ежедневная — всегда в списке дня
       </label>
@@ -283,8 +283,8 @@ export function TaskForm({
       {!onFieldChange && (
         <button
           type="submit"
-          className="mt-1 h-11 w-full rounded-[14px] text-base font-semibold lg:w-auto lg:self-start lg:px-8"
-          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+          className="mt-1 h-11 w-full rounded-sm text-base font-semibold lg:w-auto lg:self-start lg:px-8"
+          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
           {submitLabel}
         </button>

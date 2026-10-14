@@ -110,12 +110,12 @@ export function PickerField({
           type="button"
           onClick={() => setOpen(true)}
           className={`flex max-w-full items-center gap-1 ${
-            chipLarge ? 'min-h-9 rounded-[9px] px-3 py-2 text-sm' : 'rounded-[7px] px-2 py-[3px] text-xs'
+            chipLarge ? 'min-h-9 rounded-sm px-3 py-2 text-sm' : 'rounded-sm px-2 py-[3px] text-xs'
           }`}
           style={{
-            background: selected ? 'var(--s-accent-ghost)' : 'transparent',
-            border: `1px ${selected ? 'solid' : 'dashed'} var(--s-border-strong-2)`,
-            color: selected ? 'var(--s-accent-text)' : 'var(--s-muted-text)',
+            background: selected ? 'var(--accent-soft)' : 'transparent',
+            border: `1px ${selected ? 'solid' : 'dashed'} var(--border-strong)`,
+            color: selected ? 'var(--accent-text)' : 'var(--text-secondary)',
           }}
         >
           <span className="truncate">{selected ? `${label}: ${selected.name}` : shown}</span>
@@ -127,11 +127,11 @@ export function PickerField({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-base"
+            className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left text-base"
             style={{
-              background: 'var(--s-surface)',
-              border: '1px solid var(--s-border)',
-              color: selected ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: selected ? 'var(--text)' : 'var(--text-tertiary)',
             }}
           >
             <span className="truncate">{shown}</span>

@@ -103,8 +103,8 @@ export function ItemDetail() {
               <Link
                 key={child.id}
                 to={`/items/${child.id}`}
-                className="rounded-sm px-[13px] py-[9px] text-sm text-[var(--s-muted-text)]"
-                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)', opacity: child.archived ? 0.55 : 1 }}
+                className="rounded-sm px-[13px] py-[9px] text-sm text-[var(--text-secondary)]"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', opacity: child.archived ? 0.55 : 1 }}
               >
                 {child.name}
               </Link>
@@ -119,7 +119,7 @@ export function ItemDetail() {
 
       <div
         className="grid grid-cols-3 rounded-md"
-        style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
       >
         {[
           { label: 'Всего, ч', value: formatHoursRu(totalHours) },
@@ -129,7 +129,7 @@ export function ItemDetail() {
           <div
             key={s.label}
             className="flex flex-col gap-0.5 px-3.5 py-3"
-            style={i > 0 ? { borderLeft: '1px solid var(--s-border)' } : undefined}
+            style={i > 0 ? { borderLeft: '1px solid var(--border)' } : undefined}
           >
             <FieldLabel>{s.label}</FieldLabel>
             <span className="tabular font-mono text-lg font-semibold text-text">{s.value}</span>
@@ -196,7 +196,7 @@ function DriveFolder({ item }: { item: GroupItem }) {
         type="button"
         onClick={choose}
         className="flex min-h-11 items-center gap-2.5 self-start rounded-sm px-3 text-sm text-text-secondary"
-        style={{ border: '1px dashed var(--s-border-strong-2)' }}
+        style={{ border: '1px dashed var(--border-strong)' }}
       >
         <Drive size={15} />
         Привязать папку на Google Диске
@@ -206,7 +206,7 @@ function DriveFolder({ item }: { item: GroupItem }) {
   return (
     <div
       className="flex items-center gap-3 rounded-sm py-2 pr-2 pl-3"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <span className="text-accent-text">
         <Drive size={16} />
@@ -251,8 +251,8 @@ function ItemDescription({ item }: { item: GroupItem }) {
       }}
       rows={Math.min(10, Math.max(3, draft.split('\n').length + 1))}
       placeholder="Описание: кто клиент, о чём договорились, контакты, ссылки. Сохраняется само"
-      className="resize-none rounded-md px-3.5 py-3 text-base leading-[1.5] text-text placeholder:text-[var(--s-placeholder)]"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+      className="resize-none rounded-md px-3.5 py-3 text-base leading-[1.5] text-text placeholder:text-[var(--text-tertiary)]"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     />
   )
 }
@@ -444,11 +444,11 @@ function ItemHistory({
   if (tasks.length === 0) return <EmptyState>Здесь пока ничего не происходило.</EmptyState>
 
   const dot: Record<string, string> = {
-    time: 'var(--s-accent)',
-    done: 'var(--s-success)',
+    time: 'var(--accent)',
+    done: 'var(--success)',
     file: 'var(--text-secondary)',
-    comment: 'var(--s-border-strong-2)',
-    new: 'var(--s-accent-muted)',
+    comment: 'var(--border-strong)',
+    new: 'var(--ring-idle)',
   }
 
   return (

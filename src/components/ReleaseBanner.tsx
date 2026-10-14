@@ -33,23 +33,23 @@ export function ReleaseBanner() {
     <div
       role="status"
       // над таб-баром на телефоне, в углу на компьютере
-      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+104px)] z-40 flex items-start gap-3 rounded-[20px] p-3.5 lg:right-6 lg:bottom-6 lg:left-auto lg:w-[380px]"
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+104px)] z-40 flex items-start gap-3 rounded-lg p-3.5 lg:right-6 lg:bottom-6 lg:left-auto lg:w-[380px]"
       style={{
-        background: 'var(--s-surface)',
-        border: '1px solid var(--s-accent-line)',
-        boxShadow: 'var(--s-pop-shadow)',
+        background: 'var(--surface)',
+        border: '1px solid var(--timer-border)',
+        boxShadow: 'var(--shadow-popover)',
       }}
     >
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]"
-        style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm"
+        style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
       >
         <Sparkle size={17} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-base font-semibold text-slate-100">Вышла версия {LATEST_RELEASE.version}</span>
-          <span className="text-sm leading-[1.45] text-slate-400">
+          <span className="text-base font-semibold text-text">Вышла версия {LATEST_RELEASE.version}</span>
+          <span className="text-sm leading-[1.45] text-text-secondary">
             {LATEST_RELEASE.title}. Ознакомьтесь с изменениями.
           </span>
         </div>
@@ -59,8 +59,8 @@ export function ReleaseBanner() {
             markSeen.mutate(LATEST_RELEASE.version)
             navigate('/changelog')
           }}
-          className="h-9 self-start rounded-[11px] px-3.5 text-sm font-semibold"
-          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+          className="h-9 self-start rounded-sm px-3.5 text-sm font-semibold"
+          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
           Что нового
         </button>
@@ -69,7 +69,7 @@ export function ReleaseBanner() {
         type="button"
         onClick={() => markSeen.mutate(LATEST_RELEASE.version)}
         aria-label="Скрыть"
-        className="hit-44 -mt-0.5 -mr-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-slate-500"
+        className="hit-44 -mt-0.5 -mr-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-text-secondary"
       >
         <Close size={15} />
       </button>

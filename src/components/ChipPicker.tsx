@@ -93,7 +93,7 @@ export function ChipPicker({
             disabled={!draft.trim()}
             aria-label="Создать"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm disabled:opacity-40"
-            style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
           >
             <Check size={17} />
           </button>

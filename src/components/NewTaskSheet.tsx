@@ -194,7 +194,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             <button
               type="button"
               onClick={() => setEditingPlan(true)}
-              className="tabular min-w-[92px] rounded-sm py-1 text-center font-mono text-lg font-semibold text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
+              className="tabular min-w-[92px] rounded-sm py-1 text-center font-mono text-lg font-semibold text-text underline decoration-dotted decoration-text-secondary underline-offset-4"
             >
               {formatHoursMinutes(plan)}
             </button>
@@ -236,7 +236,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             Создать и начать
           </Button>
         </div>
-        {whyDisabled && title.trim() && <p className="-mt-1.5 text-center text-xs text-slate-500">{whyDisabled}</p>}
+        {whyDisabled && title.trim() && <p className="-mt-1.5 text-center text-xs text-text-secondary">{whyDisabled}</p>}
 
         {/* внутри содержимого листа, а не рядом: клик по подложке этого окна не должен
             всплыть до подложки листа и закрыть заодно и его */}

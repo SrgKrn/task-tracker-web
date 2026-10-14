@@ -60,7 +60,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   secondary:
     'border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-hover active:bg-surface-sunken',
   ghost: 'text-text-secondary hover:bg-surface-sunken hover:text-text active:bg-surface-sunken',
-  danger: 'bg-danger text-white hover:brightness-95 active:brightness-90',
+  danger: 'bg-danger text-text-inverse hover:brightness-95 active:brightness-90',
 }
 
 /** md — высота касания (44 на телефоне, 32 на широком экране), lg — подвал листа. */
@@ -88,12 +88,18 @@ export function Button({
   size?: ButtonSize
   loading?: boolean
 }) {
+  // свой цвет текста (например «Перенести» малиновым) заменяет цвет варианта, а не спорит
+  // с ним в CSS: какой из двух классов победит, зависело бы от порядка в таблице стилей
+  const ownColor = /\btext-(text|danger|accent|success|warning|on-accent)/.test(className)
+  const variantClass = ownColor
+    ? BUTTON_VARIANT[variant].replace(/(^|\s)(hover:)?text-[a-z-]+/g, '')
+    : BUTTON_VARIANT[variant]
   return (
     <button
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`relative inline-flex items-center justify-center gap-1.5 rounded-sm font-medium disabled:opacity-50 ${BUTTON_SIZE[size]} ${BUTTON_VARIANT[variant]} ${className}`}
+      className={`relative inline-flex items-center justify-center gap-1.5 rounded-sm font-medium disabled:opacity-50 ${BUTTON_SIZE[size]} ${variantClass} ${className}`}
       {...rest}
     >
       <span className={`inline-flex items-center gap-1.5 ${loading ? 'invisible' : ''}`}>{children}</span>

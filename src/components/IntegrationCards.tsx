@@ -6,9 +6,9 @@ import { useCalendarActions, useCalendarSources, useSetMeetingReminders } from '
 import { useSaveDriveReportsFolder, useUserSettings } from '../lib/queries/userSettings'
 import type { CalendarSource } from '../lib/types'
 
-const card = { background: 'var(--s-surface)', border: '1px solid var(--s-border)' }
+const card = { background: 'var(--surface)', border: '1px solid var(--border)' }
 const outline = { border: '1px solid var(--border-strong)' }
-const accent = { background: 'var(--s-accent)', color: 'var(--s-on-accent)' }
+const accent = { background: 'var(--accent)', color: 'var(--on-accent)' }
 
 function when(iso: string | null): string {
   if (!iso) return 'ещё не обновлялся'
@@ -44,7 +44,7 @@ function SourceRow({ src, title, onReconnect }: { src: CalendarSource; title: st
   return (
     <div
       className="flex flex-col gap-2 rounded-sm p-3"
-      style={{ background: 'var(--s-surface-2)', border: '1px solid var(--divider)' }}
+      style={{ background: 'var(--surface)', border: '1px solid var(--divider)' }}
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="min-w-0 truncate text-base font-medium text-text">{title}</span>
@@ -214,7 +214,7 @@ export function CalendarCard() {
               inputMode="url"
               autoCapitalize="off"
               autoCorrect="off"
-              className="h-11 min-w-0 rounded-sm px-3 font-mono text-sm text-text placeholder:text-[var(--s-placeholder)]"
+              className="h-11 min-w-0 rounded-sm px-3 font-mono text-sm text-text placeholder:text-[var(--text-tertiary)]"
               
             />
             <span className="text-xs leading-[1.45] text-text-secondary">
@@ -357,7 +357,7 @@ export function DriveCard() {
           </span>
           <div
             className="flex items-center justify-between gap-3 rounded-sm px-3 py-2.5"
-            style={{ background: 'var(--s-surface-2)', border: '1px solid var(--divider)' }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--divider)' }}
           >
             <span className="flex min-w-0 flex-col">
               <span className="text-sm text-text-secondary">Папка для отчётов</span>

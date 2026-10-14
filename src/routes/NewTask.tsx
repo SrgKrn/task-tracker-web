@@ -23,10 +23,10 @@ export function NewTask() {
 
   return (
     <div className="safe-top-page mx-auto max-w-lg px-5 pt-4 pb-6 lg:mx-0 lg:w-full lg:max-w-none">
-      <button type="button" onClick={() => navigate('/tasks')} className="mb-4 flex items-center gap-2 text-base text-slate-400">
+      <button type="button" onClick={() => navigate('/tasks')} className="mb-4 flex items-center gap-2 text-base text-text-secondary">
         <ArrowLeft size={15} />Назад
       </button>
-      <h1 className="mb-4 text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">
+      <h1 className="mb-4 text-xl font-semibold leading-[1.2] tracking-[-.02em] text-text">
         Новая задача
       </h1>
       <TaskForm

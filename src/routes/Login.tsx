@@ -128,7 +128,7 @@ export function Login() {
           ? 'Учёт часов и задач — там же, где вы его оставили.'
           : 'Данные привязаны к почте и синхронизируются между устройствами.'
 
-  const fieldStyle = { background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }
+  const fieldStyle = { background: 'var(--surface)', border: '1px solid var(--border-strong)' }
 
   return (
     <div className="safe-top-page safe-bottom flex min-h-full flex-col items-center justify-center px-5 py-10">
@@ -222,7 +222,7 @@ export function Login() {
           {error && (
             <p
               className="rounded-sm px-3 py-2.5 text-sm leading-[1.5] text-danger-text"
-              style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
+              style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger-line)' }}
               role="alert"
             >
               {error}
@@ -231,7 +231,7 @@ export function Login() {
           {info && (
             <p
               className="rounded-sm px-3 py-2.5 text-sm leading-[1.5] text-success-text"
-              style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
+              style={{ background: 'var(--success-soft)', border: '1px solid var(--success-line)' }}
               role="status"
             >
               {info}
@@ -242,7 +242,7 @@ export function Login() {
             type="submit"
             disabled={loading}
             className="h-12 rounded-sm text-base font-semibold disabled:opacity-50"
-            style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
           >
             {submitLabel}
           </button>

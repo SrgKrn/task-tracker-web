@@ -30,11 +30,11 @@ export function NetworkBanner() {
       role="status"
       data-top-bar
       className="safe-top-bar flex items-center gap-2 px-5 pb-2 text-sm"
-      style={{ background: 'var(--s-surface-2)', borderBottom: '1px solid var(--s-border)', color: 'var(--s-text-soft)' }}
+      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}
     >
       <span
         className="h-[7px] w-[7px] shrink-0 rounded-full"
-        style={{ background: online ? 'var(--s-accent)' : 'var(--s-danger-text)' }}
+        style={{ background: online ? 'var(--accent)' : 'var(--danger-text)' }}
       />
       {online
         ? `Отправляем учёт: ${plural(pending, ACTIONS)}…`

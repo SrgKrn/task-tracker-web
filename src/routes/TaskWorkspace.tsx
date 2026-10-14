@@ -40,9 +40,9 @@ function TaskWorkspaceEmpty() {
 
   return (
     <div className="hidden flex-col items-center gap-5 lg:flex">
-      <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--s-bg)" marker>
+      <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--bg)" marker>
         <span className="flex flex-col items-center gap-0.5">
-          <span className="tabular font-mono text-xl font-semibold text-slate-50">
+          <span className="tabular font-mono text-xl font-semibold text-text">
             {formatHoursRu(dayFact)}
           </span>
           <span className="text-sm font-medium text-text-secondary">
@@ -58,12 +58,12 @@ function TaskWorkspaceEmpty() {
         ].map((s) => (
           <span key={s.label} className="flex flex-col items-center gap-1">
             <Overline>{s.label}</Overline>
-            <span className="tabular font-mono text-lg font-semibold text-slate-100">{s.value}</span>
+            <span className="tabular font-mono text-lg font-semibold text-text">{s.value}</span>
           </span>
         ))}
       </div>
 
-      <p className="text-base text-slate-600">Выберите задачу слева, чтобы открыть карточку</p>
+      <p className="text-base text-text-secondary">Выберите задачу слева, чтобы открыть карточку</p>
     </div>
   )
 }
@@ -81,7 +81,7 @@ export function TaskWorkspace() {
       </div>
       <div
         className={`${hasDetail ? 'block' : 'hidden lg:flex'} min-w-0 flex-1 lg:min-h-screen lg:items-center lg:justify-center`}
-        style={{ borderLeft: '1px solid var(--s-hairline)' }}
+        style={{ borderLeft: '1px solid var(--divider)' }}
       >
         {hasDetail ? <Outlet /> : <TaskWorkspaceEmpty />}
       </div>

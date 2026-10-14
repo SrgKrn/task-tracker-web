@@ -1,12 +1,13 @@
 {
   "name": "task-tracker-web",
   "private": true,
-  "version": "0.26.0",
+  "version": "0.27.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint && node scripts/check-tokens.mjs",
+    "check:tokens": "node scripts/check-tokens.mjs",
     "test": "vitest run",
     "preview": "vite preview"
   },

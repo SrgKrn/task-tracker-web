@@ -6,9 +6,9 @@ import { CHANGE_LABEL, LATEST_RELEASE, RELEASES, type ChangeKind } from '../lib/
 import { useMarkReleaseSeen, useUserSettings } from '../lib/queries/userSettings'
 
 const KIND_STYLE: Record<ChangeKind, { background: string; color: string }> = {
-  new: { background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' },
-  changed: { background: 'var(--s-tag)', color: 'var(--s-text-soft)' },
-  fixed: { background: 'var(--s-success-ghost)', color: 'var(--s-success-text)' },
+  new: { background: 'var(--accent-soft)', color: 'var(--accent-text)' },
+  changed: { background: 'var(--surface-sunken)', color: 'var(--text-secondary)' },
+  fixed: { background: 'var(--success-soft)', color: 'var(--success-text)' },
 }
 
 function releaseDate(iso: string): string {
@@ -47,7 +47,7 @@ export function Changelog() {
               {ri === 0 && (
                 <span
                   className="rounded-sm px-1.5 py-[2px] font-mono text-xs font-medium"
-                  style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+                  style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
                 >
                   сейчас
                 </span>
@@ -64,7 +64,7 @@ export function Changelog() {
               <article
                 key={c.title}
                 className="flex flex-col gap-1.5 rounded-md p-3.5"
-                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base font-semibold leading-[1.35] text-text">{c.title}</h3>

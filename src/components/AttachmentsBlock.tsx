@@ -154,7 +154,7 @@ export function AttachmentsBlock({
       {files.length > 0 ? (
         <div
           className="flex flex-col overflow-hidden rounded-sm"
-          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
           {files.map((f, i) => (
             <div
@@ -164,7 +164,7 @@ export function AttachmentsBlock({
             >
               <span
                 className="flex h-8 w-10 shrink-0 items-center justify-center rounded-sm font-mono text-xs font-medium tracking-[.04em]"
-                style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)', color: 'var(--text-secondary)' }}
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
               >
                 {f.drive_file_id ? <Drive size={14} /> : kindOf(f.name)}
               </span>
@@ -205,7 +205,7 @@ export function AttachmentsBlock({
             type="button"
             onClick={() => inputRef.current?.click()}
             className="flex min-h-12 items-center gap-2.5 rounded-sm px-3 text-left text-sm leading-[1.45] text-text-secondary"
-            style={{ border: '1px dashed var(--s-border-strong-2)' }}
+            style={{ border: '1px dashed var(--border-strong)' }}
           >
             <Paperclip size={15} />
             {emptyText}

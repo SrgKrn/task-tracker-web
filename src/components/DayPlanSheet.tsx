@@ -81,14 +81,14 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Найти задачу"
           className="h-10 min-w-0 flex-1 rounded-sm px-3 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
-          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         />
         {suggested.length > 0 && !q && (
           <button
             type="button"
             onClick={toggleSuggested}
             className="h-10 shrink-0 rounded-sm px-3 text-sm font-medium"
-            style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+            style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
           >
             {allSuggestedOn ? 'Снять предложенное' : 'Всё предложенное'}
           </button>
@@ -159,16 +159,16 @@ function PlanRow({
       onClick={onToggle}
       className="flex min-h-[54px] items-center gap-3 rounded-sm px-3 py-2 text-left"
       style={{
-        background: on ? 'var(--s-accent-ghost)' : 'var(--s-surface)',
-        border: `1px solid ${on ? 'var(--s-accent)' : 'var(--s-border)'}`,
+        background: on ? 'var(--accent-soft)' : 'var(--surface)',
+        border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
       }}
     >
       <span
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
         style={{
-          background: on ? 'var(--s-accent)' : 'transparent',
-          border: `1.5px solid ${on ? 'var(--s-accent)' : 'var(--s-border-strong-2)'}`,
-          color: 'var(--s-on-accent)',
+          background: on ? 'var(--accent)' : 'transparent',
+          border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
+          color: 'var(--on-accent)',
         }}
       >
         {on && <Check size={14} />}
