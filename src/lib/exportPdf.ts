@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf'
 import {
+  ONEST_REGULAR,
+  ONEST_SEMIBOLD,
   PLEX_MONO_MEDIUM,
   PLEX_MONO_REGULAR,
-  PLEX_SANS_REGULAR,
-  PLEX_SANS_SEMIBOLD,
 } from './pdfFont.generated'
 import {
   dayMonth,
@@ -32,21 +32,26 @@ const CW = PW - MX * 2
 /** ниже этой линии — только подвал */
 const BOTTOM = PH - 46
 
+/*
+ * Палитра отчёта — светлая тема дизайн-системы: тёплые нейтрали, терракотовый акцент,
+ * малиновый для переработки, зелёный для готового. Ключи остались прежними (brass, terra),
+ * чтобы не трогать вёрстку отчёта: brass — теперь акцент, terra — «сверх плана».
+ */
 const C = {
-  ink: '#17171b',
-  ink2: '#4c4c55',
-  muted: '#6b6b74',
-  faint: '#a2a2a9',
-  rule: '#e6e4df',
-  track: '#efede8',
-  weekend: '#f6f4f0',
-  brass: '#c98a2e',
-  brassInk: '#8a5d17',
-  brassSoft: '#ecd3a6',
-  prev: '#b3afa6',
-  terra: '#c1583f',
-  terraInk: '#a8432c',
-  green: '#4d8259',
+  ink: '#1C1B19', // --text
+  ink2: '#4A4842',
+  muted: '#6B6860', // --text-secondary
+  faint: '#9A978E', // --text-tertiary
+  rule: '#E6E3DC', // --border
+  track: '#F0EEE8', // --surface-sunken
+  weekend: '#F7F6F2', // --bg
+  brass: '#B4532A', // --accent
+  brassInk: '#8A3B19', // --accent-text
+  brassSoft: '#E2B5A0', // акцент 40 % на белом
+  prev: '#D6D2C8', // --border-strong
+  terra: '#C2304F', // --danger
+  terraInk: '#8A1F38', // --danger-text
+  green: '#2E9B5E', // --success
   white: '#ffffff',
 }
 
@@ -79,10 +84,11 @@ class Pdf {
     this.r = r
     this.doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
     const d = this.doc
-    d.addFileToVFS('PlexSans-Regular.ttf', PLEX_SANS_REGULAR)
-    d.addFont('PlexSans-Regular.ttf', 'sans', 'normal')
-    d.addFileToVFS('PlexSans-SemiBold.ttf', PLEX_SANS_SEMIBOLD)
-    d.addFont('PlexSans-SemiBold.ttf', 'sans', 'bold')
+    // текст — Onest, как в приложении; числа — IBM Plex Mono
+    d.addFileToVFS('Onest-Regular.ttf', ONEST_REGULAR)
+    d.addFont('Onest-Regular.ttf', 'sans', 'normal')
+    d.addFileToVFS('Onest-SemiBold.ttf', ONEST_SEMIBOLD)
+    d.addFont('Onest-SemiBold.ttf', 'sans', 'bold')
     d.addFileToVFS('PlexMono-Regular.ttf', PLEX_MONO_REGULAR)
     d.addFont('PlexMono-Regular.ttf', 'mono', 'normal')
     d.addFileToVFS('PlexMono-Medium.ttf', PLEX_MONO_MEDIUM)

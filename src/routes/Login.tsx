@@ -135,7 +135,7 @@ export function Login() {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-3">
           <Logo size={44} />
-          <span className="text-lg font-semibold tracking-[.01em] text-slate-100">Semternity</span>
+          <span className="text-lg font-semibold tracking-[.01em] text-text">Semternity</span>
         </div>
 
         {isAuthMode && (
@@ -151,8 +151,8 @@ export function Login() {
         )}
 
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">{title}</h1>
-          <p className="text-sm leading-[1.5] text-slate-500" style={{ textWrap: 'pretty' }}>
+          <h1 className="text-xl font-semibold leading-[1.2] tracking-[-.02em] text-text">{title}</h1>
+          <p className="text-sm leading-[1.5] text-text-secondary" style={{ textWrap: 'pretty' }}>
             {subtitle}
           </p>
         </div>
@@ -170,7 +170,7 @@ export function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
+                className="h-[46px] rounded-sm px-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
                 style={fieldStyle}
               />
             </div>
@@ -184,7 +184,7 @@ export function Login() {
                   <button
                     type="button"
                     onClick={() => goTo('reset')}
-                    className="text-xs text-slate-500"
+                    className="text-xs text-text-secondary"
                   >
                     Забыли пароль?
                   </button>
@@ -199,20 +199,20 @@ export function Login() {
                   placeholder={screen === 'signin' ? 'Ваш пароль' : `Минимум ${MIN_PASSWORD} символов`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-[46px] w-full rounded-[14px] pr-12 pl-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
+                  className="h-[46px] w-full rounded-sm pr-12 pl-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
                   style={fieldStyle}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                  className="absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[12px] text-slate-500"
+                  className="absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-sm text-text-secondary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {passwordTooShort && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-text-secondary">
                   Ещё {MIN_PASSWORD - password.length} симв. до минимума
                 </span>
               )}
@@ -221,7 +221,7 @@ export function Login() {
 
           {error && (
             <p
-              className="rounded-xl px-3 py-2.5 text-sm leading-[1.5] text-terra-400"
+              className="rounded-sm px-3 py-2.5 text-sm leading-[1.5] text-danger-text"
               style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
               role="alert"
             >
@@ -230,7 +230,7 @@ export function Login() {
           )}
           {info && (
             <p
-              className="rounded-xl px-3 py-2.5 text-sm leading-[1.5] text-sage-400"
+              className="rounded-sm px-3 py-2.5 text-sm leading-[1.5] text-success-text"
               style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
               role="status"
             >
@@ -241,7 +241,7 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="h-12 rounded-[15px] text-base font-semibold disabled:opacity-50"
+            className="h-12 rounded-sm text-base font-semibold disabled:opacity-50"
             style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
           >
             {submitLabel}
@@ -251,7 +251,7 @@ export function Login() {
             <button
               type="button"
               onClick={() => goTo('signin')}
-              className="py-1 text-sm text-slate-500"
+              className="py-1 text-sm text-text-secondary"
             >
               Вернуться ко входу
             </button>
@@ -259,7 +259,7 @@ export function Login() {
         </form>
 
         {screen === 'signup' && (
-          <p className="text-center text-xs leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
+          <p className="text-center text-sm leading-[1.5] text-text-secondary" style={{ textWrap: 'pretty' }}>
             Аккаунт нужен только для синхронизации — данные видны вам одному.
           </p>
         )}

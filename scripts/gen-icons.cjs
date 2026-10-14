@@ -1,4 +1,5 @@
-// PWA icon generator: brass Semternity mark (ring + dot) on graphite, full-bleed square
+// PWA icon generator: terracotta Semternity mark (ring + dot) on graphite, full-bleed square
+// (design system 0.22+: mark = dark-theme --accent #E8865E, background = dark --bg #121311)
 // (iOS applies its own corner rounding/mask, so no rounding is baked in here).
 // Rendered by supersampled distance-field hit-testing + box-downsample antialiasing,
 // so no canvas/browser/native deps are needed — just zlib for PNG compression.
@@ -53,8 +54,8 @@ function encodePng(size, rgbBuffer) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idatData), chunk('IEND', Buffer.alloc(0))])
 }
 
-const BG = [21, 21, 26] // #15151a graphite
-const BRASS = [232, 163, 61] // #e8a33d
+const BG = [18, 19, 17] // #121311 — --bg тёмной темы
+const BRASS = [232, 134, 94] // #E8865E — --accent тёмной темы (терракота)
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.

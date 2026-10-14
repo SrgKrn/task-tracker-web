@@ -11,9 +11,9 @@ const card = { background: 'var(--s-surface)', border: '1px solid var(--s-border
 export function ThemeCard() {
   const theme = useTheme()
   return (
-    <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
+    <div className="flex flex-col gap-3 rounded-md p-3.5" style={card}>
       <div className="flex flex-col gap-1">
-        <span className="text-xs leading-[1.5] text-slate-500">
+        <span className="text-xs leading-[1.5] text-text-secondary">
           По умолчанию тема следует настройке телефона. На iPhone цвет строки с часами и
           батареей обновится при следующем запуске приложения.
         </span>
@@ -62,15 +62,15 @@ export function NotificationsCard() {
 
   const state = push.state
   return (
-    <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
+    <div className="flex flex-col gap-3 rounded-md p-3.5" style={card}>
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-text-secondary">
             Если учёт идёт больше часа — придёт вопрос «вы всё ещё работаете?», потом каждый
             следующий час. Работает и при заблокированном экране.
           </span>
           {state && (
-            <span className={`text-xs leading-[1.5] ${state === 'on' ? 'text-sage-400' : 'text-slate-400'}`}>
+            <span className={`text-xs leading-[1.5] ${state === 'on' ? 'text-success-text' : 'text-text-secondary'}`}>
               {STATE_TEXT[state]}
             </span>
           )}
@@ -84,7 +84,7 @@ export function NotificationsCard() {
               type="button"
               disabled={busy}
               onClick={() => run(push.enable, 'Уведомления включены')}
-              className="h-11 flex-1 rounded-[14px] text-base font-semibold disabled:opacity-50"
+              className="h-11 flex-1 rounded-sm text-base font-semibold disabled:opacity-50"
               style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
             >
               Включить
@@ -100,8 +100,8 @@ export function NotificationsCard() {
                     if (r.sent === 0) throw new UserError('Не удалось доставить — попробуйте выключить и включить снова')
                   }, 'Пробное отправлено — смотрите уведомления')
                 }
-                className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
-                style={{ border: '1px solid var(--s-border-strong-2)' }}
+                className="h-11 flex-1 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
+                style={{ border: '1px solid var(--border-strong)' }}
               >
                 Прислать пробное
               </button>
@@ -109,8 +109,8 @@ export function NotificationsCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => run(push.disable, 'Уведомления выключены')}
-                className="h-11 rounded-[14px] px-4 text-base font-medium text-slate-400 disabled:opacity-50"
-                style={{ border: '1px solid var(--s-border-strong-2)' }}
+                className="h-11 rounded-sm px-4 text-base font-medium text-text-secondary disabled:opacity-50"
+                style={{ border: '1px solid var(--border-strong)' }}
               >
                 Выключить
               </button>
@@ -128,11 +128,11 @@ export function NotificationsCard() {
               setLive(e.target.checked)
               setLiveNotificationEnabled(e.target.checked)
             }}
-            className="h-[18px] w-[18px] shrink-0 accent-brass-600"
+            className="h-[18px] w-[18px] shrink-0 accent-accent"
           />
           <span className="flex min-w-0 flex-col">
-            <span className="text-base text-slate-300">Плашка «Идёт учёт»</span>
-            <span className="text-xs leading-[1.4] text-slate-500">
+            <span className="text-base text-text-secondary">Плашка «Идёт учёт»</span>
+            <span className="text-xs leading-[1.4] text-text-secondary">
               при запуске таймера в уведомлениях и на экране блокировки появится задача и время
               начала; уберётся, когда остановите
             </span>
@@ -153,22 +153,22 @@ export function TelegramCard() {
   const onError = (e: unknown) => showError(describeError(e))
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
+    <div className="flex flex-col gap-3 rounded-md p-3.5" style={card}>
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-text-secondary">
             Итоги дня и недели, напоминание о долгом учёте и о встречах — с кнопками прямо в чате.
             Учёт можно начать и остановить из Telegram, а комментарий — просто написать боту.
           </span>
-          {isLoading && <span className="text-xs text-slate-500">Проверяем…</span>}
-          {error && <span className="text-xs text-terra-400">Не удалось узнать статус: {describeError(error)}</span>}
+          {isLoading && <span className="text-xs text-text-secondary">Проверяем…</span>}
+          {error && <span className="text-xs text-danger-text">Не удалось узнать статус: {describeError(error)}</span>}
           {status && !status.configured && (
-            <span className="text-xs leading-[1.5] text-slate-400">
+            <span className="text-xs leading-[1.5] text-text-secondary">
               Бот ещё не настроен — как только он появится, здесь будет кнопка «Подключить».
             </span>
           )}
           {linked && (
-            <span className="text-xs leading-[1.5] text-sage-400">
+            <span className="text-xs leading-[1.5] text-success-text">
               Подключено{linked.username ? `: @${linked.username}` : linked.firstName ? `: ${linked.firstName}` : ''}
             </span>
           )}
@@ -186,7 +186,7 @@ export function TelegramCard() {
             onClick={(e) => {
               if (!link) e.preventDefault()
             }}
-            className="flex h-11 items-center justify-center rounded-[14px] text-base font-semibold"
+            className="flex h-11 items-center justify-center rounded-sm text-base font-semibold"
             style={{
               background: link ? 'var(--s-accent)' : 'var(--s-disabled-bg)',
               color: link ? 'var(--s-on-accent)' : 'var(--s-disabled-fg)',
@@ -194,7 +194,7 @@ export function TelegramCard() {
           >
             {link ? 'Подключить Telegram' : 'Готовим ссылку…'}
           </a>
-          <span className="text-xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-text-secondary">
             Откроется чат с @{status.bot} — нажмите «Запустить» и вернитесь сюда.
           </span>
         </>
@@ -217,12 +217,12 @@ export function TelegramCard() {
             />
             {(linked.dailySummary || linked.weeklySummary) && (
               <label className="flex min-h-11 items-center justify-between gap-3 py-1 pl-[28px]">
-                <span className="text-base text-slate-300">Время сводки</span>
+                <span className="text-base text-text-secondary">Время сводки</span>
                 <select
                   value={linked.summaryHour}
                   onChange={(e) => actions.update.mutate({ summaryHour: Number(e.target.value) }, { onError })}
-                  className="h-9 rounded-[10px] px-2.5 font-mono text-base text-slate-100"
-                  style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+                  className="h-9 rounded-sm px-2.5 font-mono text-base text-text"
+                  
                 >
                   {Array.from({ length: 24 }, (_, h) => (
                     <option key={h} value={h}>
@@ -246,11 +246,11 @@ export function TelegramCard() {
             />
           </div>
           <p
-            className="rounded-xl px-3 py-2.5 text-xs leading-[1.6] text-slate-400"
-            style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)' }}
+            className="rounded-sm px-3 py-2.5 text-xs leading-[1.6] text-text-secondary"
+            style={{ background: 'var(--s-surface-2)', border: '1px solid var(--divider)' }}
           >
-            В чате с ботом: <span className="font-mono text-slate-300">/timer</span> — начать или остановить учёт,{' '}
-            <span className="font-mono text-slate-300">/today</span> и <span className="font-mono text-slate-300">/week</span>{' '}
+            В чате с ботом: <span className="font-mono text-text-secondary">/timer</span> — начать или остановить учёт,{' '}
+            <span className="font-mono text-text-secondary">/today</span> и <span className="font-mono text-text-secondary">/week</span>{' '}
             — итоги. Любой текст боту станет комментарием к задаче, по которой идёт учёт.
           </p>
           <div className="flex gap-[9px]">
@@ -260,8 +260,8 @@ export function TelegramCard() {
               onClick={() =>
                 actions.digestNow.mutate(undefined, { onError, onSuccess: () => showSuccess('Итоги дня — в Telegram') })
               }
-              className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
-              style={{ border: '1px solid var(--s-border-strong-2)' }}
+              className="h-11 flex-1 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
+              style={{ border: '1px solid var(--border-strong)' }}
             >
               Прислать итоги сейчас
             </button>
@@ -269,8 +269,8 @@ export function TelegramCard() {
               type="button"
               disabled={actions.unlink.isPending}
               onClick={() => actions.unlink.mutate(undefined, { onError, onSuccess: () => showSuccess('Telegram отключён') })}
-              className="h-11 rounded-[14px] px-4 text-base font-medium text-slate-400 disabled:opacity-50"
-              style={{ border: '1px solid var(--s-border-strong-2)' }}
+              className="h-11 rounded-sm px-4 text-base font-medium text-text-secondary disabled:opacity-50"
+              style={{ border: '1px solid var(--border-strong)' }}
             >
               Отключить
             </button>
@@ -299,11 +299,11 @@ export function Toggle({
         type="checkbox"
         checked={on}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-[18px] w-[18px] shrink-0 accent-brass-600"
+        className="h-[18px] w-[18px] shrink-0 accent-accent"
       />
       <span className="flex min-w-0 flex-col">
-        <span className="text-base text-slate-300">{title}</span>
-        {hint && <span className="text-xs leading-[1.4] text-slate-500">{hint}</span>}
+        <span className="text-base text-text-secondary">{title}</span>
+        {hint && <span className="text-xs leading-[1.4] text-text-secondary">{hint}</span>}
       </span>
     </label>
   )

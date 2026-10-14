@@ -97,7 +97,7 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
 
       <div className="-mx-2 flex max-h-[52vh] flex-col gap-3 overflow-y-auto px-2">
         {visible.length === 0 && (
-          <p className="py-6 text-center text-base text-text0">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
+          <p className="py-6 text-center text-base text-text-secondary">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
         )}
         {visible.map((section) => (
           <div key={section.key} className="flex flex-col gap-1">
@@ -183,7 +183,7 @@ function PlanRow({
         {meta && <span className="block truncate text-sm leading-[1.4] text-text-secondary">{meta}</span>}
       </span>
       {dueLabel && (
-        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-danger-text' : 'text-text0'}`}>
+        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-danger-text' : 'text-text-secondary'}`}>
           {overdue ? `просрочено ${dueLabel}` : `до ${dueLabel}`}
         </span>
       )}

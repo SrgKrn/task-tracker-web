@@ -7,12 +7,12 @@ import type { ReportData } from './report'
  * для «Вставка → Сводная таблица».
  */
 
-const BRASS = 'FFC98A2E'
-const HEAD_FILL = 'FFF3F1EC'
-const WEEKEND_FILL = 'FFF6F4F0'
-const MUTED = 'FF6B6B74'
-const TERRA = 'FFA8432C'
-const GREEN = 'FF4D8259'
+const BRASS = 'FFB4532A' // акцент дизайн-системы (терракота)
+const HEAD_FILL = 'FFF0EEE8' // --surface-sunken
+const WEEKEND_FILL = 'FFF7F6F2' // --bg
+const MUTED = 'FF6B6860' // --text-secondary
+const TERRA = 'FF8A1F38' // --danger-text: переработка и просрочка
+const GREEN = 'FF1F6B3F' // --success-text
 const HOURS = '0.00'
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -54,7 +54,7 @@ function sheet(wb: ExcelJS.Workbook, name: string, cols: Col[]): ExcelJS.Workshe
   head.height = 30
   head.eachCell((cell) => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_FILL } }
-    cell.border = { bottom: { style: 'thin', color: { argb: 'FFD8D5CE' } } }
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FFD6D2C8' } } }
   })
   return ws
 }

@@ -15,7 +15,7 @@ import {
   Send,
   Sparkle,
 } from '../components/Icon'
-import { Overline, fieldClass } from '../components/ui'
+import { Button, ListGroup, Overline, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
@@ -43,12 +43,13 @@ function firstOfMonthStr(): string {
 
 /* ── меню «Ещё» ─────────────────────────────────────────────────── */
 
-/** Плитка со значком слева от строки меню: тон отличает статусы от групп и прочего. */
-function Glyph({ children, tone = 'accent' }: { children: React.ReactNode; tone?: 'accent' | 'success' | 'neutral' }) {
-  const bg = tone === 'success' ? 'var(--s-success-ghost)' : tone === 'neutral' ? 'var(--s-tag)' : 'var(--s-accent-ghost)'
-  const fg = tone === 'success' ? 'var(--s-success-text)' : tone === 'neutral' ? 'var(--s-text-soft)' : 'var(--s-accent-text)'
+/**
+ * Плитка со значком слева от строки меню — одинаковая нейтральная у всех: разноцветные
+ * плитки (зелёная у статусов, латунные у остальных) спорили с цветами этапов и акцентом.
+ */
+function Glyph({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]" style={{ background: bg, color: fg }}>
+    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-text-secondary">
       {children}
     </span>
   )
@@ -78,12 +79,7 @@ function MenuGroup({ title, children }: { title: string; children: React.ReactNo
   return (
     <section className="mt-5 flex flex-col gap-2">
       <Overline className="px-0.5">{title}</Overline>
-      <div
-        className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
-        style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-      >
-        {children}
-      </div>
+      <ListGroup>{children}</ListGroup>
     </section>
   )
 }
@@ -100,11 +96,11 @@ function MenuRow({
   value?: string
 }) {
   return (
-    <Link to={to} className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 lg:hover:bg-[var(--s-surface-active)]">
+    <Link to={to} className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 active:bg-surface-sunken lg:hover:bg-surface-hover">
       {glyph}
-      <span className="min-w-0 flex-1 truncate text-base text-slate-100">{title}</span>
-      {value && <span className="max-w-[45%] truncate text-sm text-slate-500">{value}</span>}
-      <ChevronRight size={15} className="shrink-0 text-slate-600" />
+      <span className="min-w-0 flex-1 truncate text-base text-text">{title}</span>
+      {value && <span className="max-w-[45%] truncate text-sm text-text-secondary">{value}</span>}
+      <ChevronRight size={15} className="shrink-0 text-text-secondary" />
     </Link>
   )
 }
@@ -118,15 +114,11 @@ function SettingsPage({ title, children }: { title: string; children: React.Reac
   }, [])
   return (
     <div className="safe-top-page mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
-      <button
-        type="button"
-        onClick={() => navigate('/settings')}
-        className="-my-2.5 mb-1 flex items-center gap-2 self-start py-2.5 text-base text-slate-400"
-      >
-        <ArrowLeft size={15} />
+      <Button variant="ghost" className="-ml-3 self-start" onClick={() => navigate('/settings')}>
+        <ArrowLeft size={16} />
         Ещё
-      </button>
-      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
+      </Button>
+      <h1 className="mb-2 text-xl font-semibold tracking-[-0.01em] text-text">{title}</h1>
       {children}
     </div>
   )
@@ -147,11 +139,11 @@ function BudgetForm() {
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-2xl p-3.5"
+      className="flex flex-col gap-3 rounded-md p-3.5"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-xs leading-[1.5] text-slate-500">
+        <span className="text-xs leading-[1.5] text-text-secondary">
           Норма дня для кольца на «Сегодня» и сравнение с фактом в сводке. Приоритет у дневной цели.
         </span>
       </div>
@@ -190,7 +182,7 @@ function BudgetForm() {
             { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess('Сохранено') },
           )
         }
-        className="h-11 rounded-[14px] text-base font-semibold"
+        className="h-11 rounded-sm text-base font-semibold"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         Сохранить
@@ -353,11 +345,11 @@ function ExportSection() {
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-2xl p-3.5"
+      className="flex flex-col gap-3 rounded-md p-3.5"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-xs leading-[1.5] text-slate-500">
+        <span className="text-xs leading-[1.5] text-text-secondary">
           Итоги и ритм, разрезы по группам, спринты против плана, журнал по дням. PDF — чтобы
           читать и отправлять, Excel — чтобы разбирать самому.
         </span>
@@ -370,7 +362,7 @@ function ExportSection() {
           value={from}
           onChange={(v) => setFrom(v ?? todayStr())}
         />
-        <span className="font-mono text-sm text-slate-600">—</span>
+        <span className="font-mono text-sm text-text-secondary">—</span>
         <DatePicker
           small
           className="flex-1"
@@ -400,11 +392,11 @@ function ExportSection() {
               type="checkbox"
               checked={options[o.key]}
               onChange={(e) => setOption(o.key, e.target.checked)}
-              className="h-[18px] w-[18px] shrink-0 accent-brass-600"
+              className="h-[18px] w-[18px] shrink-0 accent-accent"
             />
             <span className="flex min-w-0 flex-col">
-              <span className="text-base text-slate-300">{o.title}</span>
-              <span className="text-xs leading-[1.4] text-slate-500">{o.hint}</span>
+              <span className="text-base text-text-secondary">{o.title}</span>
+              <span className="text-xs leading-[1.4] text-text-secondary">{o.hint}</span>
             </span>
           </label>
         ))}
@@ -416,8 +408,8 @@ function ExportSection() {
             type="button"
             onClick={() => handleExport(format)}
             disabled={generating !== null}
-            className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
+            className="h-11 flex-1 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
+            style={{ border: '1px solid var(--border-strong)' }}
           >
             {generating === format ? 'Готовим…' : format === 'excel' ? 'Скачать Excel' : 'Скачать PDF'}
           </button>
@@ -432,15 +424,15 @@ function ExportSection() {
                 type="button"
                 onClick={() => saveToDrive(format)}
                 disabled={generating !== null}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
-                style={{ border: '1px solid var(--s-border-strong-2)' }}
+                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
+                style={{ border: '1px solid var(--border-strong)' }}
               >
                 <Drive size={14} />
                 {generating === `drive-${format}` ? 'Кладём на Диск…' : format === 'excel' ? 'Excel на Диск' : 'PDF на Диск'}
               </button>
             ))}
           </div>
-          <span className="text-center text-xs text-slate-500">
+          <span className="text-center text-xs text-text-secondary">
             {settings?.drive_reports_folder_name
               ? `в папку «${settings.drive_reports_folder_name}» · сменить — в «Google Диск»`
               : 'папку выберете при первой выгрузке'}
@@ -490,20 +482,17 @@ export function Settings() {
 
   return (
     <div className="safe-top-page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
-      <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
+      <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Ещё</h1>
 
-      <MenuGroup title="Группы">
+      {/* раньше «Группы → Группы» и «Этапы задач → Статусы» — по разделу на пункт */}
+      <MenuGroup title="Структура">
         <MenuRow
           to="/groups"
           glyph={<Glyph>{GroupsGlyph}</Glyph>}
           title="Группы"
           value={model.groups.map((g) => g.name).join(', ') || 'Нет групп'}
         />
-      </MenuGroup>
-
-      {/* статусы — не группа, а этап задачи: отдельным блоком и другим цветом */}
-      <MenuGroup title="Этапы задач">
-        <MenuRow to="/statuses" glyph={<Glyph tone="success">{StatusGlyph}</Glyph>} title="Статусы" value={String(statuses.length)} />
+        <MenuRow to="/statuses" glyph={<Glyph>{StatusGlyph}</Glyph>} title="Этапы" value={String(statuses.length)} />
       </MenuGroup>
 
       <MenuGroup title="Настройки">
@@ -546,7 +535,7 @@ export function Settings() {
       <MenuGroup title="О приложении">
         <MenuRow
           to="/changelog"
-          glyph={<Glyph tone="neutral"><Sparkle size={15} /></Glyph>}
+          glyph={<Glyph><Sparkle size={15} /></Glyph>}
           title="История изменений"
           value={`Версия ${LATEST_RELEASE.version}`}
         />
@@ -554,25 +543,28 @@ export function Settings() {
 
       <MenuGroup title="Аккаунт">
         <div className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5">
+          {/* инициал вместо пустого серого круга */}
           <span
-            className="h-[30px] w-[30px] shrink-0 rounded-full"
-            style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
-          />
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-text uppercase"
+            aria-hidden
+          >
+            {session?.user.email?.[0] ?? '?'}
+          </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-base text-slate-100">{session?.user.email}</span>
-            <span className="block font-mono text-xs text-slate-500">синхронизация включена</span>
+            <span className="block truncate text-base text-text">{session?.user.email}</span>
+            <span className="block text-sm text-text-secondary">Синхронизация включена</span>
           </span>
         </div>
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="flex min-h-[52px] items-center px-3.5 text-left text-base text-terra-400"
+          className="flex min-h-[52px] items-center px-3.5 text-left text-base font-medium text-danger-text active:bg-surface-sunken"
         >
           Выйти
         </button>
       </MenuGroup>
 
-      <span className="mt-4 pb-1 text-center font-mono text-xs text-slate-600">
+      <span className="mt-4 pb-1 text-center font-mono text-xs text-text-secondary">
         Версия {LATEST_RELEASE.version} · сборка от{' '}
         {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
       </span>

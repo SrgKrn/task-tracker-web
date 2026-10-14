@@ -163,10 +163,10 @@ export function NextSprintSheet({
                   >
                     {checked && <Check size={12} />}
                   </span>
-                  <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-text' : 'text-text0'}`}>
+                  <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-text' : 'text-text-secondary'}`}>
                     {t.name}
                   </span>
-                  <span className="tabular shrink-0 font-mono text-xs text-text0">
+                  <span className="tabular shrink-0 font-mono text-xs text-text-secondary">
                     {t.planned_hours > 0 ? `остаток ${formatHoursMinutes(rest)}` : 'без плана'}
                   </span>
                 </button>

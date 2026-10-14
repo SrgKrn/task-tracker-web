@@ -1,10 +1,12 @@
 // Встраивает шрифты отчёта в модуль base64 для jsPDF: встроенные шрифты jsPDF без кириллицы.
 //
-// Шрифты — IBM Plex Sans и Mono (лицензия OFL, src/assets/fonts/IBMPlex-OFL.txt), урезанные
-// до латиницы, кириллицы и знаков препинания: полный файл весит ~200 КБ и целиком попадает
-// в каждый PDF, урезанный — 25 КБ. Исходники — WOFF из npm-пакетов @ibm/plex-sans и
-// @ibm/plex-mono 1.1.0, урезаны так:
-//   pyftsubset IBMPlexSans-Regular.woff --flavor= --layout-features= --no-hinting \
+// Шрифты — Onest для текста, как в приложении (OFL, src/assets/fonts/Onest-OFL.txt), и
+// IBM Plex Mono для чисел (OFL, src/assets/fonts/IBMPlex-OFL.txt), урезанные до латиницы,
+// кириллицы и знаков препинания: полный файл целиком попадает в каждый PDF, урезанный — 25 КБ.
+// Onest — из google/fonts (ofl/onest/Onest[wght].ttf); начертания 400 и 600 сняты с
+// вариативного шрифта: fonttools varLib.instancer "Onest[wght].ttf" wght=400 -o inst-400.ttf.
+// Plex Mono — WOFF из npm-пакета @ibm/plex-mono 1.1.0. Урезаны одинаково:
+//   pyftsubset <файл> --flavor= --layout-features= --no-hinting \
 //     --unicodes=U+0020-007E,U+00A0-00FF,U+0400-045F,U+0490-0491,U+2000-206F,U+20BD,U+2116,\
 //     U+2122,U+2190-2193,U+2212,U+2248,U+2260,U+2264-2265 --output-file=IBMPlexSans-Regular.ttf
 // Запуск: node scripts/gen-pdf-font.cjs
@@ -15,8 +17,8 @@ const dir = path.join(__dirname, '..', 'src', 'assets', 'fonts')
 const outPath = path.join(__dirname, '..', 'src', 'lib', 'pdfFont.generated.ts')
 
 const fonts = {
-  PLEX_SANS_REGULAR: 'IBMPlexSans-Regular.ttf',
-  PLEX_SANS_SEMIBOLD: 'IBMPlexSans-SemiBold.ttf',
+  ONEST_REGULAR: 'Onest-Regular.ttf',
+  ONEST_SEMIBOLD: 'Onest-SemiBold.ttf',
   PLEX_MONO_REGULAR: 'IBMPlexMono-Regular.ttf',
   PLEX_MONO_MEDIUM: 'IBMPlexMono-Medium.ttf',
 }

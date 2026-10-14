@@ -22,8 +22,8 @@ export function StatusesAdmin() {
   return (
     <>
       <PicklistAdmin
-        title="Статусы"
-        placeholder="Например: 25%, В работе, Готово"
+        title="Этапы"
+        placeholder="Например: Не начато, В работе, Сдано"
         items={statuses}
         loading={isLoading}
         labelOf={(s) => s.label}
@@ -34,9 +34,10 @@ export function StatusesAdmin() {
         finalOf={(s) => s.is_final}
         onToggleFinal={(s, value) => setStatusFinal.mutate({ id: s.id, isFinal: value }, { onError })}
       />
-      <p className="mx-auto max-w-lg px-4 text-sm text-slate-500">
-        «Финальный» статус считается завершением задачи — влияет на фильтр «скрыть завершённые» и на
-        статистику по закрытым задачам.
+      <p className="mx-auto max-w-lg px-5 text-sm leading-[1.5] text-text-secondary">
+        «Финальный» этап закрывает задачу: её прячет переключатель «Без готовых», и она считается в
+        закрытых в «Сводке». Цвет этапа зависит от порядка: первый — серо-синий, промежуточные — синие,
+        финальный — зелёный.
       </p>
     </>
   )

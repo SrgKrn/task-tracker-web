@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from './ConfirmDialog'
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Close } from './Icon'
+import { Button, fieldClass } from './ui'
 
 interface Item {
   id: string
@@ -104,11 +105,11 @@ export function PicklistAdmin<T extends Item>({
 
   return (
     <div className="safe-top-page mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
-      <button onClick={() => navigate(backTo)} className="mb-4 flex items-center gap-2 text-base text-slate-400">
+      <button onClick={() => navigate(backTo)} className="mb-4 flex items-center gap-2 text-base text-text-secondary">
         <ArrowLeft size={15} />
         {backLabel}
       </button>
-      <h1 className="mb-4 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
+      <h1 className="mb-4 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">{title}</h1>
 
       {header}
 
@@ -124,22 +125,18 @@ export function PicklistAdmin<T extends Item>({
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           placeholder={placeholder}
-          className="h-[38px] min-w-0 flex-1 rounded-[11px] border border-slate-700 bg-slate-800 px-3 text-base text-slate-100 placeholder:text-[var(--s-placeholder)] focus:border-brass-600"
+          className={`${fieldClass} min-w-0 flex-1`}
         />
-        <button
-          onClick={handleCreate}
-          className="h-[38px] shrink-0 rounded-[11px] px-4 text-base font-semibold"
-          style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
-        >
+        <Button variant="primary" className="shrink-0" onClick={handleCreate}>
           Добавить
-        </button>
+        </Button>
       </div>
 
       {archivedOf && archivedCount > 0 && (
         <button
           type="button"
           onClick={() => setShowArchived((v) => !v)}
-          className="mb-1 py-2.5 text-sm text-slate-500"
+          className="mb-1 py-2.5 text-sm text-text-secondary"
         >
           {showArchived ? 'Скрыть архив' : `Показать архив (${archivedCount})`}
         </button>
@@ -152,14 +149,14 @@ export function PicklistAdmin<T extends Item>({
           return (
             <li
               key={item.id}
-              className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5 lg:hover:bg-[var(--s-surface-active)]"
+              className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2.5 lg:hover:bg-surface-hover"
               style={archived ? { opacity: 0.55 } : undefined}
             >
               <div className="flex flex-col text-xs leading-none lg:flex-row lg:gap-1">
                 <button
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
-                  className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
+                  className="flex h-6 w-6 items-center justify-center text-text-secondary disabled:opacity-20"
                   aria-label="Переместить выше"
                 >
                   <ChevronUp size={14} />
@@ -167,7 +164,7 @@ export function PicklistAdmin<T extends Item>({
                 <button
                   onClick={() => move(index, 1)}
                   disabled={index === items.length - 1}
-                  className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
+                  className="flex h-6 w-6 items-center justify-center text-text-secondary disabled:opacity-20"
                   aria-label="Переместить ниже"
                 >
                   <ChevronDown size={14} />
@@ -184,13 +181,13 @@ export function PicklistAdmin<T extends Item>({
                     onChange={(e) => setEditingValue(e.target.value)}
                     onBlur={commitEdit}
                     onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                    className="w-full min-w-0 rounded-sm border border-brass-600 bg-slate-900 px-2 py-1 text-base text-slate-100"
+                    className="w-full min-w-0 rounded-sm border border-accent bg-surface px-2 py-1 text-base text-text"
                   />
                 ) : (
                   <button
                     onClick={() => startEdit(item)}
                     title={labelOf(item)}
-                    className="w-full min-w-0 truncate text-left text-base text-slate-100"
+                    className="w-full min-w-0 truncate text-left text-base text-text"
                   >
                     {labelOf(item)}
                   </button>
@@ -201,7 +198,7 @@ export function PicklistAdmin<T extends Item>({
               {onOpen && (
                 <button
                   onClick={() => onOpen(item)}
-                  className="hit-44 shrink-0 px-1 text-slate-400 active:text-brass-600"
+                  className="hit-44 shrink-0 px-1 text-text-secondary active:text-accent-text"
                   aria-label="Открыть задачи"
                 >
                   <ArrowRight size={15} className="mx-auto" />
@@ -209,12 +206,12 @@ export function PicklistAdmin<T extends Item>({
               )}
 
               {finalOf && onToggleFinal && (
-                <label className="flex shrink-0 items-center gap-1.5 text-sm text-slate-400">
+                <label className="flex shrink-0 items-center gap-1.5 text-sm text-text-secondary">
                   <input
                     type="checkbox"
                     checked={finalOf(item)}
                     onChange={(e) => onToggleFinal(item, e.target.checked)}
-                    className="accent-brass-600"
+                    className="accent-accent"
                   />
                   Финальный
                 </label>
@@ -223,7 +220,7 @@ export function PicklistAdmin<T extends Item>({
               {archivedOf && onToggleArchived && (
                 <button
                   onClick={() => onToggleArchived(item, !archived)}
-                  className="-my-2.5 shrink-0 py-2.5 text-sm text-slate-500 active:text-brass-600"
+                  className="-my-2.5 shrink-0 py-2.5 text-sm text-text-secondary active:text-accent-text"
                 >
                   {archived ? 'Вернуть' : 'В архив'}
                 </button>
@@ -231,7 +228,7 @@ export function PicklistAdmin<T extends Item>({
 
               <button
                 onClick={() => setDeletingItem(item)}
-                className="hit-44 shrink-0 px-1 text-terra-400 active:text-terra-500"
+                className="hit-44 shrink-0 px-1 text-danger-text active:text-danger"
                 aria-label="Удалить"
               >
                 <Close size={15} className="mx-auto" />
@@ -240,7 +237,7 @@ export function PicklistAdmin<T extends Item>({
           )
         })}
         {visibleItems.length === 0 && (
-          <li className="py-4 text-center text-base text-slate-600">
+          <li className="py-4 text-center text-base text-text-secondary">
             {loading ? 'Загрузка…' : 'Пока пусто.'}
           </li>
         )}

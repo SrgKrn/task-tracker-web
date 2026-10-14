@@ -66,12 +66,12 @@ export function GroupsAdmin() {
 
   return (
     <div className="safe-top-page mx-auto max-w-lg px-5 pt-3.5 pb-8 lg:max-w-2xl">
-      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-slate-400">
+      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-text-secondary">
         <ArrowLeft size={15} />
         Ещё
       </button>
-      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Группы</h1>
-      <p className="mb-4 text-sm leading-[1.5] text-slate-500">
+      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">Группы</h1>
+      <p className="mb-4 text-sm leading-[1.5] text-text-secondary">
         То, по чему раскладываются задачи: проекты, разделы, клиенты, типы работ — какие нужны именно вам.
         Порядок важен: первая группа — верхний уровень отчёта и сводки, вторая — то, что внутри.
       </p>
@@ -88,13 +88,13 @@ export function GroupsAdmin() {
           return (
             <li
               key={g.id}
-              className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5"
+              className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2.5"
             >
               <div className="flex flex-col text-xs leading-none lg:flex-row lg:gap-1">
                 <button
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
-                  className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
+                  className="flex h-6 w-6 items-center justify-center text-text-secondary disabled:opacity-20"
                   aria-label="Переместить выше"
                 >
                   <ChevronUp size={14} />
@@ -102,7 +102,7 @@ export function GroupsAdmin() {
                 <button
                   onClick={() => move(index, 1)}
                   disabled={index === model.groups.length - 1}
-                  className="flex h-6 w-6 items-center justify-center text-slate-500 disabled:opacity-20"
+                  className="flex h-6 w-6 items-center justify-center text-text-secondary disabled:opacity-20"
                   aria-label="Переместить ниже"
                 >
                   <ChevronDown size={14} />
@@ -110,17 +110,17 @@ export function GroupsAdmin() {
               </div>
               <Link to={`/groups/${g.id}`} className="flex min-w-0 flex-1 items-center gap-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base font-medium text-slate-100">{g.name}</span>
-                  <span className="block truncate text-xs text-slate-500">{facts.join(' · ')}</span>
+                  <span className="block truncate text-base font-medium text-text">{g.name}</span>
+                  <span className="block truncate text-xs text-text-secondary">{facts.join(' · ')}</span>
                 </span>
-                <span className="font-mono text-xs text-slate-600">{index + 1}</span>
-                <ArrowRight size={15} className="shrink-0 text-slate-500" />
+                <span className="font-mono text-xs text-text-secondary">{index + 1}</span>
+                <ArrowRight size={15} className="shrink-0 text-text-secondary" />
               </Link>
             </li>
           )
         })}
         {!model.loading && model.groups.length === 0 && (
-          <li className="py-4 text-center text-base text-slate-600">
+          <li className="py-4 text-center text-base text-text-secondary">
             Групп нет — задачи живут одним списком. Добавьте первую, когда захочется их разложить.
           </li>
         )}
@@ -129,7 +129,7 @@ export function GroupsAdmin() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[14px] text-base font-semibold"
+        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-sm text-base font-semibold"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         <Plus size={15} />
@@ -195,7 +195,7 @@ function NewGroupSheet({
           placeholder="Например: Клиент"
           className={fieldClass}
         />
-        <span className="text-xs leading-[1.45] text-slate-500">Так подписано поле в задаче</span>
+        <span className="text-xs leading-[1.45] text-text-secondary">Так подписано поле в задаче</span>
       </div>
       <PickerField
         label="Входит в группу"
@@ -335,12 +335,12 @@ export function GroupPage() {
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="h-11 rounded-[14px] text-base font-medium text-terra-400"
+              className="h-11 rounded-sm text-base font-medium text-danger-text"
               style={{ border: '1px solid var(--s-danger-line)' }}
             >
               Удалить группу
             </button>
-            <p className="text-center text-xs leading-[1.45] text-slate-500">
+            <p className="text-center text-xs leading-[1.45] text-text-secondary">
               Задачи и их часы останутся — пропадёт только эта раскладка
             </p>
           </div>
@@ -430,18 +430,18 @@ function GroupSettings({ group, model }: { group: Group; model: GroupModel }) {
         type="checkbox"
         checked={group[key]}
         onChange={(e) => update.mutate({ id: group.id, fields: { [key]: e.target.checked } }, { onError })}
-        className="h-[18px] w-[18px] shrink-0 accent-brass-600"
+        className="h-[18px] w-[18px] shrink-0 accent-accent"
       />
       <span className="flex min-w-0 flex-col">
-        <span className="text-base text-slate-300">{title}</span>
-        <span className="text-xs leading-[1.4] text-slate-500">{hint}</span>
+        <span className="text-base text-text-secondary">{title}</span>
+        <span className="text-xs leading-[1.4] text-text-secondary">{hint}</span>
       </span>
     </label>
   )
 
   return (
     <div
-      className="mb-5 flex flex-col gap-3 rounded-2xl p-3.5"
+      className="mb-5 flex flex-col gap-3 rounded-md p-3.5"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <Overline>Настройки группы</Overline>
