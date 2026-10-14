@@ -20,7 +20,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         <button
           type="button"
           onClick={onCreate}
-          className="w-full rounded-xl py-2 text-sm font-semibold"
+          className="w-full rounded-xl py-2 text-base font-semibold"
           style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           + Новая задача
@@ -34,7 +34,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
             <Link
               key={link.to}
               to={link.to}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
+              className={`flex items-center gap-2.5 rounded-sm px-3 py-2 text-base ${
                 active
                   ? 'bg-[var(--s-accent)] font-medium text-[var(--s-on-accent)]'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
@@ -50,7 +50,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
       <button
         type="button"
         onClick={() => supabase.auth.signOut()}
-        className="mx-3 mb-5 rounded-lg px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+        className="mx-3 mb-5 rounded-sm px-3 py-2 text-left text-base text-slate-500 hover:bg-slate-800 hover:text-slate-300"
       >
         Выйти
       </button>

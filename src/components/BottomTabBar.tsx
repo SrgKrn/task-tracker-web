@@ -11,7 +11,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
       <Link
         key={tab.to}
         to={tab.to}
-        className="flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-2xs font-medium"
+        className="flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-xs font-medium"
         style={{ color: active ? 'var(--s-accent-text)' : 'var(--s-tab-idle)' }}
       >
         <tab.Icon size={20} />
@@ -33,11 +33,11 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
             type="button"
             onClick={onCreate}
             aria-label="Новая задача"
-            className="mb-1.5 flex h-[50px] w-[50px] items-center justify-center rounded-full text-2xl leading-none"
+            className="mb-1.5 flex h-[50px] w-[50px] items-center justify-center rounded-full text-xl leading-none"
             style={{
               background: 'var(--s-accent)',
               color: 'var(--s-on-accent)',
-              boxShadow: '0 8px 20px -6px var(--s-accent-glow)',
+              boxShadow: 'var(--shadow-popover)',
             }}
           >
             +

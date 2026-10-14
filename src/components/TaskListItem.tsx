@@ -177,7 +177,7 @@ export function TaskListItem({
                   setOpen(true)
                   startAdding(task.id)
                 }}
-                className="flex-1 text-xs font-medium"
+                className="flex-1 text-sm font-medium"
                 style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
               >
                 Подзадача
@@ -190,7 +190,7 @@ export function TaskListItem({
                   close()
                   onUnplan()
                 }}
-                className="flex-1 text-xs font-medium"
+                className="flex-1 text-sm font-medium"
                 style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
               >
                 Не сегодня
@@ -203,7 +203,7 @@ export function TaskListItem({
                   close()
                   onDuplicate()
                 }}
-                className="flex-1 text-xs font-medium text-slate-300"
+                className="flex-1 text-sm font-medium text-slate-300"
                 style={{ background: 'var(--s-swipe)' }}
               >
                 Дублировать
@@ -216,7 +216,7 @@ export function TaskListItem({
                   close()
                   onDelete()
                 }}
-                className="flex-1 text-xs font-medium"
+                className="flex-1 text-sm font-medium"
                 style={{ background: 'var(--s-danger-ghost)', color: 'var(--s-danger-text)' }}
               >
                 Удалить
@@ -272,7 +272,7 @@ export function TaskListItem({
               }}
             >
               {parentName && (
-                <span className="flex min-w-0 items-center gap-1 text-2xs leading-[1.4] text-slate-500">
+                <span className="flex min-w-0 items-center gap-1 text-xs leading-[1.4] text-slate-500">
                   <CornerDownRight size={11} />
                   <span className="truncate">{parentName}</span>
                 </span>
@@ -281,7 +281,7 @@ export function TaskListItem({
                   и половина названий обрывалась на середине прямо на главном экране */}
               <p
                 title={task.name}
-                className={`text-sm leading-[1.3] ${
+                className={`text-base leading-[1.3] ${
                   done ? 'font-normal text-[var(--s-faint-text)] line-through' : 'font-medium text-slate-100'
                 }`}
                 style={{
@@ -295,7 +295,7 @@ export function TaskListItem({
               </p>
               <span
                 title={meta}
-                className={`block truncate font-mono text-2xs leading-[1.4] ${
+                className={`block truncate font-mono text-xs leading-[1.4] ${
                   overdue && !done ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
                 }`}
               >
@@ -304,7 +304,7 @@ export function TaskListItem({
             </Link>
 
             {showClock && activeTimer ? (
-              <span className="tabular shrink-0 font-mono text-sm font-semibold text-brass-600">
+              <span className="tabular shrink-0 font-mono text-base font-semibold text-brass-600">
                 {formatClock(activeTimer.started_at)}
               </span>
             ) : done ? null : overdue ? (
@@ -389,7 +389,7 @@ function CompositionToggle({
         style={{ borderTop: '1px solid var(--s-hairline)' }}
       >
         <Plus size={14} />
-        <span className="font-mono text-2xs uppercase tracking-[.12em]">Подзадача</span>
+        <span className="font-mono text-xs uppercase tracking-[.12em]">Подзадача</span>
         {open && (
           <span className="ml-auto flex" style={{ transform: 'rotate(180deg)' }}>
             <ChevronDown size={14} />
@@ -427,8 +427,8 @@ function CompositionToggle({
           ))}
         </span>
       )}
-      <span className="font-mono text-2xs uppercase tracking-[.12em]">Подзадачи</span>
-      <span className="tabular font-mono text-2xs">
+      <span className="font-mono text-xs uppercase tracking-[.12em]">Подзадачи</span>
+      <span className="tabular font-mono text-xs">
         {doneCount} из {subtasks.length}
       </span>
       {/* поворот стрелки — единственная анимация раскрытия; сам состав появляется сразу */}

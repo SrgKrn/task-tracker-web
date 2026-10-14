@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracker DS — витрина</title>
+<link rel="stylesheet" href="tokens.css">
+<script>try{var t=localStorage.getItem('ds-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+<style>
+  body{padding:0 16px 64px}
+  .wrap{max-width:1120px;margin:0 auto}
+  header.top{position:sticky;top:0;z-index:var(--z-sticky);background:var(--bg);display:flex;align-items:center;gap:12px;height:var(--header-height);border-bottom:1px solid var(--border);margin:0 -16px 32px;padding:0 16px}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:var(--text-md)}
+  .logo i{width:22px;height:22px;border-radius:6px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;color:var(--on-accent);font-style:normal;font-size:13px}
+  h2{font-size:var(--text-lg);line-height:var(--leading-lg);font-weight:600;letter-spacing:-0.01em;margin:48px 0 4px}
+  .sub{color:var(--text-secondary);font-size:var(--text-sm);margin:0 0 20px}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .sw{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;font-size:var(--text-xs)}
+  .sw .c{height:56px;border-bottom:1px solid var(--border)}
+  .sw .m{padding:8px 10px;line-height:16px}
+  .sw .m b{display:block;font-weight:500;color:var(--text)}
+  .sw .m span{color:var(--text-secondary);font-family:var(--font-mono)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px}
+  .type div{display:flex;gap:20px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--divider)}
+  .type code{width:150px;flex:none;color:var(--text-secondary);font-family:var(--font-mono);font-size:var(--text-xs)}
+  /* компоненты */
+  .btn{height:var(--control-md);padding:0 12px;display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-sm);font:500 var(--text-base)/1 var(--font-sans);cursor:pointer;border:1px solid transparent;transition:background var(--duration-fast) var(--ease-out),border-color var(--duration-fast) var(--ease-out),transform var(--duration-fast)}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-hover)}
+  .btn-secondary{background:var(--surface);color:var(--text);border-color:var(--border)}
+  .btn-secondary:hover{background:var(--surface-hover);border-color:var(--border-strong)}
+  .btn-ghost{background:transparent;color:var(--text-secondary)}
+  .btn-ghost:hover{background:var(--surface-sunken);color:var(--text)}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-sm{height:var(--control-sm);font-size:var(--text-sm);padding:0 10px}
+  .input{height:var(--control-md);padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:400 var(--text-base) var(--font-sans);width:240px;transition:border-color var(--duration-fast)}
+  .input::placeholder{color:var(--text-tertiary)}
+  .input:hover{border-color:var(--border-strong)}
+  .input:focus{outline:none;border-color:var(--accent);box-shadow:var(--focus-ring)}
+  .input.err{border-color:var(--danger)}
+  .search{background:var(--surface-sunken);border-color:transparent}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:var(--radius-full);font:500 var(--text-xs) var(--font-sans)}
+  .chip .d{width:7px;height:7px;border-radius:50%}
+  .kbd{font:500 11px var(--font-mono);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-xs);padding:1px 5px;color:var(--text-secondary)}
+  .check{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border-strong);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;background:transparent;padding:0;transition:border-color var(--duration-fast)}
+  .check:hover{border-color:var(--accent)}
+  .check.on{background:var(--accent);border-color:var(--accent);animation:pop 260ms var(--ease-spring)}
+  .check.on::after{content:"";width:7px;height:4px;border-left:1.5px solid var(--on-accent);border-bottom:1.5px solid var(--on-accent);transform:rotate(-45deg) translate(1px,-1px)}
+  @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
+  .tr{display:flex;align-items:center;gap:12px;height:var(--row-height);padding:0 12px;border-bottom:1px solid var(--divider);font-size:var(--text-base);position:relative}
+  .tr:last-child{border-bottom:0}
+  .tr:hover{background:var(--surface-hover)}
+  .tr.sel{background:var(--surface-selected)}
+  .tr.sel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent)}
+  .tr .id{font:400 var(--text-xs) var(--font-mono);color:var(--text-secondary);width:64px;flex:none}
+  .tr .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tr.done .t{text-decoration:line-through;color:var(--text-tertiary)}
+  .meta{font-size:var(--text-xs);color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .late{color:var(--danger-text)}
+  .av{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent-text);font:600 9px var(--font-sans);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .prio{display:inline-flex;gap:1.5px;align-items:flex-end;height:12px}
+  .prio i{width:3px;background:currentColor;border-radius:1px;opacity:.25}
+  .prio i.on{opacity:1}
+  .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+  .col{background:var(--surface-sunken);border-radius:var(--radius-lg);padding:10px;width:290px;flex:none}
+  .col h4{display:flex;align-items:center;gap:8px;font-size:var(--text-sm);font-weight:600;margin:2px 4px 10px}
+  .col h4 .n{color:var(--text-tertiary);font-weight:500;font-variant-numeric:tabular-nums}
+  .kc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px;transition:border-color var(--duration-fast)}
+  .kc:hover{border-color:var(--border-strong)}
+  .kc.drag{box-shadow:var(--shadow-drag);transform:rotate(1.5deg)}
+  .kc .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .kc .tt{font-weight:500;line-height:var(--leading-base);margin-bottom:10px}
+  .kc .f{display:flex;align-items:center;gap:10px}
+  .lbl{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .side{display:flex;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;height:320px}
+  .side nav{width:var(--sidebar-width);background:var(--surface);border-right:1px solid var(--border);padding:12px 8px;flex:none}
+  .side nav .g{font:500 var(--text-xs) var(--font-sans);color:var(--text-tertiary);padding:14px 10px 6px}
+  .ni{display:flex;align-items:center;gap:10px;height:30px;padding:0 10px;border-radius:var(--radius-sm);font:500 var(--text-sm) var(--font-sans);color:var(--text-secondary);cursor:pointer}
+  .ni:hover{background:var(--surface-sunken);color:var(--text)}
+  .ni.act{background:var(--surface-selected);color:var(--accent-text)}
+  .ni .c{margin-left:auto;font-size:var(--text-xs);color:var(--text-tertiary);font-variant-numeric:tabular-nums}
+  .side main{flex:1;background:var(--bg);padding:20px}
+  .pop{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-modal);width:100%;max-width:560px;overflow:hidden;border:1px solid var(--border)}
+  .pop .q{height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);font-size:var(--text-md);color:var(--text-tertiary)}
+  .pop .gl{font:500 var(--text-xs) var(--font-sans);color:var(--text-tertiary);padding:10px 16px 4px}
+  .pop .it{display:flex;align-items:center;gap:10px;height:36px;padding:0 16px;font-size:var(--text-base)}
+  .pop .it.a{background:var(--surface-selected)}
+  .pop .it .r{margin-left:auto;display:flex;gap:4px}
+  .toast{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-popover);border-radius:var(--radius-md);padding:10px 12px 10px 14px;font-size:var(--text-sm);width:max-content;max-width:100%}
+  .banner{border-radius:var(--radius-md);padding:10px 14px;font-size:var(--text-sm);display:flex;gap:10px;align-items:center}
+  .empty{text-align:center;padding:40px 20px}
+  .empty .ic{width:40px;height:40px;border-radius:12px;background:var(--surface-sunken);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:20px}
+  .skel{height:12px;border-radius:6px;background:var(--surface-sunken);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.5}}
+  table.ct{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+  table.ct td,table.ct th{padding:8px 10px;border-bottom:1px solid var(--divider);text-align:left}
+  table.ct th{font-weight:500;color:var(--text-secondary);font-size:var(--text-xs)}
+  .pass{color:var(--success-text)} .fail{color:var(--danger-text)}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  @media (max-width:640px){.side nav{width:180px}.input{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="logo"><i>✓</i> Tracker DS <span class="meta" style="font-weight:400">v1.0</span></div>
+  <div style="margin-left:auto" class="row">
+    <button class="btn btn-ghost btn-sm" data-t="light">Светлая</button>
+    <button class="btn btn-ghost btn-sm" data-t="dark">Тёмная</button>
+    <button class="btn btn-ghost btn-sm" data-t="">Системная</button>
+  </div>
+</header>
+
+<h2>Цвет — нейтральные и акцент</h2>
+<p class="sub">Значения подставляются из активной темы. Переключите тему сверху.</p>
+<div class="grid" id="neutrals"></div>
+
+<h2>Статусы, приоритеты, метки</h2>
+<p class="sub">Статус всегда показывается цветом + иконкой или текстом.</p>
+<div class="row" style="margin-bottom:16px">
+  <span class="chip" style="background:var(--status-backlog-bg);color:var(--status-backlog-text)"><span class="d" style="background:var(--status-backlog)"></span>Бэклог</span>
+  <span class="chip" style="background:var(--status-todo-bg);color:var(--status-todo-text)"><span class="d" style="background:var(--status-todo)"></span>К выполнению</span>
+  <span class="chip" style="background:var(--status-progress-bg);color:var(--status-progress-text)"><span class="d" style="background:var(--status-progress)"></span>В работе</span>
+  <span class="chip" style="background:var(--status-review-bg);color:var(--status-review-text)"><span class="d" style="background:var(--status-review)"></span>На проверке</span>
+  <span class="chip" style="background:var(--status-done-bg);color:var(--status-done-text)"><span class="d" style="background:var(--status-done)"></span>Готово</span>
+  <span class="chip" style="background:var(--status-blocked-bg);color:var(--status-blocked-text)"><span class="d" style="background:var(--status-blocked)"></span>Блокер</span>
+</div>
+<div class="row" style="margin-bottom:16px;gap:20px">
+  <span class="row meta" style="gap:6px"><span class="prio" style="color:var(--priority-urgent)"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:10px"></i><i class="on" style="height:12px"></i></span>Срочно</span>
+  <span class="row meta" style="gap:6px"><span class="prio" style="color:var(--priority-high)"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:10px"></i><i style="height:12px"></i></span>Высокий</span>
+  <span class="row meta" style="gap:6px"><span class="prio" style="color:var(--priority-medium)"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span>Средний</span>
+  <span class="row meta" style="gap:6px"><span class="prio" style="color:var(--priority-low)"><i class="on" style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span>Низкий</span>
+</div>
+<div class="row" id="labels"></div>
+
+<h2>Типографика</h2>
+<p class="sub">Onest — интерфейс, JetBrains Mono — ID, время, шорткаты. Базовый размер 14 px.</p>
+<div class="card type">
+  <div><code>2xl · 32/40 · 600</code><span style="font-size:32px;line-height:40px;font-weight:600;letter-spacing:-0.015em">Добро пожаловать</span></div>
+  <div><code>xl · 24/32 · 600</code><span style="font-size:24px;line-height:32px;font-weight:600;letter-spacing:-0.01em">Проект «Запуск сайта»</span></div>
+  <div><code>lg · 20/28 · 600</code><span style="font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.01em">Мои задачи</span></div>
+  <div><code>md · 16/24 · 500</code><span style="font-size:16px;line-height:24px;font-weight:500">Подготовить коммерческое предложение</span></div>
+  <div><code>base · 14/20 · 400</code><span>Основной текст интерфейса: строки списка, поля, описания.</span></div>
+  <div><code>sm · 13/18 · 400</code><span style="font-size:13px;color:var(--text-secondary)">Вторичный текст и пункты меню</span></div>
+  <div><code>xs · 12/16 · 500</code><span style="font-size:12px;font-weight:500;color:var(--text-secondary)">Метаданные · 3 подзадачи · 18 окт</span></div>
+  <div style="border:0"><code>mono · 12 · 400</code><span class="mono" style="color:var(--text-secondary)">TRK-142 · 02:45:10 · ⌘K</span></div>
+</div>
+
+<h2>Кнопки и поля</h2>
+<p class="sub">Одна главная кнопка на экран. Фокус — кольцо акцента (нажмите Tab).</p>
+<div class="card">
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn btn-primary"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Создать задачу</button>
+    <button class="btn btn-secondary">Вторичная</button>
+    <button class="btn btn-ghost">Призрачная</button>
+    <button class="btn btn-danger">Удалить</button>
+    <button class="btn btn-secondary btn-sm">Маленькая</button>
+  </div>
+  <div class="row" style="align-items:flex-start">
+    <input class="input" placeholder="Позвонить клиенту завтра в 10">
+    <div><input class="input err" value="Без названия"><div style="font-size:12px;color:var(--danger-text);margin-top:4px">Введите название задачи</div></div>
+    <div class="input search" style="display:flex;align-items:center;gap:8px;color:var(--text-tertiary)"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Поиск<span class="kbd" style="margin-left:auto">⌘K</span></div>
+  </div>
+</div>
+
+<h2>Список задач</h2>
+<p class="sub">Строка 36 px. Кликните по чекбоксу — анимация завершения.</p>
+<div class="list" id="list"></div>
+
+<h2>Канбан</h2>
+<p class="sub">Колонка — утопленная поверхность, карточка — граница без тени. Тень только при перетаскивании.</p>
+<div class="board" id="board"></div>
+
+<h2>Навигация</h2>
+<div class="side">
+  <nav>
+    <div class="ni act"><svg class="i" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Мои задачи<span class="c">12</span></div>
+    <div class="ni"><svg class="i" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/></svg>Входящие<span class="c">3</span></div>
+    <div class="ni"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Календарь</div>
+    <div class="g">Проекты</div>
+    <div class="ni"><span class="lbl" style="background:var(--label-1)"></span>Запуск сайта<span class="c">8</span></div>
+    <div class="ni"><span class="lbl" style="background:var(--label-3)"></span>Отдел продаж<span class="c">5</span></div>
+    <div class="ni"><span class="lbl" style="background:var(--label-5)"></span>Найм</div>
+  </nav>
+  <main>
+    <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px">Мои задачи</div>
+    <div class="meta" style="margin-bottom:20px">12 активных · 3 просрочено</div>
+    <div class="skel" style="width:70%;margin-bottom:12px"></div>
+    <div class="skel" style="width:55%;margin-bottom:12px"></div>
+    <div class="skel" style="width:62%"></div>
+  </main>
+</div>
+
+<h2>Командная палитра, тосты, баннеры</h2>
+<div class="two">
+  <div class="pop">
+    <div class="q"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Введите команду или найдите задачу…</div>
+    <div class="gl">Действия</div>
+    <div class="it a"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Создать задачу<span class="r"><span class="kbd">C</span></span></div>
+    <div class="it"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>Сменить статус<span class="r"><span class="kbd">S</span></span></div>
+    <div class="gl">Задачи</div>
+    <div class="it"><span class="mono meta">TRK-142</span>Настроить напоминания</div>
+    <div class="it" style="margin-bottom:6px"><span class="mono meta">TRK-139</span>Обновить договор</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="toast"><svg class="i" viewBox="0 0 24 24" style="color:var(--success)"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Задача перемещена в «Готово»<button class="btn btn-ghost btn-sm" style="color:var(--accent)">Отменить</button></div>
+    <div class="banner" style="background:var(--info-soft);color:var(--info-text)">Синхронизация с календарём включена</div>
+    <div class="banner" style="background:var(--warning-soft);color:var(--warning-text)">3 задачи без исполнителя</div>
+    <div class="banner" style="background:var(--danger-soft);color:var(--danger-text)">Не удалось сохранить. Проверьте соединение и повторите</div>
+    <div class="banner" style="background:var(--success-soft);color:var(--success-text)">Все задачи на сегодня выполнены</div>
+  </div>
+</div>
+
+<h2>Пустое состояние</h2>
+<div class="card empty">
+  <div class="ic">✓</div>
+  <div style="font-size:16px;font-weight:600;margin-bottom:4px">Создайте первую задачу</div>
+  <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Задачи проекта появятся здесь. Нажмите <span class="kbd">C</span> в любом месте.</div>
+  <button class="btn btn-primary">Создать задачу</button>
+</div>
+
+<h2>Проверка контраста</h2>
+<p class="sub">Считается для активной темы. Норма: текст ≥ 4.5, иконки и крупный текст ≥ 3.</p>
+<div class="card" style="padding:0;overflow-x:auto"><table class="ct" id="ct"></table></div>
+</div>
+
+<script>
+const root=document.documentElement;
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;if(t)root.dataset.theme=t;else delete root.dataset.theme;try{t?localStorage.setItem('ds-theme',t):localStorage.removeItem('ds-theme')}catch(e){}render()});
+const cs=()=>getComputedStyle(root);
+const val=n=>cs().getPropertyValue('--'+n).trim();
+const N=[['bg','Фон'],['surface','Поверхность'],['surface-sunken','Утопленная'],['surface-selected','Выбранное'],['border','Граница'],['border-strong','Граница+'],['text','Текст'],['text-secondary','Вторичный'],['text-tertiary','Третичный'],['accent','Акцент'],['accent-hover','Акцент hover'],['accent-soft','Акцент мягкий'],['success','Успех'],['warning','Внимание'],['danger','Ошибка'],['info','Инфо']];
+function hex(c){c=c.replace('#','');if(c.length===3)c=c.split('').map(x=>x+x).join('');return[0,2,4].map(i=>parseInt(c.slice(i,i+2),16))}
+function lum(c){return hex(c).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0)}
+function ratio(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+const P=[['text','bg',4.5],['text','surface',4.5],['text-secondary','surface',4.5],['text-secondary','bg',4.5],['on-accent','accent',4.5],['accent','surface',4.5],['accent-text','accent-soft',4.5],['success-text','success-soft',4.5],['warning-text','warning-soft',4.5],['danger-text','danger-soft',4.5],['info-text','info-soft',4.5],['status-backlog-text','status-backlog-bg',4.5],['status-todo-text','status-todo-bg',4.5],['status-progress-text','status-progress-bg',4.5],['status-review-text','status-review-bg',4.5],['status-done-text','status-done-bg',4.5],['status-blocked-text','status-blocked-bg',4.5],['status-progress','surface',3],['status-done','surface',3],['priority-medium','surface',3]];
+const tasks=[['TRK-142','Настроить автоматические напоминания по просроченным задачам','progress','СК','18 окт',3,0,1],['TRK-141','Подготовить КП для нового клиента','todo','АП','Сегодня',4,0,3],['TRK-139','Обновить договор поставки','review','МВ','15 окт',2,1,2],['TRK-137','Созвон с подрядчиком по интеграции','blocked','СК','12 окт',4,1,4],['TRK-130','Собрать отчёт по продажам за сентябрь','done','ЕЛ','10 окт',1,0,5]];
+const pc={4:'urgent',3:'high',2:'medium',1:'low'};
+const prio=p=>`<span class="prio" style="color:var(--priority-${pc[p]})">${[4,7,10,12].map((h,i)=>`<i class="${i<p?'on':''}" style="height:${h}px"></i>`).join('')}</span>`;
+const dot=s=>`<span class="lbl" style="background:var(--status-${s});width:10px;height:10px;outline:2px solid var(--status-${s}-bg)"></span>`;
+function render(){
+  document.getElementById('neutrals').innerHTML=N.map(([k,l])=>`<div class="sw"><div class="c" style="background:var(--${k})"></div><div class="m"><b>${l}</b><span>--${k}</span><br><span>${val(k)}</span></div></div>`).join('');
+  document.getElementById('labels').innerHTML=[1,2,3,4,5,6,7,8].map(n=>`<span class="chip" style="background:color-mix(in srgb,var(--label-${n}) 14%,transparent);color:var(--label-${n})"><span class="d" style="background:var(--label-${n})"></span>Метка ${n}</span>`).join('');
+  document.getElementById('ct').innerHTML='<tr><th>Текст / элемент</th><th>Фон</th><th>Пример</th><th>Контраст</th><th>Норма</th></tr>'+P.map(([f,b,m])=>{const r=ratio(val(f),val(b));return`<tr><td class="mono">--${f}</td><td class="mono">--${b}</td><td><span style="background:var(--${b});color:var(--${f});padding:3px 8px;border-radius:4px;border:1px solid var(--border)">Аа 123</span></td><td class="tabular">${r.toFixed(2)}</td><td class="${r>=m?'pass':'fail'}">${r>=m?'✓':'✗'} ${m}</td></tr>`}).join('');
+}
+document.getElementById('list').innerHTML=tasks.map(([id,t,s,a,d,p,late,l],i)=>`<div class="tr ${s==='done'?'done':''} ${i===0?'sel':''}"><button class="check ${s==='done'?'on':''}" aria-label="Выполнить"></button><span class="id">${id}</span>${dot(s)}<span class="t">${t}</span><span class="lbl" style="background:var(--label-${l})"></span><span class="av">${a}</span><span class="meta ${late&&s!=='done'?'late':''}" style="width:56px;text-align:right">${d}</span>${prio(p)}</div>`).join('');
+document.querySelectorAll('#list .check').forEach(c=>c.onclick=()=>{c.classList.toggle('on');c.closest('.tr').classList.toggle('done')});
+const cols=[['todo','К выполнению',[tasks[1]]],['progress','В работе',[tasks[0],tasks[3]]],['review','На проверке',[tasks[2]]],['done','Готово',[tasks[4]]]];
+document.getElementById('board').innerHTML=cols.map(([s,n,ts],ci)=>`<div class="col"><h4>${dot(s)}${n}<span class="n">${ts.length}</span></h4>${ts.map(([id,t,_,a,d,p,late,l],i)=>`<div class="kc ${ci===1&&i===1?'drag':''}"><div class="h"><span class="mono meta">${id}</span>${prio(p)}</div><div class="tt">${t}</div><div class="f"><span class="av">${a}</span><span class="meta ${late&&s!=='done'?'late':''}">${d}</span><span class="meta tabular">2/4</span><span class="lbl" style="background:var(--label-${l});margin-left:auto"></span></div></div>`).join('')}<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start">+ Добавить</button></div>`).join('');
+render();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+</script>
+</body>
+</html>

@@ -99,7 +99,7 @@ export function NextSprintSheet({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например: Спринт 7 или Октябрь"
-          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+          className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
           style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
       </div>
@@ -123,7 +123,7 @@ export function NextSprintSheet({
           className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         >
-          <span className="tabular font-mono text-sm text-slate-100">
+          <span className="tabular font-mono text-base text-slate-100">
             {plan > 0 ? formatHoursMinutes(plan) : 'не задан'}
           </span>
           <ChevronDown size={14} className="text-slate-600" />
@@ -134,7 +134,7 @@ export function NextSprintSheet({
         <div className="flex flex-col gap-1.5">
           <span className="flex items-baseline justify-between">
             <FieldLabel>Перенести подзадачи</FieldLabel>
-            <span className="tabular font-mono text-2xs text-slate-600">
+            <span className="tabular font-mono text-xs text-slate-600">
               {carryIds.size} из {unfinished.length}
             </span>
           </span>
@@ -162,10 +162,10 @@ export function NextSprintSheet({
                   >
                     {checked && <Check size={12} />}
                   </span>
-                  <span className={`min-w-0 flex-1 truncate text-sm ${checked ? 'text-slate-100' : 'text-slate-500'}`}>
+                  <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-slate-100' : 'text-slate-500'}`}>
                     {t.name}
                   </span>
-                  <span className="tabular shrink-0 font-mono text-2xs text-slate-500">
+                  <span className="tabular shrink-0 font-mono text-xs text-slate-500">
                     {t.planned_hours > 0 ? `остаток ${formatHoursMinutes(rest)}` : 'без плана'}
                   </span>
                 </button>
@@ -175,7 +175,7 @@ export function NextSprintSheet({
         </div>
       )}
 
-      <p className="text-2xs leading-[1.5] text-slate-600">
+      <p className="text-xs leading-[1.5] text-slate-600">
         Часы, история и закрытые подзадачи остаются в «{task.name}».
       </p>
 

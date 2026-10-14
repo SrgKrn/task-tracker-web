@@ -55,8 +55,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.tone === 'error' ? 'alert' : 'status'}
             className={`toast-pop flex max-w-[92vw] items-center gap-2.5 backdrop-blur-sm ${
               t.tone === 'error'
-                ? 'pointer-events-auto rounded-2xl py-2.5 pr-1.5 pl-3.5 text-sm font-medium leading-snug shadow-lg'
-                : `rounded-full px-3.5 py-2 text-xs leading-tight ${t.action ? 'pointer-events-auto' : ''}`
+                ? 'pointer-events-auto rounded-2xl py-2.5 pr-1.5 pl-3.5 text-base font-medium leading-snug shadow-popover'
+                : `rounded-full px-3.5 py-2 text-sm leading-tight ${t.action ? 'pointer-events-auto' : ''}`
             }`}
             style={
               t.tone === 'error'
@@ -90,7 +90,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Закрыть"
-                className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base leading-none opacity-70"
+                className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-md leading-none opacity-70"
               >
                 ×
               </button>

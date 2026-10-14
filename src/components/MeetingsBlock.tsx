@@ -137,7 +137,7 @@ export function MeetingsBlock({
     <div className="flex flex-col gap-[9px] px-5 pt-5">
       <div className="flex items-baseline justify-between">
         <Overline>Встречи</Overline>
-        <Link to="/settings/calendar" className="-my-3.5 py-3.5 pl-3 text-xs text-slate-500">
+        <Link to="/settings/calendar" className="-my-3.5 py-3.5 pl-3 text-sm text-slate-500">
           Календарь
         </Link>
       </div>
@@ -157,11 +157,11 @@ export function MeetingsBlock({
           return (
             <div key={ev.id} className="flex flex-col gap-2 px-3.5 py-3">
               <div className="flex items-baseline gap-2.5">
-                <span className={`tabular shrink-0 font-mono text-xs ${ongoing ? 'text-brass-600' : 'text-slate-500'}`}>
+                <span className={`tabular shrink-0 font-mono text-sm ${ongoing ? 'text-brass-600' : 'text-slate-500'}`}>
                   {clock(ev.starts_at)}–{clock(ev.ends_at)}
                 </span>
                 <span
-                  className={`min-w-0 flex-1 truncate text-sm ${muted ? 'text-slate-500' : 'text-slate-100'}`}
+                  className={`min-w-0 flex-1 truncate text-base ${muted ? 'text-slate-500' : 'text-slate-100'}`}
                   title={ev.title}
                 >
                   {ev.title}
@@ -179,12 +179,12 @@ export function MeetingsBlock({
               </div>
 
               {ev.status === 'logged' && ev.task_id && (
-                <span className="flex items-center gap-1.5 text-2xs text-[var(--s-success-text)]">
+                <span className="flex items-center gap-1.5 text-xs text-[var(--s-success-text)]">
                   <Check size={12} /> записано {formatHoursMinutes(minutes / 60)} в «{titleOf(ev.task_id)}»
                 </span>
               )}
               {ev.status === 'new' && covered && (past || ongoing) && (
-                <span className="text-2xs text-slate-500">в это время уже шёл учёт</span>
+                <span className="text-xs text-slate-500">в это время уже шёл учёт</span>
               )}
 
               {ev.status === 'new' && past && !covered && (
@@ -194,7 +194,7 @@ export function MeetingsBlock({
                       type="button"
                       disabled={logMeeting.isPending}
                       onClick={() => log(ev, suggestion)}
-                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-xs font-medium disabled:opacity-50"
+                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-sm font-medium disabled:opacity-50"
                       style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
                     >
                       Засчитать {formatHoursMinutes(minutes / 60)} в «{titleOf(suggestion)}»
@@ -220,7 +220,7 @@ export function MeetingsBlock({
                     <button
                       type="button"
                       onClick={() => startTimer.mutate(suggestion, { onError })}
-                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-xs font-medium"
+                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-sm font-medium"
                       style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
                     >
                       ▶ Начать учёт в «{titleOf(suggestion)}»
@@ -247,7 +247,7 @@ export function MeetingsBlock({
             type="button"
             onClick={() => setExpanded(!expanded)}
             aria-expanded={!collapsed}
-            className="flex min-h-11 items-center justify-between gap-2 px-3.5 text-left text-xs text-slate-500"
+            className="flex min-h-11 items-center justify-between gap-2 px-3.5 text-left text-sm text-slate-500"
           >
             <span>
               {collapsed ? `Все встречи дня · ${visible.length}` : 'Свернуть'}

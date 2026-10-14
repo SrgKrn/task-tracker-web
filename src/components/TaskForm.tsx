@@ -126,7 +126,7 @@ export function TaskForm({
           className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         >
-          <span className="tabular font-mono text-sm text-slate-100">
+          <span className="tabular font-mono text-base text-slate-100">
             {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
           </span>
           <ChevronDown size={14} className="text-slate-600" />
@@ -187,7 +187,7 @@ export function TaskForm({
       />
 
       {/* вся строка — цель нажатия: голый чекбокс был 13×13 */}
-      <label className="-my-1 flex min-h-11 items-center gap-2.5 text-sm text-slate-400">
+      <label className="-my-1 flex min-h-11 items-center gap-2.5 text-base text-slate-400">
         <input
           type="checkbox"
           checked={values.is_daily}
@@ -200,7 +200,7 @@ export function TaskForm({
       {!onFieldChange && (
         <button
           type="submit"
-          className="mt-1 h-11 w-full rounded-[14px] text-sm font-semibold lg:w-auto lg:self-start lg:px-8"
+          className="mt-1 h-11 w-full rounded-[14px] text-base font-semibold lg:w-auto lg:self-start lg:px-8"
           style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           {submitLabel}

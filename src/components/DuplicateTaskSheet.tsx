@@ -51,7 +51,7 @@ export function DuplicateTaskSheet({
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+          className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
           style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
         />
       </div>
@@ -67,7 +67,7 @@ export function DuplicateTaskSheet({
         </div>
       </div>
 
-      <p className="text-2xs leading-[1.5] text-slate-600">
+      <p className="text-xs leading-[1.5] text-slate-600">
         Группы, статус и план часов копируются. Факт и история трекинга — нет.
         {note && <span className="mt-1 block">{note}</span>}
       </p>

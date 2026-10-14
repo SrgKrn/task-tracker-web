@@ -29,7 +29,7 @@ export function NetworkBanner() {
     <div
       role="status"
       data-top-bar
-      className="safe-top flex items-center gap-2 px-5 py-2 text-xs"
+      className="safe-top flex items-center gap-2 px-5 py-2 text-sm"
       style={{ background: 'var(--s-surface-2)', borderBottom: '1px solid var(--s-border)', color: 'var(--s-text-soft)' }}
     >
       <span

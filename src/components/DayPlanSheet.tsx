@@ -80,14 +80,14 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Найти задачу"
-          className="h-10 min-w-0 flex-1 rounded-[12px] px-3 text-sm text-slate-100 outline-none placeholder:text-[var(--s-placeholder)]"
+          className="h-10 min-w-0 flex-1 rounded-[12px] px-3 text-base text-slate-100 outline-none placeholder:text-[var(--s-placeholder)]"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         />
         {suggested.length > 0 && !q && (
           <button
             type="button"
             onClick={toggleSuggested}
-            className="h-10 shrink-0 rounded-[12px] px-3 text-xs font-medium"
+            className="h-10 shrink-0 rounded-[12px] px-3 text-sm font-medium"
             style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
           >
             {allSuggestedOn ? 'Снять предложенное' : 'Всё предложенное'}
@@ -97,16 +97,16 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
 
       <div className="-mx-2 flex max-h-[52vh] flex-col gap-3 overflow-y-auto px-2">
         {visible.length === 0 && (
-          <p className="py-6 text-center text-sm text-slate-500">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
+          <p className="py-6 text-center text-base text-slate-500">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
         )}
         {visible.map((section) => (
           <div key={section.key} className="flex flex-col gap-1">
-            <span className="px-1 font-mono text-2xs uppercase tracking-[.14em] text-slate-500">{section.title}</span>
+            <span className="px-1 font-mono text-xs uppercase tracking-[.14em] text-slate-500">{section.title}</span>
             {section.key === 'rest' && !q && !showRest ? (
               <button
                 type="button"
                 onClick={() => setShowRest(true)}
-                className="h-11 rounded-[12px] text-left text-sm text-brass-600"
+                className="h-11 rounded-[12px] text-left text-base text-brass-600"
               >
                 Показать остальные · {restCount}
               </button>
@@ -175,15 +175,15 @@ function PlanRow({
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className="text-sm font-medium leading-[1.3] text-slate-100"
+          className="text-base font-medium leading-[1.3] text-slate-100"
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
         >
           {task.name}
         </span>
-        {meta && <span className="block truncate font-mono text-2xs leading-[1.4] text-slate-500">{meta}</span>}
+        {meta && <span className="block truncate font-mono text-xs leading-[1.4] text-slate-500">{meta}</span>}
       </span>
       {dueLabel && (
-        <span className={`shrink-0 font-mono text-2xs ${overdue ? 'text-terra-400' : 'text-slate-500'}`}>
+        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-terra-400' : 'text-slate-500'}`}>
           {overdue ? `просрочено ${dueLabel}` : `до ${dueLabel}`}
         </span>
       )}

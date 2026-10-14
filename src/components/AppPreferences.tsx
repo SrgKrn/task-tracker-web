@@ -13,9 +13,9 @@ export function ThemeCard() {
   return (
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex flex-col gap-1">
-        <span className="text-2xs leading-[1.5] text-slate-500">
-          Светлая тема — в палитре PDF-отчёта. На iPhone цвет строки с часами и батареей
-          обновится при следующем запуске приложения.
+        <span className="text-xs leading-[1.5] text-slate-500">
+          По умолчанию тема следует настройке телефона. На iPhone цвет строки с часами и
+          батареей обновится при следующем запуске приложения.
         </span>
       </div>
       <Segmented<ThemeChoice>
@@ -23,9 +23,9 @@ export function ThemeCard() {
         onChange={setTheme}
         className="self-start"
         options={[
-          { value: 'dark', label: 'Тёмная' },
-          { value: 'light', label: 'Светлая' },
           { value: 'system', label: 'Как в системе' },
+          { value: 'light', label: 'Светлая' },
+          { value: 'dark', label: 'Тёмная' },
         ]}
       />
     </div>
@@ -65,12 +65,12 @@ export function NotificationsCard() {
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-2xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-slate-500">
             Если учёт идёт больше часа — придёт вопрос «вы всё ещё работаете?», потом каждый
             следующий час. Работает и при заблокированном экране.
           </span>
           {state && (
-            <span className={`text-2xs leading-[1.5] ${state === 'on' ? 'text-sage-400' : 'text-slate-400'}`}>
+            <span className={`text-xs leading-[1.5] ${state === 'on' ? 'text-sage-400' : 'text-slate-400'}`}>
               {STATE_TEXT[state]}
             </span>
           )}
@@ -84,7 +84,7 @@ export function NotificationsCard() {
               type="button"
               disabled={busy}
               onClick={() => run(push.enable, 'Уведомления включены')}
-              className="h-11 flex-1 rounded-[14px] text-sm font-semibold disabled:opacity-50"
+              className="h-11 flex-1 rounded-[14px] text-base font-semibold disabled:opacity-50"
               style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
             >
               Включить
@@ -100,7 +100,7 @@ export function NotificationsCard() {
                     if (r.sent === 0) throw new UserError('Не удалось доставить — попробуйте выключить и включить снова')
                   }, 'Пробное отправлено — смотрите уведомления')
                 }
-                className="h-11 flex-1 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
+                className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
                 style={{ border: '1px solid var(--s-border-strong-2)' }}
               >
                 Прислать пробное
@@ -109,7 +109,7 @@ export function NotificationsCard() {
                 type="button"
                 disabled={busy}
                 onClick={() => run(push.disable, 'Уведомления выключены')}
-                className="h-11 rounded-[14px] px-4 text-sm font-medium text-slate-400 disabled:opacity-50"
+                className="h-11 rounded-[14px] px-4 text-base font-medium text-slate-400 disabled:opacity-50"
                 style={{ border: '1px solid var(--s-border-strong-2)' }}
               >
                 Выключить
@@ -131,8 +131,8 @@ export function NotificationsCard() {
             className="h-[18px] w-[18px] shrink-0 accent-brass-600"
           />
           <span className="flex min-w-0 flex-col">
-            <span className="text-sm text-slate-300">Плашка «Идёт учёт»</span>
-            <span className="text-2xs leading-[1.4] text-slate-500">
+            <span className="text-base text-slate-300">Плашка «Идёт учёт»</span>
+            <span className="text-xs leading-[1.4] text-slate-500">
               при запуске таймера в уведомлениях и на экране блокировки появится задача и время
               начала; уберётся, когда остановите
             </span>
@@ -156,19 +156,19 @@ export function TelegramCard() {
     <div className="flex flex-col gap-3 rounded-2xl p-3.5" style={card}>
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-2xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-slate-500">
             Итоги дня и недели, напоминание о долгом учёте и о встречах — с кнопками прямо в чате.
             Учёт можно начать и остановить из Telegram, а комментарий — просто написать боту.
           </span>
-          {isLoading && <span className="text-2xs text-slate-500">Проверяем…</span>}
-          {error && <span className="text-2xs text-terra-400">Не удалось узнать статус: {describeError(error)}</span>}
+          {isLoading && <span className="text-xs text-slate-500">Проверяем…</span>}
+          {error && <span className="text-xs text-terra-400">Не удалось узнать статус: {describeError(error)}</span>}
           {status && !status.configured && (
-            <span className="text-2xs leading-[1.5] text-slate-400">
+            <span className="text-xs leading-[1.5] text-slate-400">
               Бот ещё не настроен — как только он появится, здесь будет кнопка «Подключить».
             </span>
           )}
           {linked && (
-            <span className="text-2xs leading-[1.5] text-sage-400">
+            <span className="text-xs leading-[1.5] text-sage-400">
               Подключено{linked.username ? `: @${linked.username}` : linked.firstName ? `: ${linked.firstName}` : ''}
             </span>
           )}
@@ -186,7 +186,7 @@ export function TelegramCard() {
             onClick={(e) => {
               if (!link) e.preventDefault()
             }}
-            className="flex h-11 items-center justify-center rounded-[14px] text-sm font-semibold"
+            className="flex h-11 items-center justify-center rounded-[14px] text-base font-semibold"
             style={{
               background: link ? 'var(--s-accent)' : 'var(--s-disabled-bg)',
               color: link ? 'var(--s-on-accent)' : 'var(--s-disabled-fg)',
@@ -194,7 +194,7 @@ export function TelegramCard() {
           >
             {link ? 'Подключить Telegram' : 'Готовим ссылку…'}
           </a>
-          <span className="text-2xs leading-[1.5] text-slate-500">
+          <span className="text-xs leading-[1.5] text-slate-500">
             Откроется чат с @{status.bot} — нажмите «Запустить» и вернитесь сюда.
           </span>
         </>
@@ -217,11 +217,11 @@ export function TelegramCard() {
             />
             {(linked.dailySummary || linked.weeklySummary) && (
               <label className="flex min-h-11 items-center justify-between gap-3 py-1 pl-[28px]">
-                <span className="text-sm text-slate-300">Время сводки</span>
+                <span className="text-base text-slate-300">Время сводки</span>
                 <select
                   value={linked.summaryHour}
                   onChange={(e) => actions.update.mutate({ summaryHour: Number(e.target.value) }, { onError })}
-                  className="h-9 rounded-[10px] px-2.5 font-mono text-sm text-slate-100"
+                  className="h-9 rounded-[10px] px-2.5 font-mono text-base text-slate-100"
                   style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
                 >
                   {Array.from({ length: 24 }, (_, h) => (
@@ -246,7 +246,7 @@ export function TelegramCard() {
             />
           </div>
           <p
-            className="rounded-xl px-3 py-2.5 text-2xs leading-[1.6] text-slate-400"
+            className="rounded-xl px-3 py-2.5 text-xs leading-[1.6] text-slate-400"
             style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)' }}
           >
             В чате с ботом: <span className="font-mono text-slate-300">/timer</span> — начать или остановить учёт,{' '}
@@ -260,7 +260,7 @@ export function TelegramCard() {
               onClick={() =>
                 actions.digestNow.mutate(undefined, { onError, onSuccess: () => showSuccess('Итоги дня — в Telegram') })
               }
-              className="h-11 flex-1 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
+              className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
               style={{ border: '1px solid var(--s-border-strong-2)' }}
             >
               Прислать итоги сейчас
@@ -269,7 +269,7 @@ export function TelegramCard() {
               type="button"
               disabled={actions.unlink.isPending}
               onClick={() => actions.unlink.mutate(undefined, { onError, onSuccess: () => showSuccess('Telegram отключён') })}
-              className="h-11 rounded-[14px] px-4 text-sm font-medium text-slate-400 disabled:opacity-50"
+              className="h-11 rounded-[14px] px-4 text-base font-medium text-slate-400 disabled:opacity-50"
               style={{ border: '1px solid var(--s-border-strong-2)' }}
             >
               Отключить
@@ -302,8 +302,8 @@ export function Toggle({
         className="h-[18px] w-[18px] shrink-0 accent-brass-600"
       />
       <span className="flex min-w-0 flex-col">
-        <span className="text-sm text-slate-300">{title}</span>
-        {hint && <span className="text-2xs leading-[1.4] text-slate-500">{hint}</span>}
+        <span className="text-base text-slate-300">{title}</span>
+        {hint && <span className="text-xs leading-[1.4] text-slate-500">{hint}</span>}
       </span>
     </label>
   )

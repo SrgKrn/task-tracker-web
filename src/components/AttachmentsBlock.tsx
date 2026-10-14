@@ -126,7 +126,7 @@ export function AttachmentsBlock({
               type="button"
               onClick={onPickDrive}
               disabled={addDrive.isPending}
-              className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-brass-600 disabled:opacity-50"
+              className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-sm font-medium text-brass-600 disabled:opacity-50"
             >
               <Drive size={14} />
               Из Диска
@@ -136,7 +136,7 @@ export function AttachmentsBlock({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={upload.isPending}
-          className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-xs font-medium text-brass-600 disabled:opacity-50"
+          className="-my-2 flex items-center gap-1.5 py-2 pl-3 text-sm font-medium text-brass-600 disabled:opacity-50"
         >
           <Plus size={14} />
           {progress ? `Загружаем ${progress.done + 1 > progress.total ? progress.total : progress.done + 1} из ${progress.total}…` : 'Добавить'}
@@ -163,7 +163,7 @@ export function AttachmentsBlock({
               style={i > 0 ? { borderTop: '1px solid var(--s-hairline-3)' } : undefined}
             >
               <span
-                className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md font-mono text-[9.5px] font-medium tracking-[.04em]"
+                className="flex h-8 w-10 shrink-0 items-center justify-center rounded-sm font-mono text-xs font-medium tracking-[.04em]"
                 style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)', color: 'var(--color-slate-400)' }}
               >
                 {f.drive_file_id ? <Drive size={14} /> : kindOf(f.name)}
@@ -181,8 +181,8 @@ export function AttachmentsBlock({
                   }
                 }}
               >
-                <span className="block truncate text-sm text-slate-100">{f.name}</span>
-                <span className="block truncate font-mono text-2xs text-slate-500">
+                <span className="block truncate text-base text-slate-100">{f.name}</span>
+                <span className="block truncate font-mono text-xs text-slate-500">
                   {f.drive_file_id ? 'Google Диск' : formatSize(f.size)} · {formatDate(f.created_at)}
                   {taskNames && f.task_id && taskNames.get(f.task_id) ? ` · ${taskNames.get(f.task_id)}` : ''}
                   {taskNames && !f.task_id ? ' · база знаний' : ''}
@@ -204,7 +204,7 @@ export function AttachmentsBlock({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 text-left text-xs leading-[1.45] text-slate-500"
+            className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 text-left text-sm leading-[1.45] text-slate-500"
             style={{ border: '1px dashed var(--s-border-strong-2)' }}
           >
             <Paperclip size={15} />

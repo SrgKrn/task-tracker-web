@@ -71,7 +71,7 @@ export function ItemDetail() {
       <button
         type="button"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(`/groups/${group.id}`))}
-        className="-my-2.5 flex items-center gap-2 self-start py-2.5 text-sm text-slate-400"
+        className="-my-2.5 flex items-center gap-2 self-start py-2.5 text-base text-slate-400"
       >
         <ArrowLeft size={15} />
         Назад
@@ -82,9 +82,9 @@ export function ItemDetail() {
           {group.item_name}
           {item.archived ? ' · в архиве' : ''}
         </Overline>
-        <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{item.name}</h1>
+        <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{item.name}</h1>
         {parent && parentGroup && (
-          <span className="text-xs text-slate-500">
+          <span className="text-sm text-slate-500">
             {parentGroup.item_name}:{' '}
             <Link to={`/items/${parent.id}`} className="text-brass-600">
               {parent.name}
@@ -103,7 +103,7 @@ export function ItemDetail() {
               <Link
                 key={child.id}
                 to={`/items/${child.id}`}
-                className="rounded-[9px] px-[13px] py-[9px] text-xs text-[var(--s-muted-text)]"
+                className="rounded-[9px] px-[13px] py-[9px] text-sm text-[var(--s-muted-text)]"
                 style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)', opacity: child.archived ? 0.55 : 1 }}
               >
                 {child.name}
@@ -195,7 +195,7 @@ function DriveFolder({ item }: { item: GroupItem }) {
       <button
         type="button"
         onClick={choose}
-        className="flex min-h-11 items-center gap-2.5 self-start rounded-xl px-3 text-xs text-slate-400"
+        className="flex min-h-11 items-center gap-2.5 self-start rounded-xl px-3 text-sm text-slate-400"
         style={{ border: '1px dashed var(--s-border-strong-2)' }}
       >
         <Drive size={15} />
@@ -217,10 +217,10 @@ function DriveFolder({ item }: { item: GroupItem }) {
         rel="noopener noreferrer"
         className="min-w-0 flex-1"
       >
-        <span className="block truncate text-sm text-slate-100">{item.drive_folder_name || 'Папка на Диске'}</span>
-        <span className="block font-mono text-2xs text-slate-500">Google Диск · открыть</span>
+        <span className="block truncate text-base text-slate-100">{item.drive_folder_name || 'Папка на Диске'}</span>
+        <span className="block font-mono text-xs text-slate-500">Google Диск · открыть</span>
       </a>
-      <button type="button" onClick={choose} className="h-9 shrink-0 rounded-[10px] px-2.5 text-xs text-slate-400">
+      <button type="button" onClick={choose} className="h-9 shrink-0 rounded-[10px] px-2.5 text-sm text-slate-400">
         Сменить
       </button>
     </div>
@@ -251,7 +251,7 @@ function ItemDescription({ item }: { item: GroupItem }) {
       }}
       rows={Math.min(10, Math.max(3, draft.split('\n').length + 1))}
       placeholder="Описание: кто клиент, о чём договорились, контакты, ссылки. Сохраняется само"
-      className="resize-none rounded-2xl px-3.5 py-3 text-sm leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
+      className="resize-none rounded-2xl px-3.5 py-3 text-base leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     />
   )
@@ -297,13 +297,13 @@ function ItemTasks({
   return (
     <div className="flex flex-col gap-[9px]">
       {active.map(row)}
-      {active.length === 0 && <p className="text-sm text-slate-500">Открытых задач нет.</p>}
+      {active.length === 0 && <p className="text-base text-slate-500">Открытых задач нет.</p>}
       {closed.length > 0 && (
         <>
           <button
             type="button"
             onClick={() => setShowClosed((v) => !v)}
-            className="mt-1 flex min-h-10 items-center gap-2 self-start text-xs text-slate-500"
+            className="mt-1 flex min-h-10 items-center gap-2 self-start text-sm text-slate-500"
           >
             <span className="flex transition-transform" style={{ transform: showClosed ? 'rotate(180deg)' : undefined }}>
               <ChevronDown size={14} />
@@ -453,16 +453,16 @@ function ItemHistory({
 
   return (
     <div className="flex flex-col gap-4">
-      {isLoading && <p className="text-sm text-slate-500">Собираем историю…</p>}
+      {isLoading && <p className="text-base text-slate-500">Собираем историю…</p>}
       {!isLoading && days.length === 0 && (
-        <p className="text-sm text-slate-500">За последние {windowDays} дней ничего не происходило.</p>
+        <p className="text-base text-slate-500">За последние {windowDays} дней ничего не происходило.</p>
       )}
       {days.map((d) => (
         <div key={d.day} className="flex flex-col">
           <div className="flex items-baseline justify-between pb-1.5" style={{ borderBottom: '1px solid var(--s-hairline-3)' }}>
-            <span className="text-sm font-semibold text-slate-100">{dayTitle(d.day)}</span>
+            <span className="text-base font-semibold text-slate-100">{dayTitle(d.day)}</span>
             {d.hours !== 0 && (
-              <span className="tabular font-mono text-xs font-medium text-slate-300">{formatHoursMinutes(d.hours)}</span>
+              <span className="tabular font-mono text-sm font-medium text-slate-300">{formatHoursMinutes(d.hours)}</span>
             )}
           </div>
           {d.items.map((it, i) => {
@@ -473,13 +473,13 @@ function ItemHistory({
                   style={{ background: dot[it.tone ?? 'comment'] }}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm leading-[1.4] text-slate-300" style={{ overflowWrap: 'anywhere' }}>
+                  <span className="block text-base leading-[1.4] text-slate-300" style={{ overflowWrap: 'anywhere' }}>
                     {it.tone === 'comment' ? `«${it.text}»` : it.text}
                   </span>
-                  {it.sub && <span className="block truncate font-mono text-2xs text-slate-500">{it.sub}</span>}
+                  {it.sub && <span className="block truncate font-mono text-xs text-slate-500">{it.sub}</span>}
                 </span>
                 {it.hours !== undefined && (
-                  <span className="tabular shrink-0 font-mono text-xs text-slate-400">
+                  <span className="tabular shrink-0 font-mono text-sm text-slate-400">
                     {it.hours < 0 ? '−' : ''}
                     {formatHoursMinutes(Math.abs(it.hours))}
                   </span>
@@ -512,7 +512,7 @@ function ItemHistory({
         <button
           type="button"
           onClick={() => setWindowDays((n) => n + HISTORY_STEP_DAYS)}
-          className="h-11 rounded-[14px] text-sm text-slate-400"
+          className="h-11 rounded-[14px] text-base text-slate-400"
           style={{ border: '1px solid var(--s-border-strong-2)' }}
         >
           Показать раньше

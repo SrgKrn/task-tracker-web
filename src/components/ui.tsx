@@ -32,7 +32,7 @@ export function Logo({ size = 22, color = 'var(--s-accent)' }: { size?: number; 
 export function Overline({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`font-mono text-2xs font-medium uppercase tracking-[.16em] text-slate-500 ${className}`}
+      className={`font-mono text-xs font-medium uppercase tracking-[.16em] text-slate-500 ${className}`}
     >
       {children}
     </span>
@@ -42,7 +42,7 @@ export function Overline({ children, className = '' }: { children: ReactNode; cl
 /** Микро-метка над полем. */
 export function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">{children}</span>
+    <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">{children}</span>
   )
 }
 
@@ -59,7 +59,7 @@ export function Chip({ active = false, onClick, children, className = '' }: Chip
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-9 shrink-0 rounded-[9px] px-[13px] py-[9px] text-xs ${
+      className={`min-h-9 shrink-0 rounded-[9px] px-[13px] py-[9px] text-sm ${
         active
           ? 'bg-[var(--s-accent)] font-medium text-[var(--s-on-accent)]'
           : 'border border-slate-700 bg-slate-800 text-[var(--s-muted-text)]'
@@ -104,7 +104,7 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-[9px] px-2.5 text-xs ${stretch ? 'min-h-9 flex-1' : 'min-h-8'}`}
+            className={`rounded-[9px] px-2.5 text-sm ${stretch ? 'min-h-9 flex-1' : 'min-h-8'}`}
             style={{
               background: active ? 'var(--s-accent)' : 'transparent',
               color: active ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
@@ -190,7 +190,7 @@ export function SheetActions({
       <button
         type="button"
         onClick={onCancel}
-        className="h-12 flex-1 rounded-[15px] text-sm font-medium text-slate-300"
+        className="h-12 flex-1 rounded-[15px] text-base font-medium text-slate-300"
         style={{ border: '1px solid var(--s-border-strong-2)' }}
       >
         {cancelLabel}
@@ -199,7 +199,7 @@ export function SheetActions({
         type="button"
         onClick={onConfirm}
         disabled={confirmDisabled}
-        className="h-12 flex-[2] rounded-[15px] text-sm font-semibold"
+        className="h-12 flex-[2] rounded-[15px] text-base font-semibold"
         style={{
           background: confirmDisabled ? 'var(--s-disabled-bg)' : 'var(--s-accent)',
           color: confirmDisabled ? 'var(--s-placeholder)' : 'var(--s-on-accent)',
@@ -223,7 +223,7 @@ const TAG_TONE: Record<TagTone, string> = {
 /** Тег статуса: пользовательские статусы нейтральны, латунь и зелень зарезервированы. */
 export function Tag({ tone = 'neutral', children }: { tone?: TagTone; children: ReactNode }) {
   return (
-    <span className={`shrink-0 rounded-md px-2 py-[3px] text-2xs font-medium ${TAG_TONE[tone]}`}>
+    <span className={`shrink-0 rounded-sm px-2 py-[3px] text-xs font-medium ${TAG_TONE[tone]}`}>
       {children}
     </span>
   )
@@ -254,14 +254,14 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
       >
         <span className="h-[14px] w-[14px] rounded-full" style={{ background: 'var(--s-on-accent)' }} />
       </span>
-      {label && <span className="whitespace-nowrap text-left text-2xs text-[var(--s-muted-text)]">{label}</span>}
+      {label && <span className="whitespace-nowrap text-left text-xs text-[var(--s-muted-text)]">{label}</span>}
     </button>
   )
 }
 
 /** Единый стиль поля ввода из макета. */
 export const fieldClass =
-  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 focus:border-brass-600'
+  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-base text-slate-100 focus:border-brass-600'
 
 /** Заглушка-плейсхолдер на время первой загрузки — вместо пустого экрана. */
 export function Skeleton({ className = '', rounded = '15px' }: { className?: string; rounded?: string }) {
@@ -310,7 +310,7 @@ export function EmptyState({ children }: { children: ReactNode }) {
           }}
         />
       </span>
-      <p className="max-w-[260px] text-sm leading-[1.5] text-slate-600">{children}</p>
+      <p className="max-w-[260px] text-base leading-[1.5] text-slate-600">{children}</p>
     </div>
   )
 }

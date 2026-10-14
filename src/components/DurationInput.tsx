@@ -78,7 +78,7 @@ export function DurationInput({
             key={preset}
             type="button"
             onClick={() => onChange(draftFromMinutes(preset))}
-            className="min-h-9 rounded-[9px] px-3 text-xs text-slate-300"
+            className="min-h-9 rounded-[9px] px-3 text-sm text-slate-300"
             style={{ border: '1px solid var(--s-border-strong-2)' }}
           >
             {formatHoursMinutes(preset / 60)}
@@ -99,7 +99,7 @@ export function AdjustmentNote({ value, onChange }: { value: string; onChange: (
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Почему правка: забыл включить таймер, созвон без учёта…"
-        className="resize-none rounded-[14px] px-3.5 py-2.5 text-sm leading-[1.45] text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        className="resize-none rounded-[14px] px-3.5 py-2.5 text-base leading-[1.45] text-slate-100 placeholder:text-[var(--s-placeholder)]"
         style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
       />
     </label>

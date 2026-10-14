@@ -1,0 +1,244 @@
+/* =========================================================
+   Tracker Design System — tokens v1.0
+   Подключить один раз в корне приложения (до остальных стилей).
+   Тема: <html data-theme="light|dark">; без атрибута — по системе.
+   ========================================================= */
+
+/* Semternity: шрифты не с Google Fonts — они собираются из @fontsource вместе с приложением
+   (см. src/fonts.ts), чтобы PWA открывалось без сети. */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Поверхности ---------- */
+  --bg:               #F7F6F2;  /* фон приложения (тёплый off-white) */
+  --surface:          #FFFFFF;  /* карточки, панели, модалки */
+  --surface-hover:    #FBFAF7;  /* hover строки/карточки */
+  --surface-sunken:   #F0EEE8;  /* колонки канбана, поля поиска, well */
+  --surface-selected: #F7E6DD;  /* выбранная строка / активный пункт меню */
+  --overlay:          rgba(28, 27, 25, 0.40); /* подложка модалок */
+
+  /* ---------- Границы ---------- */
+  --border:           #E6E3DC;
+  --border-strong:    #D6D2C8;
+  --divider:          #EEEBE5;
+
+  /* ---------- Текст ---------- */
+  --text:             #1C1B19;  /* основной */
+  --text-secondary:   #6B6860;  /* описания, метаданные */
+  --text-tertiary:    #9A978E;  /* плейсхолдеры, подсказки (не для важного текста) */
+  --text-disabled:    #B8B5AC;
+  --text-inverse:     #FFFFFF;
+
+  /* ---------- Акцент (бренд, терракота — тренд 2026: землистые тёплые тона) ---------- */
+  --accent:           #B4532A;  /* главные кнопки, ссылки, чекбоксы */
+  --accent-hover:     #9A4521;
+  --accent-active:    #7F381A;
+  --accent-soft:      #F7E6DD;  /* фон бейджей/выделений */
+  --accent-text:      #8A3B19;  /* текст на accent-soft */
+  --on-accent:        #FFFFFF;  /* текст на accent */
+  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(180, 83, 42, 0.50);
+
+  /* ---------- Семантика ---------- */
+  --success:          #2E9B5E;  --success-soft: #E5F3EA;  --success-text: #1F6B3F;
+  --warning:          #C27C18;  --warning-soft: #FBF0DD;  --warning-text: #7A4E0E;
+  --danger:           #C2304F;  --danger-soft:  #FBE6EB;  --danger-text:  #8A1F38;
+  --info:             #4A72C9;  --info-soft:    #E8EEF8;  --info-text:    #2A4A85;
+
+  /* ---------- Статусы задач (dot / фон чипа / текст чипа) ---------- */
+  --status-backlog:      #8A877F; --status-backlog-bg:  #EFEEE9; --status-backlog-text:  #4A4842;
+  --status-todo:         #64748B; --status-todo-bg:     #ECEFF3; --status-todo-text:     #3D4A5C;
+  --status-progress:     #4A72C9; --status-progress-bg: #E8EEF8; --status-progress-text: #2A4A85;
+  --status-review:       #7A5AF0; --status-review-bg:   #EFEBFC; --status-review-text:   #4B3699;
+  --status-done:         #2E9B5E; --status-done-bg:     #E5F3EA; --status-done-text:     #1F6B3F;
+  --status-blocked:      #C2304F; --status-blocked-bg:  #FBE6EB; --status-blocked-text:  #8A1F38;
+
+  /* ---------- Приоритеты ---------- */
+  --priority-urgent: #C2304F;
+  --priority-high:   #C27C18;
+  --priority-medium: #A8860A;
+  --priority-low:    #8A877F;
+
+  /* ---------- Метки проектов (категориальные, по кругу) ---------- */
+  --label-1: #B4532A; --label-2: #4A72C9; --label-3: #7A5AF0; --label-4: #C2538A;
+  --label-5: #C27C18; --label-6: #2E9B5E; --label-7: #6E8B3D; --label-8: #6B6860;
+
+  /* ---------- Типографика ---------- */
+  --font-sans: "Onest", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --text-xs:   12px;  --leading-xs:   16px;
+  --text-sm:   13px;  --leading-sm:   18px;
+  --text-base: 14px;  --leading-base: 20px;   /* базовый размер интерфейса */
+  --text-md:   16px;  --leading-md:   24px;
+  --text-lg:   20px;  --leading-lg:   28px;
+  --text-xl:   24px;  --leading-xl:   32px;
+  --text-2xl:  32px;  --leading-2xl:  40px;
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --tracking-tight:  -0.01em; /* для заголовков ≥ 20px */
+
+  /* ---------- Отступы (сетка 4px) ---------- */
+  --space-0: 0;     --space-1: 4px;   --space-2: 8px;   --space-3: 12px;
+  --space-4: 16px;  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;
+  --space-10: 40px; --space-12: 48px; --space-16: 64px;
+
+  /* ---------- Размеры контролов ---------- */
+  --control-sm: 28px;
+  --control-md: 32px;  /* по умолчанию в плотном интерфейсе */
+  --control-lg: 40px;
+  --row-height: 36px;  /* строка списка задач, режим «компактно» */
+  --row-height-comfortable: 44px;
+  --sidebar-width: 248px;
+  --header-height: 52px;
+
+  /* ---------- Радиусы ---------- */
+  --radius-xs:   4px;   /* чекбокс, мелкие теги */
+  --radius-sm:   6px;   /* кнопки, поля */
+  --radius-md:   10px;  /* карточки */
+  --radius-lg:   14px;  /* модалки, поповеры */
+  --radius-full: 999px; /* чипы, аватары */
+
+  /* ---------- Тени (только для всплывающих слоёв) ---------- */
+  --shadow-sm:      0 1px 2px rgba(28, 27, 25, 0.06);
+  --shadow-popover: 0 8px 24px rgba(28, 27, 25, 0.10), 0 2px 6px rgba(28, 27, 25, 0.06);
+  --shadow-modal:   0 24px 48px rgba(28, 27, 25, 0.16), 0 4px 12px rgba(28, 27, 25, 0.08);
+  --shadow-drag:    0 12px 28px rgba(28, 27, 25, 0.18); /* перетаскиваемая карточка */
+
+  /* ---------- Движение ---------- */
+  --duration-fast: 120ms;  /* hover, нажатие */
+  --duration-base: 180ms;  /* поповеры, переключатели */
+  --duration-slow: 260ms;  /* модалки, панели */
+  --ease-out:      cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* только для отметки «выполнено» */
+
+  /* ---------- Слои ---------- */
+  --z-dropdown: 100; --z-sticky: 200; --z-overlay: 300;
+  --z-modal: 400;    --z-toast: 500;  --z-tooltip: 600;
+}
+
+/* ================= Тёмная тема ================= */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:               #121311;
+  --surface:          #1B1C1A;
+  --surface-hover:    #222321;
+  --surface-sunken:   #0E0F0D;
+  --surface-selected: #3A2219;
+  --overlay:          rgba(0, 0, 0, 0.60);
+
+  --border:           #2E2F2C;
+  --border-strong:    #3D3E3A;
+  --divider:          #252623;
+
+  --text:             #ECEBE7;
+  --text-secondary:   #9A988F;
+  --text-tertiary:    #6E6C65;
+  --text-disabled:    #55534D;
+  --text-inverse:     #121311;
+
+  --accent:           #E8865E;
+  --accent-hover:     #F09A76;
+  --accent-active:    #D4704A;
+  --accent-soft:      #3A2219;
+  --accent-text:      #F2B497;
+  --on-accent:        #2A1209;
+  --focus-ring:       0 0 0 2px var(--bg), 0 0 0 4px rgba(232, 134, 94, 0.55);
+
+  --success:          #4CBB7C;  --success-soft: #15301F;  --success-text: #97DDB3;
+  --warning:          #E6A748;  --warning-soft: #33270F;  --warning-text: #F0C988;
+  --danger:           #E8687F;  --danger-soft:  #3A1820;  --danger-text:  #F4A9B7;
+  --info:             #6E93E0;  --info-soft:    #1A2438;  --info-text:    #A9C1F0;
+
+  --status-backlog:      #8A877F; --status-backlog-bg:  #262724; --status-backlog-text:  #B9B7AF;
+  --status-todo:         #8A98AD; --status-todo-bg:     #1F242C; --status-todo-text:     #B8C3D3;
+  --status-progress:     #6E93E0; --status-progress-bg: #1A2438; --status-progress-text: #A9C1F0;
+  --status-review:       #9A82F5; --status-review-bg:   #251E3F; --status-review-text:   #C7B9FA;
+  --status-done:         #4CBB7C; --status-done-bg:     #15301F; --status-done-text:     #97DDB3;
+  --status-blocked:      #E8687F; --status-blocked-bg:  #3A1820; --status-blocked-text:  #F4A9B7;
+
+  --priority-urgent: #E8687F;
+  --priority-high:   #E6A748;
+  --priority-medium: #E3C04A;
+  --priority-low:    #8A877F;
+
+  --label-1: #E8865E; --label-2: #6E93E0; --label-3: #9A82F5; --label-4: #DB78A8;
+  --label-5: #E6A748; --label-6: #4CBB7C; --label-7: #9DB86A; --label-8: #9A988F;
+
+  --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border);
+  --shadow-modal:   0 24px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border);
+  --shadow-drag:    0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* Тёмная тема по системе, если пользователь не выбрал явно */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --bg: #121311; --surface: #1B1C1A; --surface-hover: #222321; --surface-sunken: #0E0F0D;
+    --surface-selected: #3A2219; --overlay: rgba(0,0,0,0.60);
+    --border: #2E2F2C; --border-strong: #3D3E3A; --divider: #252623;
+    --text: #ECEBE7; --text-secondary: #9A988F; --text-tertiary: #6E6C65; --text-disabled: #55534D; --text-inverse: #121311;
+    --accent: #E8865E; --accent-hover: #F09A76; --accent-active: #D4704A; --accent-soft: #3A2219; --accent-text: #F2B497; --on-accent: #2A1209;
+    --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(232,134,94,0.55);
+    --success: #4CBB7C; --success-soft: #15301F; --success-text: #97DDB3;
+    --warning: #E6A748; --warning-soft: #33270F; --warning-text: #F0C988;
+    --danger: #E8687F;  --danger-soft: #3A1820;  --danger-text: #F4A9B7;
+    --info: #6E93E0;    --info-soft: #1A2438;    --info-text: #A9C1F0;
+    --status-backlog: #8A877F; --status-backlog-bg: #262724; --status-backlog-text: #B9B7AF;
+    --status-todo: #8A98AD; --status-todo-bg: #1F242C; --status-todo-text: #B8C3D3;
+    --status-progress: #6E93E0; --status-progress-bg: #1A2438; --status-progress-text: #A9C1F0;
+    --status-review: #9A82F5; --status-review-bg: #251E3F; --status-review-text: #C7B9FA;
+    --status-done: #4CBB7C; --status-done-bg: #15301F; --status-done-text: #97DDB3;
+    --status-blocked: #E8687F; --status-blocked-bg: #3A1820; --status-blocked-text: #F4A9B7;
+    --priority-urgent: #E8687F; --priority-high: #E6A748; --priority-medium: #E3C04A; --priority-low: #8A877F;
+    --label-1: #E8865E; --label-2: #6E93E0; --label-3: #9A82F5; --label-4: #DB78A8;
+    --label-5: #E6A748; --label-6: #4CBB7C; --label-7: #9DB86A; --label-8: #9A988F;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.40);
+    --shadow-popover: 0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px var(--border);
+    --shadow-modal: 0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px var(--border);
+    --shadow-drag: 0 12px 28px rgba(0,0,0,0.55);
+  }
+}
+
+/* ================= Базовые стили ================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Semternity: корень остаётся 16 px — отступы Tailwind считаются в rem, и корень 14 px
+   уменьшил бы все размеры на 12,5 % (зоны нажатия 44 → 38,5 px). Базовый кегль — у body. */
+html {
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body { margin: 0; background: var(--bg); color: var(--text); font-size: var(--text-base); line-height: var(--leading-base); }
+
+::selection { background: var(--accent-soft); color: var(--accent-text); }
+
+/* Semternity: без border-radius — этот файл вне слоёв и перебивал бы rounded-full у круглых
+   кнопок и колец, превращая их при фокусе в квадраты со скруглением 6 px. */
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Числа, даты, счётчики, ID — моноширинно-выровненные */
+.tabular, time, [data-numeric] { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+/* Тонкие скроллбары */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -84,7 +84,7 @@ export function ChipPicker({
               }
             }}
             placeholder={placeholder}
-            className="h-10 min-w-0 flex-1 rounded-xl px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+            className="h-10 min-w-0 flex-1 rounded-xl px-3 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
             style={{ background: 'var(--s-input)', border: '1px solid var(--s-accent)' }}
           />
           <button

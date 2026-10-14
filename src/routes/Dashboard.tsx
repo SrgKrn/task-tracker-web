@@ -217,7 +217,7 @@ export function Dashboard() {
           <Overline className="tracking-[.14em]">
             {shortDate(from)} — {shortDate(to)}
           </Overline>
-          <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
+          <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
         </div>
         {/* прокрутка, а не перенос: на узком экране «Свой диапазон» уезжал на вторую
             строку и ряд выглядел сломанным */}
@@ -240,7 +240,7 @@ export function Dashboard() {
               value={customFrom}
               onChange={(v) => setCustomFrom(v ?? todayStr())}
             />
-            <span className="font-mono text-xs text-slate-600">—</span>
+            <span className="font-mono text-sm text-slate-600">—</span>
             <DatePicker
               small
               className="flex-1"
@@ -285,7 +285,7 @@ export function Dashboard() {
             >
               <span className="flex flex-col items-center gap-px">
                 <span className="tabular font-mono text-xl font-semibold text-slate-50">{sumPct}%</span>
-                <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">плана</span>
+                <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">плана</span>
               </span>
             </Ring>
 
@@ -294,10 +294,10 @@ export function Dashboard() {
                 <FieldLabel>Часов затрачено</FieldLabel>
                 <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
                   {formatHoursRu(totalFactHours)}{' '}
-                  <span className="text-sm text-[var(--s-placeholder)]">/ {formatHoursRu(totalPlanHours)} ч</span>
+                  <span className="text-base text-[var(--s-placeholder)]">/ {formatHoursRu(totalPlanHours)} ч</span>
                 </span>
                 {prevFactHours > 0 && (
-                  <span className="tabular font-mono text-2xs text-slate-500">
+                  <span className="tabular font-mono text-xs text-slate-500">
                     {deltaHours >= 0 ? '+' : '−'}
                     {formatHoursRu(Math.abs(deltaHours))} ч к прошлому периоду
                   </span>
@@ -346,7 +346,7 @@ export function Dashboard() {
                   )
                 })}
               </div>
-              <div className="flex justify-between pt-1 font-mono text-2xs text-slate-600">
+              <div className="flex justify-between pt-1 font-mono text-xs text-slate-600">
                 <span>{shortDate(days[0])}</span>
                 <span>{shortDate(days[days.length - 1])}</span>
               </div>
@@ -361,14 +361,14 @@ export function Dashboard() {
                 style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
               >
                 <Overline>Темп</Overline>
-                <p className="text-sm leading-[1.45] text-slate-100">
+                <p className="text-base leading-[1.45] text-slate-100">
                   {formatHoursRu(pace.perDay)} ч в рабочий день — к {shortDate(to)} выйдет{' '}
                   <span className={`tabular font-mono font-semibold ${pace.forecastPct > 100 ? 'text-terra-400' : 'text-brass-600'}`}>
                     ≈{pace.forecastPct}%
                   </span>{' '}
                   плана
                 </p>
-                <p className="font-mono text-2xs leading-[1.5] text-slate-500">
+                <p className="font-mono text-xs leading-[1.5] text-slate-500">
                   {pace.remaining > 0
                     ? `осталось ${formatHoursRu(pace.remaining)} ч и ${plural(pace.left, WORKDAYS)}${
                         pace.needPerDay !== null ? ` — по ${formatHoursRu(pace.needPerDay)} ч в день` : ''
@@ -390,20 +390,20 @@ export function Dashboard() {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="flex flex-col gap-px">
                     <FieldLabel>План</FieldLabel>
-                    <span className="tabular font-mono text-base font-semibold text-slate-100">
+                    <span className="tabular font-mono text-md font-semibold text-slate-100">
                       {formatHoursRu(budgetForPeriod)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-px">
                     <FieldLabel>Факт</FieldLabel>
-                    <span className="tabular font-mono text-base font-semibold text-slate-100">
+                    <span className="tabular font-mono text-md font-semibold text-slate-100">
                       {formatHoursRu(totalFactHours)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-px">
                     <FieldLabel>Сверх</FieldLabel>
                     <span
-                      className={`tabular font-mono text-base font-semibold ${
+                      className={`tabular font-mono text-md font-semibold ${
                         totalOverHours > 0 ? 'text-terra-400' : 'text-slate-100'
                       }`}
                     >
@@ -412,7 +412,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 {isProrated && (
-                  <p className="font-mono text-2xs leading-[1.5] text-slate-600">
+                  <p className="font-mono text-xs leading-[1.5] text-slate-600">
                     План рассчитан из месячной цели пропорционально числу дней в периоде.
                   </p>
                 )}
@@ -456,7 +456,7 @@ export function Dashboard() {
                     color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'var(--s-accent-muted)'}
                   >
                     <span
-                      className={`tabular font-mono text-2xs font-medium ${
+                      className={`tabular font-mono text-xs font-medium ${
                         over ? 'text-terra-400' : pct >= 50 ? 'text-brass-600' : 'text-slate-400'
                       }`}
                     >
@@ -466,13 +466,13 @@ export function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p
                       title={row.name}
-                      className="truncate text-sm font-medium leading-[1.3] text-slate-100"
+                      className="truncate text-base font-medium leading-[1.3] text-slate-100"
                     >
                       {row.name}
                     </p>
                     {/* счётчик задач больше не вытесняется словом «переработка»: о ней
                         уже говорят терракотовое кольцо и процент больше ста */}
-                    <span className="block truncate font-mono text-2xs leading-[1.4] text-slate-500">
+                    <span className="block truncate font-mono text-xs leading-[1.4] text-slate-500">
                       {hasPlan
                         ? `${formatHoursRu(row.factHours)} / ${formatHoursRu(row.planHours)} ч`
                         : `${formatHoursRu(row.factHours)} ч · без плана`}{' · '}

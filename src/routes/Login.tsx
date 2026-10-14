@@ -152,7 +152,7 @@ export function Login() {
 
         <div className="flex flex-col gap-1 text-center">
           <h1 className="text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100">{title}</h1>
-          <p className="text-xs leading-[1.5] text-slate-500" style={{ textWrap: 'pretty' }}>
+          <p className="text-sm leading-[1.5] text-slate-500" style={{ textWrap: 'pretty' }}>
             {subtitle}
           </p>
         </div>
@@ -170,7 +170,7 @@ export function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-[46px] rounded-[14px] px-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+                className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
                 style={fieldStyle}
               />
             </div>
@@ -184,7 +184,7 @@ export function Login() {
                   <button
                     type="button"
                     onClick={() => goTo('reset')}
-                    className="text-2xs text-slate-500"
+                    className="text-xs text-slate-500"
                   >
                     Забыли пароль?
                   </button>
@@ -199,7 +199,7 @@ export function Login() {
                   placeholder={screen === 'signin' ? 'Ваш пароль' : `Минимум ${MIN_PASSWORD} символов`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-[46px] w-full rounded-[14px] pr-12 pl-3.5 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+                  className="h-[46px] w-full rounded-[14px] pr-12 pl-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
                   style={fieldStyle}
                 />
                 <button
@@ -212,7 +212,7 @@ export function Login() {
                 </button>
               </div>
               {passwordTooShort && (
-                <span className="text-2xs text-slate-500">
+                <span className="text-xs text-slate-500">
                   Ещё {MIN_PASSWORD - password.length} симв. до минимума
                 </span>
               )}
@@ -221,7 +221,7 @@ export function Login() {
 
           {error && (
             <p
-              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-terra-400"
+              className="rounded-xl px-3 py-2.5 text-sm leading-[1.5] text-terra-400"
               style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
               role="alert"
             >
@@ -230,7 +230,7 @@ export function Login() {
           )}
           {info && (
             <p
-              className="rounded-xl px-3 py-2.5 text-xs leading-[1.5] text-sage-400"
+              className="rounded-xl px-3 py-2.5 text-sm leading-[1.5] text-sage-400"
               style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
               role="status"
             >
@@ -241,7 +241,7 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="h-12 rounded-[15px] text-sm font-semibold disabled:opacity-50"
+            className="h-12 rounded-[15px] text-base font-semibold disabled:opacity-50"
             style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
           >
             {submitLabel}
@@ -251,7 +251,7 @@ export function Login() {
             <button
               type="button"
               onClick={() => goTo('signin')}
-              className="py-1 text-xs text-slate-500"
+              className="py-1 text-sm text-slate-500"
             >
               Вернуться ко входу
             </button>
@@ -259,7 +259,7 @@ export function Login() {
         </form>
 
         {screen === 'signup' && (
-          <p className="text-center text-2xs leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
+          <p className="text-center text-xs leading-[1.5] text-slate-600" style={{ textWrap: 'pretty' }}>
             Аккаунт нужен только для синхронизации — данные видны вам одному.
           </p>
         )}

@@ -98,7 +98,7 @@ export function SubtaskList({
       })}
 
       {hiddenCount > 0 && (
-        <span className="px-1 font-mono text-2xs text-slate-600">скрыто готовых: {hiddenCount}</span>
+        <span className="px-1 font-mono text-xs text-slate-600">скрыто готовых: {hiddenCount}</span>
       )}
 
       <AddSubtask parent={parent} />
@@ -171,13 +171,13 @@ function SubtaskRow({
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         <span
           title={task.name}
-          className={`block text-sm leading-[1.3] ${done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
+          className={`block text-base leading-[1.3] ${done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
         >
           {task.name}
         </span>
         <span
-          className={`block truncate font-mono text-2xs leading-[1.4] ${
+          className={`block truncate font-mono text-xs leading-[1.4] ${
             overdue ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
           }`}
         >
@@ -187,7 +187,7 @@ function SubtaskRow({
       </Link>
 
       {isRunning && activeTimer ? (
-        <span className="tabular shrink-0 font-mono text-xs font-semibold text-brass-600">
+        <span className="tabular shrink-0 font-mono text-sm font-semibold text-brass-600">
           {formatClock(activeTimer.started_at)}
         </span>
       ) : canClose ? (
@@ -199,7 +199,7 @@ function SubtaskRow({
           }}
           aria-pressed={done}
           aria-label={done ? `Вернуть в работу: ${task.name}` : `Закрыть: ${task.name}`}
-          className="hit-44 flex shrink-0 items-center gap-1 rounded-md px-2 py-[3px] text-2xs font-medium"
+          className="hit-44 flex shrink-0 items-center gap-1 rounded-sm px-2 py-[3px] text-xs font-medium"
           style={
             done
               ? { background: 'var(--s-success-ghost)', color: 'var(--s-success-text)' }
@@ -250,7 +250,7 @@ function AddSubtask({ parent }: { parent: Task }) {
       <button
         type="button"
         onClick={() => startAdding(parent.id)}
-        className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-xs text-slate-500"
+        className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-sm text-slate-500"
         style={{ border: '1px dashed var(--s-border-strong-2)' }}
       >
         <Plus size={14} />
@@ -289,14 +289,14 @@ function AddSubtask({ parent }: { parent: Task }) {
         }}
         placeholder="Название подзадачи"
         aria-label={`Новая подзадача в «${parent.name}»`}
-        className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
         // фокус уже показывает латунная рамка всей строки — вторая рамка вокруг поля лишняя
         style={{ outline: 'none' }}
       />
       <button
         type="submit"
         disabled={!name.trim() || createTask.isPending}
-        className="h-8 shrink-0 rounded-lg px-3 text-xs font-semibold disabled:opacity-40"
+        className="h-8 shrink-0 rounded-sm px-3 text-sm font-semibold disabled:opacity-40"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         Добавить

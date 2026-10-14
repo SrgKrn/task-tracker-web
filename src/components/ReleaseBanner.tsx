@@ -48,8 +48,8 @@ export function ReleaseBanner() {
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold text-slate-100">Вышла версия {LATEST_RELEASE.version}</span>
-          <span className="text-xs leading-[1.45] text-slate-400">
+          <span className="text-base font-semibold text-slate-100">Вышла версия {LATEST_RELEASE.version}</span>
+          <span className="text-sm leading-[1.45] text-slate-400">
             {LATEST_RELEASE.title}. Ознакомьтесь с изменениями.
           </span>
         </div>
@@ -59,7 +59,7 @@ export function ReleaseBanner() {
             markSeen.mutate(LATEST_RELEASE.version)
             navigate('/changelog')
           }}
-          className="h-9 self-start rounded-[11px] px-3.5 text-xs font-semibold"
+          className="h-9 self-start rounded-[11px] px-3.5 text-sm font-semibold"
           style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
         >
           Что нового

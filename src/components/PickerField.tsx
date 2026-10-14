@@ -84,7 +84,7 @@ export function PickerField({
           type="button"
           onClick={() => setOpen(true)}
           className={`flex max-w-full items-center gap-1 ${
-            chipLarge ? 'min-h-9 rounded-[9px] px-3 py-2 text-xs' : 'rounded-[7px] px-2 py-[3px] text-2xs'
+            chipLarge ? 'min-h-9 rounded-[9px] px-3 py-2 text-sm' : 'rounded-[7px] px-2 py-[3px] text-xs'
           }`}
           style={{
             background: selected ? 'var(--s-accent-ghost)' : 'transparent',
@@ -101,7 +101,7 @@ export function PickerField({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm"
+            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-base"
             style={{
               background: 'var(--s-surface)',
               border: '1px solid var(--s-border)',
@@ -125,7 +125,7 @@ export function PickerField({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"
-            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+            className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
           />
         </div>
 
@@ -137,7 +137,7 @@ export function PickerField({
                 onChange(null)
                 close()
               }}
-              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-sm text-slate-400"
+              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-slate-400"
               style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
             >
               {noneLabel}
@@ -152,7 +152,7 @@ export function PickerField({
                 onChange(item.id)
                 close()
               }}
-              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-sm text-slate-100"
+              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-slate-100"
               style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
             >
               <span className="min-w-0 truncate">{item.name}</span>
@@ -160,11 +160,11 @@ export function PickerField({
             </button>
           ))}
           {filtered.length === 0 && !creating && (
-            <p className="py-4 text-center text-xs text-slate-600">Ничего не нашлось</p>
+            <p className="py-4 text-center text-sm text-slate-600">Ничего не нашлось</p>
           )}
         </div>
 
-        {hint && <p className="-mt-1 text-2xs leading-[1.45] text-slate-500">{hint}</p>}
+        {hint && <p className="-mt-1 text-xs leading-[1.45] text-slate-500">{hint}</p>}
 
         {!onCreate ? null : creating ? (
           <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export function PickerField({
                 }
               }}
               placeholder={placeholder}
-              className="h-11 min-w-0 flex-1 rounded-xl px-3 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+              className="h-11 min-w-0 flex-1 rounded-xl px-3 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
               style={{ background: 'var(--s-input)', border: '1px solid var(--s-accent)' }}
             />
             <button

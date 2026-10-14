@@ -18,6 +18,8 @@ export default defineConfig({
         // Excel/PDF export pulls in ~2MB of libraries (exceljs, jsPDF + an embedded Cyrillic
         // font) that are already code-split via dynamic import() — exclude them from the
         // mandatory install precache so most users never download this, only whoever exports.
+        // шрифты дизайн-системы (src/fonts.ts) — в предзагрузку, чтобы без сети не было подмены
+        globPatterns: ['**/*.{js,css,html,woff2}'],
         globIgnores: ['**/exportExcel-*.js', '**/exportPdf-*.js', '**/html2canvas-*.js', '**/purify.es-*.js', '**/index.es-*.js'],
         // пуш-уведомления и нажатие на них — свой обработчик поверх сгенерированного воркера
         importScripts: ['/push-handler.js'],
@@ -26,8 +28,9 @@ export default defineConfig({
         name: 'Semternity',
         short_name: 'Semternity',
         description: 'Трекер задач и времени',
-        theme_color: '#0d0d0f',
-        background_color: '#0d0d0f',
+        // фон тёмной темы дизайн-системы (--bg): заставка Android при запуске
+        theme_color: '#121311',
+        background_color: '#121311',
         display: 'standalone',
         start_url: '/',
         lang: 'ru',

@@ -20,7 +20,7 @@ export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButto
         if (isRunning) onStop()
         else onStart()
       }}
-      className="flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] text-sm font-semibold"
+      className="flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] text-base font-semibold"
       style={{
         background: isRunning ? 'var(--s-accent)' : 'transparent',
         border: '1px solid var(--s-accent)',

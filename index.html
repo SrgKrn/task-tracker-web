@@ -21,27 +21,23 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0d0d0f" />
-    <!-- тема ставится до первой отрисовки: иначе светлая тема при запуске мигала бы тёмной -->
+    <meta name="theme-color" content="#121311" />
+    <!-- тема ставится до первой отрисовки: иначе светлая тема при запуске мигала бы тёмной.
+         По умолчанию — как в системе (то же правило, что в src/lib/theme.ts) -->
     <script>
       ;(function () {
         try {
-          var c = localStorage.getItem('semternity.theme') || 'dark'
+          var c = localStorage.getItem('semternity.theme')
+          if (c !== 'light' && c !== 'dark') c = 'system'
           var t = c === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : c
           document.documentElement.dataset.theme = t
           if (t === 'light') {
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f6f5f2')
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#F7F6F2')
             document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content', 'default')
           }
         } catch (e) {}
       })()
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
     <title>Semternity</title>
   </head>
   <body>

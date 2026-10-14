@@ -112,7 +112,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                   <button
                     type="button"
                     onClick={() => setNoting(entry)}
-                    className="self-start text-left text-sm leading-[1.35] text-slate-300"
+                    className="self-start text-left text-base leading-[1.35] text-slate-300"
                   >
                     {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}:{' '}
                     {formatDuration(row.kind === 'adjustment' ? row.seconds : entrySeconds(entry))}
@@ -125,13 +125,13 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                   <button
                     type="button"
                     onClick={() => setEditing(row.comment)}
-                    className="self-start text-left text-sm leading-[1.35] text-slate-300"
+                    className="self-start text-left text-base leading-[1.35] text-slate-300"
                     style={{ overflowWrap: 'anywhere' }}
                   >
                     {row.comment.body}
                   </button>
                 ) : (
-                  <p className="text-sm leading-[1.35] text-slate-300">
+                  <p className="text-base leading-[1.35] text-slate-300">
                     {row.kind === 'file' && (
                       <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brass-600">
                         Файл «{row.file.name}»
@@ -144,14 +144,14 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                   <button
                     type="button"
                     onClick={() => setNoting(entry)}
-                    className="self-start rounded-[9px] px-2.5 py-1.5 text-left text-xs leading-[1.45] text-slate-300"
+                    className="self-start rounded-[9px] px-2.5 py-1.5 text-left text-sm leading-[1.45] text-slate-300"
                     style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)', overflowWrap: 'anywhere' }}
                   >
                     «{note}»
                   </button>
                 )}
               </div>
-              <span className="shrink-0 font-mono text-2xs leading-[1.4] text-slate-600">
+              <span className="shrink-0 font-mono text-xs leading-[1.4] text-slate-600">
                 {formatDateTime(row.at)}
               </span>
               {entry && (
@@ -181,7 +181,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
             </div>
           )
         })}
-        {rows.length === 0 && <p className="py-2 text-sm text-slate-600">Пока ничего нет.</p>}
+        {rows.length === 0 && <p className="py-2 text-base text-slate-600">Пока ничего нет.</p>}
       </div>
 
       <EntryNoteSheet entry={noting} onClose={() => setNoting(null)} />
@@ -210,18 +210,18 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
       onClose={onClose}
       title={entry.entry_type === 'timer' ? 'Комментарий к сессии' : 'Комментарий к правке'}
     >
-      <span className="-mt-2 font-mono text-xs text-slate-500">{entrySummary(entry)}</span>
+      <span className="-mt-2 font-mono text-sm text-slate-500">{entrySummary(entry)}</span>
       <textarea
         autoFocus
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder="Что делали в это время"
-        className="resize-none rounded-[14px] px-3.5 py-3 text-sm leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        className="resize-none rounded-[14px] px-3.5 py-3 text-base leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
         style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
       />
       {entryNote(entry) && (
-        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-xs text-terra-400">
+        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-sm text-terra-400">
           Удалить комментарий
         </button>
       )}
@@ -260,7 +260,7 @@ export function CommentBar({ taskId }: { taskId: string }) {
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
         placeholder="Комментарий"
-        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
         style={{ background: 'var(--s-input-2)', border: '1px solid var(--s-border-strong)' }}
       />
       <button
@@ -294,13 +294,13 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
 
   return (
     <Sheet open onClose={onClose} title="Комментарий">
-      <span className="-mt-2 font-mono text-xs text-slate-500">{formatDateTime(comment.created_at)}</span>
+      <span className="-mt-2 font-mono text-sm text-slate-500">{formatDateTime(comment.created_at)}</span>
       <textarea
         autoFocus
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="resize-none rounded-[14px] px-3.5 py-3 text-sm leading-[1.5] text-slate-100"
+        className="resize-none rounded-[14px] px-3.5 py-3 text-base leading-[1.5] text-slate-100"
         style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
       />
       <button
@@ -316,7 +316,7 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
               }),
           })
         }}
-        className="-my-1 self-start py-1 text-xs text-terra-400"
+        className="-my-1 self-start py-1 text-sm text-terra-400"
       >
         Удалить комментарий
       </button>

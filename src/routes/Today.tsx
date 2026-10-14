@@ -217,7 +217,7 @@ export function Today() {
       <div className="safe-top flex items-center justify-between px-5 pt-4 pb-1.5 lg:hidden">
         <div className="flex items-center gap-2.5">
           <Logo />
-          <span className="text-sm font-semibold tracking-[.01em] text-slate-100">Semternity</span>
+          <span className="text-base font-semibold tracking-[.01em] text-slate-100">Semternity</span>
         </div>
         <Link
           to="/settings"
@@ -231,8 +231,8 @@ export function Today() {
       <div className="flex items-center gap-[18px] px-5 pt-4 pb-[18px] lg:pt-6">
         <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--s-bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
-            <span className="tabular font-mono text-2xl font-semibold text-slate-50">{formatHoursRu(dayFact)}</span>
-            <span className="font-mono text-2xs uppercase tracking-[.14em] text-slate-500">
+            <span className="tabular font-mono text-xl font-semibold text-slate-50">{formatHoursRu(dayFact)}</span>
+            <span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">
               из {formatHoursRu(dayNorm)} ч
             </span>
           </span>
@@ -240,7 +240,7 @@ export function Today() {
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Overline>{formatTodayLabel()}</Overline>
-          <h1 className="text-2xl font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
+          <h1 className="text-xl font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
             полных планов всех задач дня. Задача на 12 часов, растянутая на три недели,
@@ -250,7 +250,7 @@ export function Today() {
           <div className="flex flex-col gap-1.5">
             <span className="flex items-center gap-2">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--s-accent)' }} />
-              <span className="font-mono text-xs text-[var(--s-text-soft)]">
+              <span className="font-mono text-sm text-[var(--s-text-soft)]">
                 {dayFact >= dayNorm
                   ? 'норма дня выполнена'
                   : `осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
@@ -261,7 +261,7 @@ export function Today() {
                 className="h-[7px] w-[7px] shrink-0 rounded-full"
                 style={{ background: 'var(--s-accent-muted)' }}
               />
-              <span className="font-mono text-xs text-[var(--s-faint-text)]">
+              <span className="font-mono text-sm text-[var(--s-faint-text)]">
                 {todayCountLabel}
               </span>
             </span>
@@ -307,11 +307,11 @@ export function Today() {
             const isToday = day === today
             return (
               <span key={day} className="flex flex-1 flex-col items-center gap-px">
-                <span className={`font-mono text-2xs ${isToday ? 'text-brass-600' : 'text-slate-600'}`}>
+                <span className={`font-mono text-xs ${isToday ? 'text-brass-600' : 'text-slate-600'}`}>
                   {WEEKDAYS[i]}
                 </span>
                 <span
-                  className={`tabular font-mono text-2xs ${isToday ? 'text-brass-600' : 'text-slate-500'}`}
+                  className={`tabular font-mono text-xs ${isToday ? 'text-brass-600' : 'text-slate-500'}`}
                 >
                   {fact > 0 ? formatHoursRu(fact) : '—'}
                 </span>
@@ -337,12 +337,12 @@ export function Today() {
               <button
                 type="button"
                 onClick={() => setPlanning(true)}
-                className="-my-3.5 py-3.5 text-xs font-medium text-brass-600"
+                className="-my-3.5 py-3.5 text-sm font-medium text-brass-600"
               >
                 Выбрать
               </button>
             )}
-            <Link to="/tasks" className="-my-3.5 py-3.5 text-xs text-brass-600">
+            <Link to="/tasks" className="-my-3.5 py-3.5 text-sm text-brass-600">
               <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
             </Link>
           </div>
@@ -384,8 +384,8 @@ export function Today() {
             style={{ background: 'var(--s-accent-ghost)', border: '1px solid var(--s-accent)' }}
           >
             <span className="min-w-0 flex-1">
-              <span className="block text-base font-semibold text-slate-100">Что делаем сегодня?</span>
-              <span className="block text-xs text-[var(--s-text-soft)]">
+              <span className="block text-md font-semibold text-slate-100">Что делаем сегодня?</span>
+              <span className="block text-sm text-[var(--s-text-soft)]">
                 {suggestedCount > 0
                   ? `Отметьте задачи на день — ${suggestedCount} уже предложено`
                   : 'Отметьте задачи на день — это займёт полминуты'}
@@ -421,7 +421,7 @@ export function Today() {
                     }}
                     ariaLabel="Начать учёт"
                   >
-                    <span className="tabular font-mono text-2xs font-medium text-terra-400">{pct}%</span>
+                    <span className="tabular font-mono text-xs font-medium text-terra-400">{pct}%</span>
                   </Ring>
 
                   {/* мета в одну строку с обрезкой: раньше она переносилась, наезжала на
@@ -429,13 +429,13 @@ export function Today() {
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
                     <p
                       title={task.name}
-                      className="truncate text-sm font-medium leading-[1.3] text-slate-100"
+                      className="truncate text-base font-medium leading-[1.3] text-slate-100"
                     >
                       {task.name}
                     </p>
                     {/* срок идёт первым: именно он объясняет, почему задача в этом блоке,
                         и при обрезке должен уцелеть, а не название проекта */}
-                    <span className="block truncate font-mono text-xs text-terra-400">
+                    <span className="block truncate font-mono text-sm text-terra-400">
                       срок {task.end_date?.slice(8, 10)}.{task.end_date?.slice(5, 7)}
                       {category ? ` · ${category}` : ''}
                     </span>
@@ -444,7 +444,7 @@ export function Today() {
                   <button
                     type="button"
                     onClick={() => setPostponing(task)}
-                    className="-my-3 shrink-0 py-3 pl-2 text-xs font-medium text-terra-400"
+                    className="-my-3 shrink-0 py-3 pl-2 text-sm font-medium text-terra-400"
                   >
                     Перенести
                   </button>
@@ -482,8 +482,8 @@ export function Today() {
                     <PlayGlyph />
                   </Ring>
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 py-1">
-                    <span className="block truncate text-sm text-slate-100">{task.name}</span>
-                    {meta && <span className="block truncate font-mono text-2xs text-slate-500">{meta}</span>}
+                    <span className="block truncate text-base text-slate-100">{task.name}</span>
+                    {meta && <span className="block truncate font-mono text-xs text-slate-500">{meta}</span>}
                   </Link>
                 </div>
               )
@@ -511,7 +511,7 @@ export function Today() {
       <Sheet open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">
         {postponing && (
           <div className="flex flex-col gap-2 pb-2">
-            <p className="truncate text-sm text-slate-400">{postponing.name}</p>
+            <p className="truncate text-base text-slate-400">{postponing.name}</p>
             {[
               { date: today, label: 'сегодня', title: 'На сегодня' },
               { date: addDays(today, 1), label: 'завтра', title: 'На завтра' },
@@ -521,11 +521,11 @@ export function Today() {
                 key={o.date}
                 type="button"
                 onClick={() => postpone(postponing, o.date, o.label)}
-                className="flex h-12 items-center justify-between rounded-[14px] px-4 text-sm font-medium text-slate-100"
+                className="flex h-12 items-center justify-between rounded-[14px] px-4 text-base font-medium text-slate-100"
                 style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
               >
                 {o.title}
-                <span className="font-mono text-xs text-slate-500">{formatShortDate(o.date)}</span>
+                <span className="font-mono text-sm text-slate-500">{formatShortDate(o.date)}</span>
               </button>
             ))}
           </div>

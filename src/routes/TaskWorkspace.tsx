@@ -45,7 +45,7 @@ function TaskWorkspaceEmpty() {
           <span className="tabular font-mono text-xl font-semibold text-slate-50">
             {formatHoursRu(dayFact)}
           </span>
-          <span className="font-mono text-2xs uppercase tracking-[.14em] text-slate-500">
+          <span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">
             из {formatHoursRu(dayNorm)} ч
           </span>
         </span>
@@ -63,7 +63,7 @@ function TaskWorkspaceEmpty() {
         ))}
       </div>
 
-      <p className="text-sm text-slate-600">Выберите задачу слева, чтобы открыть карточку</p>
+      <p className="text-base text-slate-600">Выберите задачу слева, чтобы открыть карточку</p>
     </div>
   )
 }

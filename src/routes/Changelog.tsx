@@ -32,12 +32,12 @@ export function Changelog() {
       <button
         type="button"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/settings'))}
-        className="-my-2.5 mb-1.5 flex items-center gap-2 self-start py-2.5 text-sm text-slate-400"
+        className="-my-2.5 mb-1.5 flex items-center gap-2 self-start py-2.5 text-base text-slate-400"
       >
         <ArrowLeft size={15} />
         Назад
       </button>
-      <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">История изменений</h1>
+      <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">История изменений</h1>
 
       {RELEASES.map((release, ri) => (
         <section key={release.version} className="mt-6 flex flex-col gap-3">
@@ -46,13 +46,13 @@ export function Changelog() {
               <Overline>Версия {release.version}</Overline>
               {ri === 0 && (
                 <span
-                  className="rounded-md px-1.5 py-[2px] font-mono text-2xs font-medium"
+                  className="rounded-sm px-1.5 py-[2px] font-mono text-xs font-medium"
                   style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
                 >
                   сейчас
                 </span>
               )}
-              <span className="ml-auto font-mono text-2xs text-slate-500">{releaseDate(release.date)}</span>
+              <span className="ml-auto font-mono text-xs text-slate-500">{releaseDate(release.date)}</span>
             </div>
             <h2 className="text-lg font-semibold leading-[1.25] text-slate-100" style={{ textWrap: 'balance' }}>
               {release.title}
@@ -67,16 +67,16 @@ export function Changelog() {
                 style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-sm font-semibold leading-[1.35] text-slate-100">{c.title}</h3>
+                  <h3 className="text-base font-semibold leading-[1.35] text-slate-100">{c.title}</h3>
                   <span
-                    className="shrink-0 rounded-md px-2 py-[3px] text-2xs font-medium"
+                    className="shrink-0 rounded-sm px-2 py-[3px] text-xs font-medium"
                     style={KIND_STYLE[c.kind]}
                   >
                     {CHANGE_LABEL[c.kind]}
                   </span>
                 </div>
-                <p className="text-xs leading-[1.55] text-slate-400">{c.text}</p>
-                {c.where && <p className="font-mono text-2xs leading-[1.45] text-slate-500">Где: {c.where}</p>}
+                <p className="text-sm leading-[1.55] text-slate-400">{c.text}</p>
+                {c.where && <p className="font-mono text-xs leading-[1.45] text-slate-500">Где: {c.where}</p>}
               </article>
             ))}
           </div>

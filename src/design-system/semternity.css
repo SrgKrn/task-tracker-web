@@ -1,0 +1,45 @@
+/*
+ * Доменные токены Semternity поверх дизайн-системы: таймер, кольца план/факт, столбики
+ * по дням и мобильный слой. Здесь нет своих цветов — только ссылки на tokens.css и их
+ * смеси, поэтому обе темы получаются сами.
+ */
+:root {
+  /* Кольца. Терракотой горит только задача под учётом; прогресс остальных — графит:
+     акцент с прозрачностью 55 % давал 2,3:1 на белом, ниже нормы 3:1 для графики. */
+  --ring-track: var(--border);
+  --ring-idle: var(--text-secondary);
+  --ring-running: var(--accent);
+  --ring-done: var(--success);
+  --ring-over: var(--danger);
+  /* первый виток при переработке: терракота и малиновый одной яркости (1,1:1) и слились бы */
+  --ring-over-base: var(--text-secondary);
+  --ring-track-danger: color-mix(in srgb, var(--danger) 22%, var(--surface));
+
+  /* Плашка идущего учёта */
+  --timer-bg: var(--accent-soft);
+  --timer-border: color-mix(in srgb, var(--accent) 35%, transparent);
+  --timer-track: color-mix(in srgb, var(--accent) 25%, transparent);
+  --timer-text: var(--accent-text);
+
+  /* Рамки блоков состояния — в пакете их нет */
+  --success-line: color-mix(in srgb, var(--success) 35%, transparent);
+  --danger-line: color-mix(in srgb, var(--danger) 40%, transparent);
+
+  /* Столбики по дням */
+  --bar-past: var(--border-strong);
+  --bar-future: var(--surface-sunken);
+  --bar-empty: var(--divider);
+
+  /* Мобильный слой: палец требует 44 px, а iOS приближает страницу при вводе в поле
+     мельче 16 px. На широком экране — размеры пакета. */
+  --tap: var(--control-md);
+  --row-task: 56px;
+  --input-size: var(--text-base);
+}
+
+@media (max-width: 639px) {
+  :root {
+    --tap: 44px;
+    --input-size: 16px;
+  }
+}

@@ -34,7 +34,7 @@ export function StatusesAdmin() {
         finalOf={(s) => s.is_final}
         onToggleFinal={(s, value) => setStatusFinal.mutate({ id: s.id, isFinal: value }, { onError })}
       />
-      <p className="mx-auto max-w-lg px-4 text-xs text-slate-500">
+      <p className="mx-auto max-w-lg px-4 text-sm text-slate-500">
         «Финальный» статус считается завершением задачи — влияет на фильтр «скрыть завершённые» и на
         статистику по закрытым задачам.
       </p>

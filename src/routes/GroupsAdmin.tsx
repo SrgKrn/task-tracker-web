@@ -66,12 +66,12 @@ export function GroupsAdmin() {
 
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-8 lg:max-w-2xl">
-      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-sm text-slate-400">
+      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-slate-400">
         <ArrowLeft size={15} />
         Ещё
       </button>
-      <h1 className="mb-2 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Группы</h1>
-      <p className="mb-4 text-xs leading-[1.5] text-slate-500">
+      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Группы</h1>
+      <p className="mb-4 text-sm leading-[1.5] text-slate-500">
         То, по чему раскладываются задачи: проекты, разделы, клиенты, типы работ — какие нужны именно вам.
         Порядок важен: первая группа — верхний уровень отчёта и сводки, вторая — то, что внутри.
       </p>
@@ -90,7 +90,7 @@ export function GroupsAdmin() {
               key={g.id}
               className="flex items-center gap-2 rounded-[15px] border border-slate-700 bg-slate-800 px-3 py-2.5"
             >
-              <div className="flex flex-col text-2xs leading-none lg:flex-row lg:gap-1">
+              <div className="flex flex-col text-xs leading-none lg:flex-row lg:gap-1">
                 <button
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
@@ -110,17 +110,17 @@ export function GroupsAdmin() {
               </div>
               <Link to={`/groups/${g.id}`} className="flex min-w-0 flex-1 items-center gap-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-slate-100">{g.name}</span>
-                  <span className="block truncate text-2xs text-slate-500">{facts.join(' · ')}</span>
+                  <span className="block truncate text-base font-medium text-slate-100">{g.name}</span>
+                  <span className="block truncate text-xs text-slate-500">{facts.join(' · ')}</span>
                 </span>
-                <span className="font-mono text-2xs text-slate-600">{index + 1}</span>
+                <span className="font-mono text-xs text-slate-600">{index + 1}</span>
                 <ArrowRight size={15} className="shrink-0 text-slate-500" />
               </Link>
             </li>
           )
         })}
         {!model.loading && model.groups.length === 0 && (
-          <li className="py-4 text-center text-sm text-slate-600">
+          <li className="py-4 text-center text-base text-slate-600">
             Групп нет — задачи живут одним списком. Добавьте первую, когда захочется их разложить.
           </li>
         )}
@@ -129,7 +129,7 @@ export function GroupsAdmin() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold"
+        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[14px] text-base font-semibold"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         <Plus size={15} />
@@ -195,7 +195,7 @@ function NewGroupSheet({
           placeholder="Например: Клиент"
           className={fieldClass}
         />
-        <span className="text-2xs leading-[1.45] text-slate-500">Так подписано поле в задаче</span>
+        <span className="text-xs leading-[1.45] text-slate-500">Так подписано поле в задаче</span>
       </div>
       <PickerField
         label="Входит в группу"
@@ -302,12 +302,12 @@ export function GroupPage() {
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="h-11 rounded-[14px] text-sm font-medium text-terra-400"
+              className="h-11 rounded-[14px] text-base font-medium text-terra-400"
               style={{ border: '1px solid var(--s-danger-line)' }}
             >
               Удалить группу
             </button>
-            <p className="text-center text-2xs leading-[1.45] text-slate-500">
+            <p className="text-center text-xs leading-[1.45] text-slate-500">
               Задачи и их часы останутся — пропадёт только эта раскладка
             </p>
           </div>
@@ -364,8 +364,8 @@ function GroupSettings({ group, model }: { group: Group; model: GroupModel }) {
         className="h-[18px] w-[18px] shrink-0 accent-brass-600"
       />
       <span className="flex min-w-0 flex-col">
-        <span className="text-sm text-slate-300">{title}</span>
-        <span className="text-2xs leading-[1.4] text-slate-500">{hint}</span>
+        <span className="text-base text-slate-300">{title}</span>
+        <span className="text-xs leading-[1.4] text-slate-500">{hint}</span>
       </span>
     </label>
   )

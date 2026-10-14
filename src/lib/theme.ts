@@ -8,14 +8,16 @@ import { useEffect, useSyncExternalStore } from 'react'
 export type ThemeChoice = 'dark' | 'light' | 'system'
 
 const KEY = 'semternity.theme'
-const COLORS = { dark: '#0d0d0f', light: '#f6f5f2' }
+/** фон приложения (--bg) в каждой теме — для строки состояния и theme-color */
+const COLORS = { dark: '#121311', light: '#F7F6F2' }
 
+/** по умолчанию — как в системе: две темы равноправны, тёмная больше не главная */
 function read(): ThemeChoice {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'light' || v === 'system' ? v : 'dark'
+    return v === 'light' || v === 'dark' ? v : 'system'
   } catch {
-    return 'dark'
+    return 'system'
   }
 }
 

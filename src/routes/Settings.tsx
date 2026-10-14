@@ -102,8 +102,8 @@ function MenuRow({
   return (
     <Link to={to} className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 lg:hover:bg-[var(--s-surface-active)]">
       {glyph}
-      <span className="min-w-0 flex-1 truncate text-sm text-slate-100">{title}</span>
-      {value && <span className="max-w-[45%] truncate text-xs text-slate-500">{value}</span>}
+      <span className="min-w-0 flex-1 truncate text-base text-slate-100">{title}</span>
+      {value && <span className="max-w-[45%] truncate text-sm text-slate-500">{value}</span>}
       <ChevronRight size={15} className="shrink-0 text-slate-600" />
     </Link>
   )
@@ -121,12 +121,12 @@ function SettingsPage({ title, children }: { title: string; children: React.Reac
       <button
         type="button"
         onClick={() => navigate('/settings')}
-        className="-my-2.5 mb-1 flex items-center gap-2 self-start py-2.5 text-sm text-slate-400"
+        className="-my-2.5 mb-1 flex items-center gap-2 self-start py-2.5 text-base text-slate-400"
       >
         <ArrowLeft size={15} />
         Ещё
       </button>
-      <h1 className="mb-2 text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
+      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">{title}</h1>
       {children}
     </div>
   )
@@ -151,13 +151,13 @@ function BudgetForm() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-2xs leading-[1.5] text-slate-500">
+        <span className="text-xs leading-[1.5] text-slate-500">
           Норма дня для кольца на «Сегодня» и сравнение с фактом в сводке. Приоритет у дневной цели.
         </span>
       </div>
       <div className="flex gap-[9px]">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">В день</span>
+          <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">В день</span>
           <input
             type="number"
             min="0"
@@ -168,7 +168,7 @@ function BudgetForm() {
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-2xs uppercase tracking-[.12em] text-slate-500">В месяц</span>
+          <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">В месяц</span>
           <input
             type="number"
             min="0"
@@ -190,7 +190,7 @@ function BudgetForm() {
             { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess('Сохранено') },
           )
         }
-        className="h-11 rounded-[14px] text-sm font-semibold"
+        className="h-11 rounded-[14px] text-base font-semibold"
         style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
       >
         Сохранить
@@ -357,7 +357,7 @@ function ExportSection() {
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
     >
       <div className="flex flex-col gap-1">
-        <span className="text-2xs leading-[1.5] text-slate-500">
+        <span className="text-xs leading-[1.5] text-slate-500">
           Итоги и ритм, разрезы по группам, спринты против плана, журнал по дням. PDF — чтобы
           читать и отправлять, Excel — чтобы разбирать самому.
         </span>
@@ -370,7 +370,7 @@ function ExportSection() {
           value={from}
           onChange={(v) => setFrom(v ?? todayStr())}
         />
-        <span className="font-mono text-xs text-slate-600">—</span>
+        <span className="font-mono text-sm text-slate-600">—</span>
         <DatePicker
           small
           className="flex-1"
@@ -403,8 +403,8 @@ function ExportSection() {
               className="h-[18px] w-[18px] shrink-0 accent-brass-600"
             />
             <span className="flex min-w-0 flex-col">
-              <span className="text-sm text-slate-300">{o.title}</span>
-              <span className="text-2xs leading-[1.4] text-slate-500">{o.hint}</span>
+              <span className="text-base text-slate-300">{o.title}</span>
+              <span className="text-xs leading-[1.4] text-slate-500">{o.hint}</span>
             </span>
           </label>
         ))}
@@ -416,7 +416,7 @@ function ExportSection() {
             type="button"
             onClick={() => handleExport(format)}
             disabled={generating !== null}
-            className="h-11 flex-1 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
+            className="h-11 flex-1 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
             style={{ border: '1px solid var(--s-border-strong-2)' }}
           >
             {generating === format ? 'Готовим…' : format === 'excel' ? 'Скачать Excel' : 'Скачать PDF'}
@@ -432,7 +432,7 @@ function ExportSection() {
                 type="button"
                 onClick={() => saveToDrive(format)}
                 disabled={generating !== null}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[14px] text-sm font-medium text-slate-300 disabled:opacity-50"
+                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[14px] text-base font-medium text-slate-300 disabled:opacity-50"
                 style={{ border: '1px solid var(--s-border-strong-2)' }}
               >
                 <Drive size={14} />
@@ -440,7 +440,7 @@ function ExportSection() {
               </button>
             ))}
           </div>
-          <span className="text-center text-2xs text-slate-500">
+          <span className="text-center text-xs text-slate-500">
             {settings?.drive_reports_folder_name
               ? `в папку «${settings.drive_reports_folder_name}» · сменить — в «Google Диск»`
               : 'папку выберете при первой выгрузке'}
@@ -490,7 +490,7 @@ export function Settings() {
 
   return (
     <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
-      <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
+      <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
 
       <MenuGroup title="Группы">
         <MenuRow
@@ -559,20 +559,20 @@ export function Settings() {
             style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-slate-100">{session?.user.email}</span>
-            <span className="block font-mono text-2xs text-slate-500">синхронизация включена</span>
+            <span className="block truncate text-base text-slate-100">{session?.user.email}</span>
+            <span className="block font-mono text-xs text-slate-500">синхронизация включена</span>
           </span>
         </div>
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="flex min-h-[52px] items-center px-3.5 text-left text-sm text-terra-400"
+          className="flex min-h-[52px] items-center px-3.5 text-left text-base text-terra-400"
         >
           Выйти
         </button>
       </MenuGroup>
 
-      <span className="mt-4 pb-1 text-center font-mono text-2xs text-slate-600">
+      <span className="mt-4 pb-1 text-center font-mono text-xs text-slate-600">
         Версия {LATEST_RELEASE.version} · сборка от{' '}
         {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
       </span>

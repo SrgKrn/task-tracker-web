@@ -301,12 +301,12 @@ export function TaskDetail() {
         <button
           type="button"
           onClick={() => navigate(backTo)}
-          className="-my-2.5 flex min-w-0 items-center gap-2 py-2.5 text-sm text-slate-400"
+          className="-my-2.5 flex min-w-0 items-center gap-2 py-2.5 text-base text-slate-400"
         >
           <ArrowLeft size={15} />
           <span className="truncate">{parent ? parent.name : 'Назад'}</span>
         </button>
-        <div className="-my-2.5 flex shrink-0 gap-3.5 pl-3 text-sm">
+        <div className="-my-2.5 flex shrink-0 gap-3.5 pl-3 text-base">
           <button type="button" onClick={() => setDuplicating(true)} className="py-2.5 text-slate-400">
             Дублировать
           </button>
@@ -323,7 +323,7 @@ export function TaskDetail() {
       >
         <div className="flex items-center gap-2">
           {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
-          <span className="truncate font-mono text-xs text-slate-500">
+          <span className="truncate font-mono text-sm text-slate-500">
             {/* каждое значение — ссылка на свою карточку: там вся история и файлы по нему */}
             {values.map((v, i) => (
               <span key={v.item.id}>
@@ -358,7 +358,7 @@ export function TaskDetail() {
                 setDraftName(task.name)
               }
             }}
-            className="resize-none rounded-xl px-3 py-2 text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+            className="resize-none rounded-xl px-3 py-2 text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
             style={{ background: 'var(--s-surface)', border: '1px solid var(--s-accent)' }}
           />
         ) : (
@@ -368,7 +368,7 @@ export function TaskDetail() {
               setDraftName(task.name)
               setRenaming(true)
             }}
-            className="cursor-text text-2xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+            className="cursor-text text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
             style={{ textWrap: 'pretty' }}
           >
             {task.name}
@@ -376,7 +376,7 @@ export function TaskDetail() {
         )}
 
         {original && (
-          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-xs text-slate-500">
+          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-sm text-slate-500">
             На основе «<span className="text-brass-600">{original.name}</span>»
           </Link>
         )}
@@ -392,7 +392,7 @@ export function TaskDetail() {
                     ? 'text-xl text-brass-600'
                     : formatHoursRu(fact).length > 4
                       ? 'text-xl text-slate-50'
-                      : 'text-2xl text-slate-50'
+                      : 'text-xl text-slate-50'
                 }`}
               >
                 {isRunning && activeTimer ? (
@@ -400,11 +400,11 @@ export function TaskDetail() {
                 ) : (
                   <>
                     {formatHoursRu(fact)}
-                    <span className="ml-0.5 text-sm font-medium text-slate-400">ч</span>
+                    <span className="ml-0.5 text-base font-medium text-slate-400">ч</span>
                   </>
                 )}
               </span>
-              <span className="font-mono text-2xs uppercase tracking-[.14em] text-slate-500">
+              <span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">
                 {isRunning ? 'идёт учёт' : 'факт'}
               </span>
             </span>
@@ -415,7 +415,7 @@ export function TaskDetail() {
               <FieldLabel>Факт / план</FieldLabel>
               <span className="tabular font-mono text-lg font-semibold leading-[1.1] text-slate-50">
                 {formatHoursRu(fact)}{' '}
-                <span className="text-sm text-[var(--s-placeholder)]">/ {formatHoursRu(task.planned_hours)} ч</span>
+                <span className="text-base text-[var(--s-placeholder)]">/ {formatHoursRu(task.planned_hours)} ч</span>
               </span>
             </div>
             <TimerButton
@@ -487,7 +487,7 @@ export function TaskDetail() {
                 <button
                   type="button"
                   onClick={() => setEditingFact(true)}
-                  className="tabular -my-2 rounded-lg py-2 font-mono text-sm font-medium text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
+                  className="tabular -my-2 rounded-sm py-2 font-mono text-base font-medium text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
                 >
                   {formatHoursMinutes(task.fact_hours)}
                 </button>
@@ -524,7 +524,7 @@ export function TaskDetail() {
               {/* за какой день засчитать правку: без этого исправление старых часов
                   вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
               <div className="flex items-center gap-2 pb-0.5">
-                <span className="shrink-0 text-2xs text-slate-500">Засчитать в день</span>
+                <span className="shrink-0 text-xs text-slate-500">Засчитать в день</span>
                 <DatePicker
                   small
                   className="w-[128px]"
@@ -536,7 +536,7 @@ export function TaskDetail() {
                   <button
                     type="button"
                     onClick={() => setAdjustDate(todayStr())}
-                    className="shrink-0 text-2xs text-brass-600"
+                    className="shrink-0 text-xs text-brass-600"
                   >
                     Сегодня
                   </button>

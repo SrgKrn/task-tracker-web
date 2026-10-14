@@ -1,0 +1,88 @@
+/* Tailwind CSS v4 — подключение дизайн-системы.
+   В главном CSS-файле приложения:
+     @import "tailwindcss";
+     @import "./design-system/tokens.css";
+     @import "./design-system/tokens.v4.css";
+   Значения берутся из tokens.css, тема переключается через data-theme. */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-selected: var(--surface-selected);
+  --color-overlay: var(--overlay);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-divider: var(--divider);
+
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+
+  --color-success: var(--success); --color-success-soft: var(--success-soft); --color-success-text: var(--success-text);
+  --color-warning: var(--warning); --color-warning-soft: var(--warning-soft); --color-warning-text: var(--warning-text);
+  --color-danger: var(--danger);   --color-danger-soft: var(--danger-soft);   --color-danger-text: var(--danger-text);
+  --color-info: var(--info);       --color-info-soft: var(--info-soft);       --color-info-text: var(--info-text);
+
+  --color-status-backlog: var(--status-backlog);   --color-status-backlog-bg: var(--status-backlog-bg);   --color-status-backlog-text: var(--status-backlog-text);
+  --color-status-todo: var(--status-todo);         --color-status-todo-bg: var(--status-todo-bg);         --color-status-todo-text: var(--status-todo-text);
+  --color-status-progress: var(--status-progress); --color-status-progress-bg: var(--status-progress-bg); --color-status-progress-text: var(--status-progress-text);
+  --color-status-review: var(--status-review);     --color-status-review-bg: var(--status-review-bg);     --color-status-review-text: var(--status-review-text);
+  --color-status-done: var(--status-done);         --color-status-done-bg: var(--status-done-bg);         --color-status-done-text: var(--status-done-text);
+  --color-status-blocked: var(--status-blocked);   --color-status-blocked-bg: var(--status-blocked-bg);   --color-status-blocked-text: var(--status-blocked-text);
+
+  --color-priority-urgent: var(--priority-urgent);
+  --color-priority-high: var(--priority-high);
+  --color-priority-medium: var(--priority-medium);
+  --color-priority-low: var(--priority-low);
+
+  --color-label-1: var(--label-1); --color-label-2: var(--label-2); --color-label-3: var(--label-3); --color-label-4: var(--label-4);
+  --color-label-5: var(--label-5); --color-label-6: var(--label-6); --color-label-7: var(--label-7); --color-label-8: var(--label-8);
+}
+
+@theme {
+  /* Обычный (не inline) @theme: утилиты ссылаются на var(--shadow-*) и т.п.,
+     а реальные значения для светлой/тёмной темы задаёт tokens.css
+     (он без @layer, поэтому перекрывает слой theme Tailwind). Литералы — только запасные. */
+  --font-sans: "Onest", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;   --text-xs--line-height: 16px;
+  --text-sm: 13px;   --text-sm--line-height: 18px;
+  --text-base: 14px; --text-base--line-height: 20px;
+  --text-md: 16px;   --text-md--line-height: 24px;
+  --text-lg: 20px;   --text-lg--line-height: 28px;
+  --text-xl: 24px;   --text-xl--line-height: 32px;
+  --text-2xl: 32px;  --text-2xl--line-height: 40px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(28, 27, 25, 0.06);
+  --shadow-popover: 0 8px 24px rgba(28, 27, 25, 0.10), 0 2px 6px rgba(28, 27, 25, 0.06);
+  --shadow-modal: 0 24px 48px rgba(28, 27, 25, 0.16), 0 4px 12px rgba(28, 27, 25, 0.08);
+  --shadow-drag: 0 12px 28px rgba(28, 27, 25, 0.18);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

@@ -1,237 +1,16 @@
 @import "tailwindcss";
+/* Дизайн-система: tokens.css — первым и вне слоёв, затем утилиты Tailwind v4 на её токенах,
+   доменные токены Semternity и временный слой совместимости со старыми именами (до 0.27). */
+@import "./design-system/tokens.css";
+@import "./design-system/tokens.v4.css";
+@import "./design-system/semternity.css";
+@import "./design-system/compat.css";
 
 /*
- * Semternity: графит + латунь. Латунь означает «сейчас» — активный таймер, текущий день,
- * выбранный фильтр, главное действие. Терракота только для просрочки и переработки.
- * Тема тёмная намеренно: латунь читается как металл именно на чёрном.
- *
- * Токены заданы дважды: как семантические CSS-переменные (--s-*) для нестандартных мест
- * вроде conic-gradient колец, и через перемапливание шкал Tailwind — чтобы обычные утилиты
- * (bg-slate-800, text-brass-600) сразу давали цвета из палитры.
+ * Шкала шрифтов пакета: xs 12 · sm 13 · base 14 · md 16 · lg 20 · xl 24 · 2xl 32.
+ * В 0.22 классы переименованы на ступень вверх (text-sm 14 → text-base 14 и т. д.),
+ * поэтому размеры на экране почти не изменились.
  */
-@theme {
-  --font-sans: "Instrument Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-
-  /* нейтрали */
-  --color-slate-50: #f4f4f4;  /* text-strong: крупные числа */
-  --color-slate-100: #ededed; /* text */
-  --color-slate-300: #cfcfd4; /* text-2: значения полей */
-  --color-slate-400: #9a9aa2; /* muted */
-  /* оба тона подняты по контрасту: было 4.46:1 и 2.93:1 на фоне #0d0d0f —
-     мета задач и подписи дней недели не дотягивали до нормы 4.5:1 */
-  --color-slate-500: #8a8a92; /* muted-2: метки, мета */
-  --color-slate-600: #82828c; /* faint: сноски, отключённое; #7a7a84 давал 4.28:1 на карточке */
-  --color-slate-700: #24242b; /* border */
-  --color-slate-800: #15151a; /* surface */
-  --color-slate-900: #0d0d0f; /* bg */
-
-  /* латунь — единственный акцент */
-  --color-brass-400: #f0b45c;
-  --color-brass-500: #f0b968;
-  --color-brass-600: #e8a33d;
-  --color-brass-700: #c98a2e; /* accent-dim: надпись «идёт учёт» */
-
-  /* терракота — просрочка, переработка, удаление */
-  --color-terra-400: #d97256;
-  --color-terra-500: #c1583f;
-  --color-terra-800: #5a2a1c;
-  --color-terra-950: #2a140d;
-
-  /*
-   * Типографическая шкала: семь ступеней вместо девятнадцати произвольных кеглей.
-   * Разница между 13 и 13.5 на глаз неразличима, но каждый такой выбор при вёрстке
-   * нового экрана приходилось принимать заново. Переопределяем шкалу Tailwind,
-   * поэтому text-sm / text-xs и остальные утилиты сразу берут эти значения.
-   */
-  --text-2xs: 11px; /* надзаголовки, метки полей, счётчики */
-  --text-2xs--line-height: 1.4;
-  --text-xs: 12.5px; /* мета строки, вспомогательные подписи */
-  --text-xs--line-height: 1.45;
-  --text-sm: 14px; /* основной интерфейсный текст, поля, кнопки */
-  --text-sm--line-height: 1.4;
-  --text-base: 16px; /* крупный ввод: вход, название новой задачи */
-  --text-base--line-height: 1.4;
-  --text-lg: 19px; /* заголовки листов, крупные числа */
-  --text-lg--line-height: 1.25;
-  --text-xl: 23px; /* заголовок карточки задачи, метрики сводки */
-  --text-xl--line-height: 1.2;
-  --text-2xl: 28px; /* заголовки экранов */
-  --text-2xl--line-height: 1.1;
-
-  /* зелень — финальные статусы и подтверждения */
-  --color-sage-400: #7fb894;
-  --color-sage-600: #5f9e6f;
-  --color-sage-700: #4d8259;
-}
-
-:root {
-  color-scheme: dark;
-
-  --s-bg: #0d0d0f;
-  --s-surface: #15151a;
-  --s-surface-active: #16161a;
-  --s-surface-2: #121216;
-  --s-chrome: #0f0f12;
-  --s-border: #24242b;
-  --s-border-strong: #2a2a32;
-  --s-border-strong-2: #2f2f37;
-  --s-hairline: #1f1f25;
-  --s-hairline-2: #1c1c22;
-  --s-hairline-3: #1a1a20;
-  --s-ring-track: #2b2b32;
-  --s-ring-track-lg: #212127;
-  --s-accent: #e8a33d;
-  /* на кольце 32px половинная прозрачность плохо отделялась от трека — подняли до 0.62 */
-  --s-accent-muted: rgba(232, 163, 61, 0.62);
-  --s-accent-ghost: rgba(232, 163, 61, 0.14);
-  --s-accent-dim: #c98a2e;
-  --s-timer-bg: #17130c;
-  --s-timer-track: #2a2318;
-  --s-success: #7fb894;
-  --s-danger: #d97256;
-  --s-on-accent: #121212;
-  /* было #6e6e77 — 3.79:1 на фоне приложения, ниже нормы для текста */
-  --s-tab-idle: #83838c;
-
-  /* раньше эти цвета были прописаны прямо в компонентах — светлой теме их не перекрасить */
-  --s-text: #ededed;
-  --s-accent-text: #e8a33d;
-  --s-input: #0f0f13;
-  --s-input-2: #17171c;
-  --s-placeholder: #83838c;
-  --s-muted-text: #8f8f98;
-  --s-text-soft: #b6b6be;
-  --s-faint-text: #8a8a92;
-  --s-disabled-bg: #232329;
-  --s-disabled-fg: #6e6e77;
-  --s-backdrop: rgba(5, 5, 7, 0.62);
-  --s-swipe: #1e1e24;
-  --s-dot: #3a3a42;
-  --s-tag: rgba(255, 255, 255, 0.06);
-  --s-avatar: #1c1c22;
-  --s-avatar-border: #2a2a30;
-  --s-bar-past: #3a3a44;
-  --s-bar-future: #1c1c22;
-  --s-bar-empty: #232329;
-  --s-danger-track: #33231e;
-  --s-danger-center: #161112;
-  --s-toast-ok-bg: rgba(17, 32, 26, 0.72);
-  --s-toast-err-bg: rgba(40, 20, 17, 0.72);
-  --s-pop-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
-
-  /* подложки и рамки состояний: в светлой теме у них свои светлые тона, а не та же
-     полупрозрачная зелень и терракота, что ложилась на белое грязным налётом */
-  --s-success-text: #7fb894;
-  --s-success-ghost: rgba(127, 184, 148, 0.14);
-  --s-success-line: rgba(127, 184, 148, 0.3);
-  --s-danger-text: #d97256;
-  --s-danger-ghost: rgba(217, 114, 86, 0.12);
-  --s-danger-line: rgba(217, 114, 86, 0.42);
-  --s-accent-line: rgba(232, 163, 61, 0.4);
-  --s-accent-glow: rgba(232, 163, 61, 0.6);
-
-  /* единые токены движения — раньше длительность выбиралась по месту */
-  --dur-fast: 120ms; /* отклик на касание и наведение */
-  --dur-base: 180ms; /* сдвиги и раскрытия */
-  --dur-slow: 300ms; /* заливка колец */
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-/*
- * Светлая тема — та же палитра, что у PDF-отчёта: белые листы на светлом тёплом сером,
- * графитовый текст, латунь. Латунь здесь двух оттенков: заливка (кнопки, кольца) светлее,
- * текст темнее — светлая латунь на белом не дотягивает до читаемого контраста.
- * Шкалы Tailwind перемаплены так же, как в тёмной теме: text-slate-100 — основной текст,
- * bg-slate-800 — поверхность, и компонентам ничего не нужно знать о теме.
- */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --color-slate-50: #0f0f12;
-  --color-slate-100: #17171b;
-  --color-slate-300: #3a3a42;
-  --color-slate-400: #55555e;
-  --color-slate-500: #62626a;
-  --color-slate-600: #6b6b73;
-  --color-slate-700: #e6e4df;
-  --color-slate-800: #ffffff;
-  --color-slate-900: #f6f5f2;
-
-  --color-brass-400: #a8711f;
-  --color-brass-500: #9a6618;
-  --color-brass-600: #94631a;
-  --color-brass-700: #7d5414;
-
-  /* красный и зелёный подобраны под белое: чистые, читаемые (текст ≥ 4,5:1 на белом, на фоне
-     и на своей подложке), без бурого и болотного налёта прежних тонов */
-  --color-terra-400: #c03a23;
-  --color-terra-500: #a3301b;
-  --color-terra-800: #f4cdc2;
-  --color-terra-950: #fdeee9;
-
-  --color-sage-400: #1f7a47;
-  --color-sage-600: #2f9a5c;
-  --color-sage-700: #257a4a;
-
-  --s-bg: #f6f5f2;
-  --s-surface: #ffffff;
-  --s-surface-active: #fffaf0;
-  --s-surface-2: #fbfaf8;
-  --s-chrome: #ffffff;
-  --s-border: #e6e4df;
-  --s-border-strong: #dcd9d2;
-  --s-border-strong-2: #d2cfc7;
-  --s-hairline: #ebe9e4;
-  --s-hairline-2: #ebe9e4;
-  --s-hairline-3: #efede8;
-  --s-ring-track: #ebe8e2;
-  --s-ring-track-lg: #ece9e3;
-  --s-accent: #c98a2e;
-  --s-accent-muted: rgba(201, 138, 46, 0.55);
-  --s-accent-ghost: #f8eedd;
-  --s-accent-dim: #8a5d17;
-  --s-timer-bg: #fdf5e6;
-  --s-timer-track: #f0dfbf;
-  --s-success: #2f9a5c;
-  --s-danger: #dd5236;
-  --s-on-accent: #17171b;
-  --s-tab-idle: #6b6b73;
-
-  --s-text: #17171b;
-  --s-accent-text: #93621a;
-  --s-input: #ffffff;
-  --s-input-2: #ffffff;
-  --s-placeholder: #6e6e76;
-  --s-muted-text: #62626a;
-  --s-text-soft: #4c4c55;
-  --s-faint-text: #6b6b73;
-  --s-disabled-bg: #ece9e3;
-  --s-disabled-fg: #9a9aa2;
-  --s-backdrop: rgba(23, 23, 27, 0.28);
-  --s-swipe: #eeece7;
-  --s-dot: #cfccc4;
-  --s-tag: rgba(23, 23, 27, 0.06);
-  --s-avatar: #ece9e3;
-  --s-avatar-border: #dcd9d2;
-  --s-bar-past: #b9b5ad;
-  --s-bar-future: #efede8;
-  --s-bar-empty: #e6e3dc;
-  --s-danger-track: #f8d8cf;
-  --s-danger-center: #fff8f6;
-  --s-toast-ok-bg: rgba(236, 247, 240, 0.96);
-  --s-toast-err-bg: rgba(253, 238, 233, 0.96);
-  --s-pop-shadow: 0 18px 40px -16px rgba(23, 23, 27, 0.22);
-
-  --s-success-text: #1f7a47;
-  --s-success-ghost: #e8f5ed;
-  --s-success-line: #b9dfc8;
-  --s-danger-text: #c03a23;
-  --s-danger-ghost: #fdeee9;
-  --s-danger-line: #f0b9ab;
-  --s-accent-line: #e6c48f;
-  --s-accent-glow: rgba(201, 138, 46, 0.35);
-}
 
 html,
 body,
@@ -247,9 +26,6 @@ html {
 }
 
 body {
-  background-color: var(--s-bg);
-  color: var(--s-text);
-  font-family: "Instrument Sans", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -294,14 +70,6 @@ input[type="number"] {
     width: max(100%, 44px);
     height: max(100%, 44px);
   }
-}
-
-/* Клавиатурный фокус: у приложения есть полноценная десктоп-версия,
-   и до этого он был не виден вообще ни на одном элементе. */
-:focus-visible {
-  outline: 2px solid var(--s-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /*

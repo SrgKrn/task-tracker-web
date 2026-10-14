@@ -157,13 +157,13 @@ export function TaskList() {
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
             <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
           </Overline>
-          <h1 className="text-2xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
+          <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
         </div>
         <button
           type="button"
           onClick={() => setSortByDue((v) => !v)}
           title="Сортировать по сроку"
-          className="hit-44 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] font-mono text-sm font-medium"
+          className="hit-44 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] font-mono text-base font-medium"
           style={{
             background: 'var(--s-surface)',
             border: `1px solid ${sortByDue ? 'var(--s-accent)' : 'var(--s-border)'}`,
@@ -184,13 +184,13 @@ export function TaskList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию"
-            className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 placeholder:text-[var(--s-placeholder)]"
+            className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
           />
         </div>
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          className="flex h-[38px] shrink-0 items-center rounded-[11px] px-[13px] text-xs"
+          className="flex h-[38px] shrink-0 items-center rounded-[11px] px-[13px] text-sm"
           style={{
             background: filtersActive ? 'var(--s-accent)' : 'var(--s-surface)',
             border: `1px solid ${filtersActive ? 'var(--s-accent)' : 'var(--s-border)'}`,
@@ -207,7 +207,7 @@ export function TaskList() {
           style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
         >
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-2xs leading-[1.4] text-slate-500">
+            <span className="font-mono text-xs leading-[1.4] text-slate-500">
               Задачи, чей срок пересекается с периодом
             </span>
             <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export function TaskList() {
                 value={periodFrom || null}
                 onChange={(v) => setPeriodFrom(v ?? '')}
               />
-              <span className="font-mono text-xs text-slate-600">—</span>
+              <span className="font-mono text-sm text-slate-600">—</span>
               <DatePicker
                 small
                 className="flex-1"
@@ -233,7 +233,7 @@ export function TaskList() {
                     setPeriodFrom('')
                     setPeriodTo('')
                   }}
-                  className="shrink-0 text-xs text-brass-600"
+                  className="shrink-0 text-sm text-brass-600"
                 >
                   Сброс
                 </button>
@@ -272,7 +272,7 @@ export function TaskList() {
                       }}
                     >
                       {o.name}
-                      <span className="tabular ml-1.5 font-mono text-2xs opacity-60">
+                      <span className="tabular ml-1.5 font-mono text-xs opacity-60">
                         {counts.get(`${group.id}|${o.id}`) ?? 0}
                       </span>
                     </Chip>
@@ -309,7 +309,7 @@ export function TaskList() {
               <div key={group.id} className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
                   <Overline>{group.title}</Overline>
-                  <span className="tabular font-mono text-2xs text-slate-600">
+                  <span className="tabular font-mono text-xs text-slate-600">
                     <FactSum tasks={group.items} childrenOf={childrenOf} activeTimer={activeTimer} plan={group.plan} />
                   </span>
                 </div>
