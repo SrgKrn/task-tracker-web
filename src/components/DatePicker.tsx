@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toDateString, todayStr } from '../lib/period'
+import { formatDueDate, toDateString, todayStr } from '../lib/period'
 import { ChevronDown, ChevronLeft, ChevronRight } from './Icon'
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
@@ -22,14 +22,17 @@ interface DatePickerProps {
   value: string | null
   onChange: (value: string | null) => void
   placeholder?: string
-  /** компактная высота для строк фильтров (34px вместо 40px) */
+  /** компактная высота для строк фильтров */
   small?: boolean
+  /** строка списка свойств: без рамки, значение справа, календарь открывается к правому краю */
+  row?: boolean
   className?: string
   ariaLabel?: string
 }
 
+/** «Сегодня», «Завтра», «20 сент» — вместо «20.09.26» */
 function formatDisplay(iso: string): string {
-  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(2, 4)}`
+  return formatDueDate(iso)
 }
 
 /** дни календарной сетки месяца, начиная с понедельника */
@@ -52,6 +55,7 @@ export function DatePicker({
   onChange,
   placeholder = 'не задан',
   small = false,
+  row = false,
   className = '',
   ariaLabel,
 }: DatePickerProps) {
@@ -84,8 +88,13 @@ export function DatePicker({
 
   const cells = useMemo(() => monthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
 
-  const height = small ? 'h-[34px]' : 'h-10'
+  const height = small ? 'h-9' : 'h-[var(--tap)]'
   const text = small ? 'text-sm' : 'text-base'
+  const trigger = row
+    ? `min-h-12 justify-end gap-1.5 text-base ${value ? 'text-text' : 'text-text-tertiary'}`
+    : `${height} ${text} justify-between gap-2 rounded-sm border bg-surface px-2.5 ${
+        open ? 'border-accent' : 'border-border hover:border-border-strong'
+      } ${value ? 'text-text' : 'text-text-tertiary'}`
 
   function shiftMonth(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
@@ -97,43 +106,35 @@ export function DatePicker({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={ariaLabel}
-        className={`${height} ${text} flex w-full items-center justify-between gap-2 rounded-xl px-3 text-left font-mono`}
-        style={{
-          background: 'var(--s-surface)',
-          border: `1px solid ${open ? 'var(--s-accent)' : 'var(--s-border)'}`,
-          color: value ? 'var(--color-slate-100)' : 'var(--s-placeholder)',
-        }}
+        className={`flex w-full items-center text-left ${trigger}`}
       >
         <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
-        <ChevronDown size={14} className="text-slate-600" />
+        <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
       </button>
 
       {open && (
         <div
-          className="absolute left-0 z-50 mt-1.5 w-[252px] rounded-2xl p-3"
-          style={{
-            background: 'var(--s-surface-2)',
-            border: '1px solid var(--s-border-strong)',
-            boxShadow: 'var(--s-pop-shadow)',
-          }}
+          className={`absolute z-50 mt-1.5 w-[252px] rounded-lg border border-border bg-surface p-3 shadow-popover ${
+            row ? 'right-0' : 'left-0'
+          }`}
         >
           <div className="mb-2.5 flex items-center justify-between">
             <button
               type="button"
               onClick={() => shiftMonth(-1)}
-              className="hit-44 h-8 w-8 rounded-sm text-base text-slate-400"
+              className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Предыдущий месяц"
             >
               <ChevronLeft size={16} className="mx-auto" />
             </button>
-            <span className="text-base font-medium text-slate-100">
+            <span className="text-base font-medium text-text">
               {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
             </span>
             <button
               type="button"
               onClick={() => shiftMonth(1)}
-              className="hit-44 h-8 w-8 rounded-sm text-base text-slate-400"
+              className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
               style={{ border: '1px solid var(--s-border)' }}
               aria-label="Следующий месяц"
             >

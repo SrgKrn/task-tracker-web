@@ -41,8 +41,15 @@ export function Overline({ children, className = '' }: { children: ReactNode; cl
 }
 
 /** Подпись над полем — тем же голосом, что и заголовок группы. */
-export function FieldLabel({ children }: { children: ReactNode }) {
-  return <span className="text-sm font-medium text-text-secondary">{children}</span>
+export function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
+  // с htmlFor — настоящая подпись поля: диктор читает её вместе с полем, нажатие ставит фокус
+  return htmlFor ? (
+    <label htmlFor={htmlFor} className="text-sm font-medium text-text-secondary">
+      {children}
+    </label>
+  ) : (
+    <span className="text-sm font-medium text-text-secondary">{children}</span>
+  )
 }
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -360,9 +367,20 @@ export function ClientDot({ color, size = 8 }: { color: LabelColor | null | unde
  * Сгруппированный список: строки внутри общей подложки с разделителями, без рамки у каждой
  * строки. Раньше каждая задача была отдельной карточкой — на экран влезало на две-три меньше.
  */
-export function ListGroup({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function ListGroup({
+  children,
+  className = '',
+  clip = true,
+}: {
+  children: ReactNode
+  className?: string
+  /** обрезать по скруглению (нужно свайпу строк); без обрезки — для списков с выпадающим календарём */
+  clip?: boolean
+}) {
   return (
-    <div className={`flex flex-col divide-y divide-divider overflow-hidden rounded-md border border-border bg-surface ${className}`}>
+    <div
+      className={`flex flex-col divide-y divide-divider rounded-md border border-border bg-surface ${clip ? 'overflow-hidden' : ''} ${className}`}
+    >
       {children}
     </div>
   )
@@ -374,7 +392,18 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 }
 
 /** Переключатель-пилюля (например «скрыть готовые»). Нажимается вся строка с подписью. */
-export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
+export function Switch({
+  on,
+  onChange,
+  label,
+  ariaLabel,
+}: {
+  on: boolean
+  onChange: (v: boolean) => void
+  label?: string
+  /** имя для экранного диктора, когда видимая подпись стоит отдельно */
+  ariaLabel?: string
+}) {
   return (
     <button
       type="button"
@@ -382,6 +411,7 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
       onClick={() => onChange(!on)}
       className="flex min-h-11 shrink-0 items-center gap-2"
       aria-checked={on}
+      aria-label={ariaLabel}
     >
       <span
         className={`flex h-5 w-[34px] items-center rounded-full p-0.5 transition-colors ${

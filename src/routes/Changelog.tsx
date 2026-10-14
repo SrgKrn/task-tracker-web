@@ -28,7 +28,7 @@ export function Changelog() {
   }, [isFetched, settings?.seen_release])
 
   return (
-    <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-10 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top-page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-10 lg:mx-0 lg:max-w-2xl">
       <button
         type="button"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/settings'))}

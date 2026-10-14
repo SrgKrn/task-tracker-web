@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Overline, Sheet, SheetActions } from './ui'
+import { EmptyState, Overline, Sheet, SheetActions, fieldClass } from './ui'
 import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
 import {
   useAddComment,
@@ -12,6 +12,7 @@ import { useSetEntryNote, useTimeEntries } from '../lib/queries/timer'
 import { describeError, useToast } from '../lib/Toast'
 import { entryNote } from '../lib/notes'
 import { entrySeconds, formatDuration, plural } from '../lib/time'
+import { formatShortDate, toDateString, todayStr, addDays } from '../lib/period'
 import type { Comment, TimeEntry } from '../lib/types'
 import { ArrowUp, Comment as CommentIcon, MoreDots } from './Icon'
 
@@ -30,6 +31,14 @@ function formatDateTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/** «Сегодня», «Вчера», иначе «пн, 13 окт» */
+function dayTitle(day: string): string {
+  const today = todayStr()
+  if (day === today) return 'Сегодня'
+  if (day === addDays(today, -1)) return 'Вчера'
+  return formatShortDate(day)
 }
 
 function clock(iso: string | null): string {
@@ -86,103 +95,131 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
     ...comments.map((comment): TimelineRow => ({ kind: 'comment', at: comment.created_at, comment })),
     // файл — тоже событие в истории задачи: видно, когда пришёл договор или макет
     ...files.map((file): TimelineRow => ({ kind: 'file', at: file.created_at, file })),
-  ].sort((a, b) => b.at.localeCompare(a.at))
+  ]
+
+  /*
+   * История по дням: заголовок дня с суммой учёта, в строках — только время. Раньше это
+   * была сплошная лента с «14.10, 18:14» у каждой строки, и сколько ушло за день, не
+   * было видно вовсе. День записи учёта — день, к которому она засчитана.
+   */
+  const dayOf = (row: TimelineRow) =>
+    row.kind === 'timer' || row.kind === 'adjustment' ? row.entry.effective_date : toDateString(new Date(row.at))
+  rows.sort((a, b) => dayOf(b).localeCompare(dayOf(a)) || b.at.localeCompare(a.at))
+  const days: { day: string; seconds: number; rows: TimelineRow[] }[] = []
+  for (const row of rows) {
+    const day = dayOf(row)
+    let group = days[days.length - 1]
+    if (!group || group.day !== day) {
+      group = { day, seconds: 0, rows: [] }
+      days.push(group)
+    }
+    group.rows.push(row)
+    if (row.kind === 'timer') group.seconds += entrySeconds(row.entry)
+    if (row.kind === 'adjustment') group.seconds += row.seconds
+  }
+  const firstRow = rows[0]
 
   return (
-    <div className="mt-1 flex flex-col gap-[9px]">
-      <Overline>Таймлайн</Overline>
-
-      <div className="flex flex-col">
-        {rows.map((row, i) => {
-          const entry = row.kind === 'timer' || row.kind === 'adjustment' ? row.entry : null
-          const note = entry ? entryNote(entry) : null
-          return (
-            <div
-              key={i}
-              className="flex items-start gap-[11px] py-[9px]"
-              style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
-            >
-              <span
-                className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full"
-                style={{ background: isRunning && i === 0 ? 'var(--s-accent)' : 'var(--s-dot)' }}
-              />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                {/* строка учёта целиком — цель нажатия: по ней открывается комментарий к ней */}
-                {entry ? (
-                  <button
-                    type="button"
-                    onClick={() => setNoting(entry)}
-                    className="self-start text-left text-base leading-[1.35] text-slate-300"
-                  >
-                    {row.kind === 'timer' ? 'Трекинг' : 'Ручная правка'}:{' '}
-                    {formatDuration(row.kind === 'adjustment' ? row.seconds : entrySeconds(entry))}
-                    {row.kind === 'adjustment' && row.count > 1 && (
-                      <span className="text-slate-500"> · {plural(row.count, ADJUSTMENTS)} за день</span>
+    <div className="mt-1 flex flex-col gap-4">
+      {days.map((group) => (
+        <section key={group.day} className="flex flex-col gap-1.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <Overline className="first-letter:uppercase">{dayTitle(group.day)}</Overline>
+            {group.seconds !== 0 && (
+              <span className="tabular font-mono text-xs text-text-secondary">{formatDuration(group.seconds)}</span>
+            )}
+          </div>
+          <div className="flex flex-col divide-y divide-divider rounded-md border border-border bg-surface px-3">
+            {group.rows.map((row, i) => {
+              const entry = row.kind === 'timer' || row.kind === 'adjustment' ? row.entry : null
+              const note = entry ? entryNote(entry) : null
+              return (
+                <div key={i} className="flex items-start gap-2.5 py-2.5">
+                  <span
+                    className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full"
+                    style={{ background: isRunning && row === firstRow ? 'var(--accent)' : 'var(--border-strong)' }}
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {/* строка учёта целиком — цель нажатия: по ней открывается комментарий к ней */}
+                    {entry ? (
+                      <button
+                        type="button"
+                        onClick={() => setNoting(entry)}
+                        className="self-start text-left text-base leading-[1.4] text-text"
+                      >
+                        {row.kind === 'timer' ? 'Учёт' : 'Правка'}{' '}
+                        <span className="tabular font-mono text-sm">
+                          {formatDuration(row.kind === 'adjustment' ? row.seconds : entrySeconds(entry))}
+                        </span>
+                        {row.kind === 'adjustment' && row.count > 1 && (
+                          <span className="text-text-secondary"> · {plural(row.count, ADJUSTMENTS)} за день</span>
+                        )}
+                      </button>
+                    ) : row.kind === 'comment' ? (
+                      // свой комментарий — нажатием править или удалить
+                      <button
+                        type="button"
+                        onClick={() => setEditing(row.comment)}
+                        className="self-start text-left text-base leading-[1.4] text-text"
+                        style={{ overflowWrap: 'anywhere' }}
+                      >
+                        {row.comment.body}
+                      </button>
+                    ) : (
+                      <p className="text-base leading-[1.4] text-text">
+                        {row.kind === 'file' && (
+                          <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-accent-text">
+                            Файл «{row.file.name}»
+                          </a>
+                        )}
+                      </p>
                     )}
-                  </button>
-                ) : row.kind === 'comment' ? (
-                  // свой комментарий — нажатием править или удалить
-                  <button
-                    type="button"
-                    onClick={() => setEditing(row.comment)}
-                    className="self-start text-left text-base leading-[1.35] text-slate-300"
-                    style={{ overflowWrap: 'anywhere' }}
-                  >
-                    {row.comment.body}
-                  </button>
-                ) : (
-                  <p className="text-base leading-[1.35] text-slate-300">
-                    {row.kind === 'file' && (
-                      <a href={row.file.url ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brass-600">
-                        Файл «{row.file.name}»
-                      </a>
+                    {/* комментарий к самой сессии — под ней, нажатием правится */}
+                    {entry && note && (
+                      <button
+                        type="button"
+                        onClick={() => setNoting(entry)}
+                        className="self-start rounded-sm bg-surface-sunken px-2.5 py-1.5 text-left text-sm leading-[1.45] text-text"
+                        style={{ overflowWrap: 'anywhere' }}
+                      >
+                        «{note}»
+                      </button>
                     )}
-                  </p>
-                )}
-                {/* комментарий к самой сессии — под ней, нажатием правится */}
-                {entry && note && (
-                  <button
-                    type="button"
-                    onClick={() => setNoting(entry)}
-                    className="self-start rounded-[9px] px-2.5 py-1.5 text-left text-sm leading-[1.45] text-slate-300"
-                    style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)', overflowWrap: 'anywhere' }}
-                  >
-                    «{note}»
-                  </button>
-                )}
-              </div>
-              <span className="shrink-0 font-mono text-xs leading-[1.4] text-slate-600">
-                {formatDateTime(row.at)}
-              </span>
-              {entry && (
-                <button
-                  type="button"
-                  onClick={() => setNoting(entry)}
-                  aria-label={note ? 'Изменить комментарий к сессии' : 'Комментарий к сессии'}
-                  title="Комментарий к этой строке"
-                  className="hit-44 -my-0.5 flex h-5 w-5 shrink-0 items-center justify-center"
-                  style={{ color: note ? 'var(--s-accent-text)' : 'var(--s-placeholder)' }}
-                >
-                  <CommentIcon size={14} />
-                </button>
-              )}
-              {row.kind === 'comment' && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(row.comment)}
-                  aria-label="Изменить или удалить комментарий"
-                  className="hit-44 -my-0.5 flex h-5 w-5 shrink-0 items-center justify-center"
-                  style={{ color: 'var(--s-placeholder)' }}
-                >
-                  <MoreDots size={14} />
-                </button>
-              )}
-              {!entry && row.kind !== 'comment' && <span className="w-5 shrink-0" />}
-            </div>
-          )
-        })}
-        {rows.length === 0 && <p className="py-2 text-base text-slate-600">Пока ничего нет.</p>}
-      </div>
+                  </div>
+                  <span className="tabular shrink-0 pt-0.5 font-mono text-xs leading-[1.4] text-text-secondary">
+                    {row.kind === 'timer' && entry?.started_at ? clock(entry.started_at) : clock(row.at)}
+                  </span>
+                  {entry && (
+                    <button
+                      type="button"
+                      onClick={() => setNoting(entry)}
+                      aria-label={note ? 'Изменить комментарий к записи' : 'Комментарий к записи'}
+                      title="Комментарий к этой строке"
+                      className={`hit-44 flex h-5 w-5 shrink-0 items-center justify-center ${note ? 'text-accent-text' : 'text-text-tertiary'}`}
+                    >
+                      <CommentIcon size={14} />
+                    </button>
+                  )}
+                  {row.kind === 'comment' && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(row.comment)}
+                      aria-label="Изменить или удалить комментарий"
+                      className="hit-44 flex h-5 w-5 shrink-0 items-center justify-center text-text-tertiary"
+                    >
+                      <MoreDots size={14} />
+                    </button>
+                  )}
+                  {!entry && row.kind !== 'comment' && <span className="w-5 shrink-0" />}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      ))}
+      {rows.length === 0 && (
+        <EmptyState title="Истории пока нет">Здесь появятся сессии учёта, правки, комментарии и файлы.</EmptyState>
+      )}
 
       <EntryNoteSheet entry={noting} onClose={() => setNoting(null)} />
       <CommentSheet comment={editing} onClose={() => setEditing(null)} />
@@ -210,18 +247,17 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
       onClose={onClose}
       title={entry.entry_type === 'timer' ? 'Комментарий к сессии' : 'Комментарий к правке'}
     >
-      <span className="-mt-2 font-mono text-sm text-slate-500">{entrySummary(entry)}</span>
+      <span className="-mt-2 font-mono text-sm text-text-secondary">{entrySummary(entry)}</span>
       <textarea
         autoFocus
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder="Что делали в это время"
-        className="resize-none rounded-[14px] px-3.5 py-3 text-base leading-[1.5] text-slate-100 placeholder:text-[var(--s-placeholder)]"
-        style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+        className={`${fieldClass} h-auto resize-none py-2.5 leading-[1.5]`}
       />
       {entryNote(entry) && (
-        <button type="button" onClick={() => save('')} className="-my-1 self-start py-1 text-sm text-terra-400">
+        <button type="button" onClick={() => save('')} className="min-h-11 self-start text-sm font-medium text-danger-text">
           Удалить комментарий
         </button>
       )}
@@ -252,23 +288,21 @@ export function CommentBar({ taskId }: { taskId: string }) {
 
   return (
     <div
-      className="safe-bottom flex items-center gap-[9px] px-4 pt-3 pb-2"
-      style={{ borderTop: '1px solid var(--s-hairline-2)', background: 'var(--s-chrome)' }}
+      className="safe-bottom flex items-center gap-2 border-t border-border bg-surface px-4 pt-3 pb-2"
     >
       <input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
         placeholder="Комментарий"
-        className="h-[42px] min-w-0 flex-1 rounded-full px-4 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
-        style={{ background: 'var(--s-input-2)', border: '1px solid var(--s-border-strong)' }}
+        aria-label="Комментарий к задаче"
+        className="h-11 min-w-0 flex-1 rounded-full border border-border bg-surface-sunken px-4 text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
       />
       <button
         type="button"
         onClick={submit}
         aria-label="Добавить комментарий"
-        className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-lg"
-        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
       >
         <ArrowUp size={16} className="mx-auto" />
       </button>
@@ -294,14 +328,13 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
 
   return (
     <Sheet open onClose={onClose} title="Комментарий">
-      <span className="-mt-2 font-mono text-sm text-slate-500">{formatDateTime(comment.created_at)}</span>
+      <span className="-mt-2 font-mono text-sm text-text-secondary">{formatDateTime(comment.created_at)}</span>
       <textarea
         autoFocus
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="resize-none rounded-[14px] px-3.5 py-3 text-base leading-[1.5] text-slate-100"
-        style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+        className={`${fieldClass} h-auto resize-none py-2.5 leading-[1.5]`}
       />
       <button
         type="button"
@@ -316,7 +349,7 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
               }),
           })
         }}
-        className="-my-1 self-start py-1 text-sm text-terra-400"
+        className="min-h-11 self-start text-sm font-medium text-danger-text"
       >
         Удалить комментарий
       </button>

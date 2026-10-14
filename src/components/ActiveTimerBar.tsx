@@ -31,7 +31,7 @@ export function ActiveTimerBar() {
   return (
     <div
       data-top-bar
-      className="safe-top mx-4 mt-2 mb-2 flex items-center gap-3 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] px-3 py-2.5"
+      className="safe-top-box mx-4 mb-2 flex items-center gap-3 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] px-3 py-2.5"
     >
       <Ring
         size={34}

@@ -92,7 +92,7 @@ export function SubtractSheet({
       <DurationInput autoFocus value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       {(nothing || tooMuch) && (
-        <span className="font-mono text-xs text-terra-400">
+        <span className="font-mono text-xs text-danger-text">
           {nothing ? 'укажите, сколько отнять' : `больше, чем записано: всего ${formatHoursMinutes(maxMinutes / 60)}`}
         </span>
       )}
@@ -131,8 +131,8 @@ export function SubtractSheet({
       <button
         type="button"
         onClick={onCancel}
-        className="h-12 rounded-[15px] text-base font-medium text-slate-300"
-        style={{ border: '1px solid var(--s-border-strong-2)' }}
+        className="h-12 rounded-sm text-base font-medium text-text-secondary"
+        style={{ border: '1px solid var(--border-strong)' }}
       >
         Отмена
       </button>
@@ -170,11 +170,11 @@ function Choice({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-[60px] flex-col justify-center gap-0.5 rounded-[14px] px-3.5 py-2.5 text-left disabled:opacity-45"
+      className="flex min-h-[60px] flex-col justify-center gap-0.5 rounded-sm px-3.5 py-2.5 text-left disabled:opacity-45"
       style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border-strong)' }}
     >
-      <span className="text-base font-medium text-slate-100">{title}</span>
-      <span className="font-mono text-xs leading-[1.45] text-slate-500">{detail}</span>
+      <span className="text-base font-medium text-text">{title}</span>
+      <span className="text-sm leading-[1.45] text-text-secondary">{detail}</span>
     </button>
   )
 }

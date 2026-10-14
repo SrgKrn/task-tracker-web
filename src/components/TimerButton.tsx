@@ -1,5 +1,7 @@
 import { tap } from '../lib/haptics'
 import type { ActiveTimer } from '../lib/types'
+import { PlayGlyph, StopGlyph } from './Ring'
+import { Button } from './ui'
 
 interface TimerButtonProps {
   taskId: string
@@ -8,41 +10,26 @@ interface TimerButtonProps {
   onStop: () => void
 }
 
-/** Главное действие карточки: латунь с квадратом-стопом при учёте, контур с треугольником в покое. */
+/**
+ * Главное действие карточки: начать или остановить учёт по этой задаче. В покое — главная
+ * кнопка экрана (она на экране одна); при учёте — спокойная «Остановить»: учёт и так виден
+ * по кольцу и плашке сверху.
+ */
 export function TimerButton({ taskId, activeTimer, onStart, onStop }: TimerButtonProps) {
   const isRunning = activeTimer?.task_id === taskId
 
   return (
-    <button
-      type="button"
+    <Button
+      variant={isRunning ? 'secondary' : 'primary'}
+      className="w-full whitespace-nowrap"
       onClick={() => {
         tap()
         if (isRunning) onStop()
         else onStart()
       }}
-      className="flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] text-base font-semibold"
-      style={{
-        background: isRunning ? 'var(--s-accent)' : 'transparent',
-        border: '1px solid var(--s-accent)',
-        color: isRunning ? 'var(--s-on-accent)' : 'var(--s-accent-text)',
-      }}
     >
-      {isRunning ? (
-        <span
-          style={{ width: 11, height: 11, borderRadius: 2, background: 'var(--s-on-accent)' }}
-        />
-      ) : (
-        <span
-          style={{
-            width: 0,
-            height: 0,
-            borderLeft: '10px solid var(--s-accent)',
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-          }}
-        />
-      )}
+      {isRunning ? <StopGlyph size={10} /> : <PlayGlyph size={9} color="currentColor" />}
       {isRunning ? 'Остановить' : 'Начать учёт'}
-    </button>
+    </Button>
   )
 }

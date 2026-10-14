@@ -12,19 +12,20 @@ export function GroupFields({
   model,
   value,
   onChange,
+  rows = false,
 }: {
   model: GroupModel
   value: string[]
   onChange: (itemIds: string[]) => void
+  /** строки списка свойств карточки, а не сетка полей */
+  rows?: boolean
 }) {
   const createItem = useCreateGroupItem()
   const { showError } = useToast()
 
   if (model.groups.length === 0) return null
 
-  return (
-    <div className="grid grid-cols-2 gap-[9px]">
-      {model.groups.map((group) => {
+  const fields = model.groups.map((group) => {
         const parentGroup = group.parent_group_id ? model.groupById.get(group.parent_group_id) : undefined
         const parentValue = parentGroup ? model.valueOf({ item_ids: value }, parentGroup.id) : undefined
         const options = pickableItems(model, group, value).map((i) => ({
@@ -34,6 +35,11 @@ export function GroupFields({
         return (
           <PickerField
             key={group.id}
+            row={rows}
+            dotOf={(id) => {
+              const color = group.show_in_list ? model.itemById.get(id)?.color : null
+              return color ? `var(--${color})` : null
+            }}
             label={group.item_name}
             items={options}
             value={model.valueOf({ item_ids: value }, group.id)?.id ?? null}
@@ -55,7 +61,7 @@ export function GroupFields({
             }
           />
         )
-      })}
-    </div>
-  )
+  })
+  // строки — прямо в список свойств (без обёртки: у общего списка разделители между детьми)
+  return rows ? <>{fields}</> : <div className="grid grid-cols-2 gap-[9px]">{fields}</div>
 }

@@ -28,7 +28,7 @@ export function StaleTimerBanner() {
   return (
     <div
       data-top-bar
-      className="safe-top flex items-center justify-between gap-3 px-5 py-2 text-base text-brass-600"
+      className="safe-top-bar flex items-center justify-between gap-3 px-5 pb-2 text-base text-accent-text"
       style={{ background: 'var(--s-timer-bg)', borderBottom: '1px solid var(--s-accent-line)' }}
     >
       <span>Таймер идёт уже {hours} ч — забыли остановить?</span>

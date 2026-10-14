@@ -44,15 +44,16 @@ export function DuplicateTaskSheet({
   return (
     <Sheet open={open} onClose={onCancel} title="Дублировать задачу">
       <div className="flex flex-col gap-1.5">
-        <FieldLabel>Название</FieldLabel>
+        <FieldLabel htmlFor="duplicate-name">Название</FieldLabel>
         <input
+          id="duplicate-name"
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
-          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+          className="h-[46px] rounded-sm px-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
+          
         />
       </div>
 
@@ -67,7 +68,7 @@ export function DuplicateTaskSheet({
         </div>
       </div>
 
-      <p className="text-xs leading-[1.5] text-slate-600">
+      <p className="text-sm leading-[1.5] text-text-secondary">
         Группы, статус и план часов копируются. Факт и история трекинга — нет.
         {note && <span className="mt-1 block">{note}</span>}
       </p>

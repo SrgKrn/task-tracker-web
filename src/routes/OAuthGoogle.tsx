@@ -43,7 +43,7 @@ export function OAuthGoogle() {
   }, [])
 
   return (
-    <div className="safe-top mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-5 px-6 text-center">
+    <div className="safe-top-page mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-5 px-6 text-center">
       <Logo size={40} />
       <p className={`text-md leading-[1.5] ${state.kind === 'error' ? 'text-terra-400' : 'text-slate-100'}`}>{state.text}</p>
       {state.kind !== 'working' && (

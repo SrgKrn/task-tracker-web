@@ -61,6 +61,11 @@ export function formatDueDate(dateStr: string, today = todayStr()): string {
   if (dateStr === today) return 'Сегодня'
   if (dateStr === addDays(today, 1)) return 'Завтра'
   if (dateStr === addDays(today, -1)) return 'Вчера'
+  return formatDayMonth(dateStr, today)
+}
+
+/** «9 окт» без «Сегодня/Завтра» — для границ периода; год — только если не текущий */
+export function formatDayMonth(dateStr: string, today = todayStr()): string {
   const [y, m, d] = dateStr.split('-').map(Number)
   const label = `${d} ${MONTHS_SHORT[m - 1]}`
   return y === Number(today.slice(0, 4)) ? label : `${label} ${y}`

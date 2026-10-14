@@ -30,7 +30,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
       <div className="flex items-baseline justify-between">
         <Overline>Подзадачи</Overline>
         {subtasks.length > 0 && (
-          <span className="tabular font-mono text-xs text-slate-600">
+          <span className="tabular font-mono text-xs text-text-secondary">
             закрыто {doneCount} из {subtasks.length}
           </span>
         )}
@@ -42,12 +42,12 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
           приложение только замечает расхождение и предлагает */}
       {suggestion && (
         <div
-          className="flex items-center gap-3 rounded-xl py-1.5 pr-1.5 pl-3"
+          className="flex items-center gap-3 rounded-sm py-1.5 pr-1.5 pl-3"
           style={{ background: 'var(--s-success-ghost)', border: '1px solid var(--s-success-line)' }}
         >
-          <span className="min-w-0 flex-1 text-sm leading-[1.4] text-slate-300">
+          <span className="min-w-0 flex-1 text-sm leading-[1.4] text-text-secondary">
             Закрыто {suggestion.done} из {suggestion.total} — по подзадачам это{' '}
-            <span className="font-medium text-sage-400">{suggestion.status.label}</span>
+            <span className="font-medium text-success-text">{suggestion.status.label}</span>
           </span>
           <button
             type="button"
@@ -65,7 +65,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
       <button
         type="button"
         onClick={onNextSprint}
-        className="-mb-1 flex min-h-11 items-center justify-between gap-2 self-stretch rounded-xl px-3 text-left text-sm text-slate-400"
+        className="-mb-1 flex min-h-11 items-center justify-between gap-2 self-stretch rounded-sm px-3 text-left text-sm text-text-secondary"
         style={{ border: '1px solid var(--s-border)' }}
       >
         <span>Новый период</span>
@@ -107,12 +107,12 @@ function PlanAllocation({
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-xl p-3"
-      style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)' }}
+      className="flex flex-col gap-2 rounded-sm p-3"
+      style={{ background: 'var(--s-surface-2)', border: '1px solid var(--divider)' }}
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-text-secondary">План разложен</span>
-        <span className="tabular font-mono text-sm text-slate-300">
+        <span className="tabular font-mono text-sm text-text-secondary">
           {plan > 0
             ? `${formatHoursRu(allocated)} из ${formatHoursRu(plan)} ч`
             : `${formatHoursRu(allocated)} ч · у спринта без плана`}
@@ -131,10 +131,10 @@ function PlanAllocation({
         </div>
       )}
 
-      <p className="font-mono text-xs leading-[1.5] text-slate-500">
+      <p className="text-sm leading-[1.5] text-text-secondary">
         {over ? (
           // перебор не запрещаем: так бывает, но видно это должно быть сразу
-          <span className="text-terra-400">разложено на {formatHoursMinutes(-left)} больше плана</span>
+          <span className="text-danger-text">разложено на {formatHoursMinutes(-left)} больше плана</span>
         ) : (
           status
         )}

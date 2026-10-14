@@ -103,7 +103,7 @@ export function PicklistAdmin<T extends Item>({
   }
 
   return (
-    <div className="safe-top mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
+    <div className="safe-top-page mx-auto max-w-lg px-5 pt-3.5 pb-2 lg:max-w-2xl">
       <button onClick={() => navigate(backTo)} className="mb-4 flex items-center gap-2 text-base text-slate-400">
         <ArrowLeft size={15} />
         {backLabel}

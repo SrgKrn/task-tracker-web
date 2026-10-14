@@ -80,14 +80,14 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Найти задачу"
-          className="h-10 min-w-0 flex-1 rounded-[12px] px-3 text-base text-slate-100 outline-none placeholder:text-[var(--s-placeholder)]"
+          className="h-10 min-w-0 flex-1 rounded-sm px-3 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         />
         {suggested.length > 0 && !q && (
           <button
             type="button"
             onClick={toggleSuggested}
-            className="h-10 shrink-0 rounded-[12px] px-3 text-sm font-medium"
+            className="h-10 shrink-0 rounded-sm px-3 text-sm font-medium"
             style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
           >
             {allSuggestedOn ? 'Снять предложенное' : 'Всё предложенное'}
@@ -97,7 +97,7 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
 
       <div className="-mx-2 flex max-h-[52vh] flex-col gap-3 overflow-y-auto px-2">
         {visible.length === 0 && (
-          <p className="py-6 text-center text-base text-slate-500">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
+          <p className="py-6 text-center text-base text-text0">{q ? 'Ничего не найдено' : 'Открытых задач нет'}</p>
         )}
         {visible.map((section) => (
           <div key={section.key} className="flex flex-col gap-1">
@@ -106,7 +106,7 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
               <button
                 type="button"
                 onClick={() => setShowRest(true)}
-                className="h-11 rounded-[12px] text-left text-base text-brass-600"
+                className="h-11 rounded-sm text-left text-base text-accent-text"
               >
                 Показать остальные · {restCount}
               </button>
@@ -157,7 +157,7 @@ function PlanRow({
       role="checkbox"
       aria-checked={on}
       onClick={onToggle}
-      className="flex min-h-[54px] items-center gap-3 rounded-[14px] px-3 py-2 text-left"
+      className="flex min-h-[54px] items-center gap-3 rounded-sm px-3 py-2 text-left"
       style={{
         background: on ? 'var(--s-accent-ghost)' : 'var(--s-surface)',
         border: `1px solid ${on ? 'var(--s-accent)' : 'var(--s-border)'}`,
@@ -175,15 +175,15 @@ function PlanRow({
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className="text-base font-medium leading-[1.3] text-slate-100"
+          className="text-base font-medium leading-[1.3] text-text"
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
         >
           {task.name}
         </span>
-        {meta && <span className="block truncate font-mono text-xs leading-[1.4] text-slate-500">{meta}</span>}
+        {meta && <span className="block truncate text-sm leading-[1.4] text-text-secondary">{meta}</span>}
       </span>
       {dueLabel && (
-        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-terra-400' : 'text-slate-500'}`}>
+        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-danger-text' : 'text-text0'}`}>
           {overdue ? `просрочено ${dueLabel}` : `до ${dueLabel}`}
         </span>
       )}

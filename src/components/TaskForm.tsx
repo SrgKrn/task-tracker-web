@@ -5,7 +5,9 @@ import { DurationSheet } from './DurationSheet'
 import { GroupFields } from './GroupFields'
 import { ChevronDown } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
-import { FieldLabel, fieldClass } from './ui'
+import { Link } from 'react-router-dom'
+import { FieldLabel, ListGroup, Switch, fieldClass } from './ui'
+import { stageTone } from '../lib/stage'
 import { formatHoursMinutes } from '../lib/time'
 import { describeError, useToast } from '../lib/Toast'
 import { missingRequired, useGroupModel } from '../lib/groups'
@@ -99,6 +101,87 @@ export function TaskForm({
       return
     }
     onSubmit(values)
+  }
+
+  /*
+   * Карточка: свойства списком, как в настройках iOS — подпись слева, значение справа.
+   * Раньше они лежали во вкладке «Время» полями формы, хотя ко времени не относятся.
+   */
+  if (compact && onFieldChange) {
+    const stageColor = (id: string) => {
+      const st = statuses.find((x) => x.id === id)
+      return st ? `var(--status-${stageTone(st, statuses)})` : null
+    }
+    return (
+      <>
+      <ListGroup clip={false}>
+        <PickerField
+          row
+          label="Этап"
+          items={[...statuses].sort((a, b) => a.sort_order - b.sort_order).map((st) => ({ id: st.id, name: st.label }))}
+          value={values.status_id}
+          onChange={(id) => set('status_id', id)}
+          placeholder="Этап"
+          noneLabel="Без этапа"
+          dotOf={stageColor}
+          footer={
+            <Link to="/statuses" className="min-h-11 self-start py-2 text-sm font-medium text-accent-text">
+              Настроить этапы
+            </Link>
+          }
+        />
+        <button
+          type="button"
+          onClick={() => setEditingPlan(true)}
+          className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
+        >
+          <span className="text-text-secondary">План</span>
+          <span className={`tabular flex-1 text-right font-mono ${values.planned_hours > 0 ? 'text-text' : 'text-text-tertiary'}`}>
+            {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
+          </span>
+          <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+        </button>
+        <div className="flex items-center gap-3 px-3">
+          <span className="shrink-0 text-base text-text-secondary">Начало</span>
+          <DatePicker row className="flex-1" value={values.start_date} onChange={(v) => set('start_date', v)} ariaLabel="Начало" />
+        </div>
+        <div className="flex items-center gap-3 px-3">
+          <span className="shrink-0 text-base text-text-secondary">Срок</span>
+          <DatePicker row className="flex-1" value={values.end_date} onChange={(v) => set('end_date', v)} ariaLabel="Срок" />
+        </div>
+        {sprints ? (
+          <PickerField
+            row
+            label="Спринт"
+            items={sprints}
+            value={values.parent_id ?? null}
+            onChange={(id) => id && set('parent_id', id)}
+            placeholder="Спринт"
+          />
+        ) : (
+          <GroupFields rows model={model} value={values.item_ids} onChange={(ids) => set('item_ids', ids)} />
+        )}
+        <div className="flex min-h-12 items-center gap-3 px-3">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-base text-text">Ежедневная</span>
+            <span className="text-sm text-text-secondary">Всегда в списке дня</span>
+          </span>
+          <Switch on={values.is_daily} onChange={(v) => set('is_daily', v)} ariaLabel="Ежедневная — всегда в списке дня" />
+        </div>
+      </ListGroup>
+      {/* лист — вне списка: у списка разделители между детьми, и подложка получила бы рамку */}
+        <DurationSheet
+          open={editingPlan}
+          title="Плановое время"
+          hours={values.planned_hours}
+          onCancel={() => setEditingPlan(false)}
+          onSubmit={(value) => {
+            setEditingPlan(false)
+            set('planned_hours', value)
+          }}
+        />
+      </>
+    )
   }
 
   return (

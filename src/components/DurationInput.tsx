@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { FieldLabel } from './ui'
 import { formatHoursMinutes } from '../lib/time'
 
@@ -36,13 +37,15 @@ export function DurationInput({
   onChange: (value: DurationDraft) => void
   autoFocus?: boolean
 }) {
-  const fieldStyle = { background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }
+  const idBase = useId()
+  const fieldStyle = { background: 'var(--surface)', border: '1px solid var(--border)' }
   return (
     <>
       <div className="flex items-end gap-2.5">
         <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <FieldLabel>Часы</FieldLabel>
+          <FieldLabel htmlFor={`${idBase}-h`}>Часы</FieldLabel>
           <input
+            id={`${idBase}-h`}
             autoFocus={autoFocus}
             type="number"
             inputMode="numeric"
@@ -50,14 +53,15 @@ export function DurationInput({
             value={value.h}
             onChange={(e) => onChange({ ...value, h: e.target.value })}
             onFocus={(e) => e.currentTarget.select()}
-            className="tabular h-[52px] rounded-[14px] px-3.5 text-center font-mono text-xl text-slate-100"
+            className="tabular h-[52px] rounded-sm px-3.5 text-center font-mono text-xl text-text"
             style={fieldStyle}
           />
         </label>
-        <span className="pb-4 font-mono text-lg text-slate-600">:</span>
+        <span className="pb-4 font-mono text-lg text-text-secondary">:</span>
         <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <FieldLabel>Минуты</FieldLabel>
+          <FieldLabel htmlFor={`${idBase}-m`}>Минуты</FieldLabel>
           <input
+            id={`${idBase}-m`}
             type="number"
             inputMode="numeric"
             min="0"
@@ -65,7 +69,7 @@ export function DurationInput({
             value={value.m}
             onChange={(e) => onChange({ ...value, m: e.target.value })}
             onFocus={(e) => e.currentTarget.select()}
-            className="tabular h-[52px] rounded-[14px] px-3.5 text-center font-mono text-xl text-slate-100"
+            className="tabular h-[52px] rounded-sm px-3.5 text-center font-mono text-xl text-text"
             style={fieldStyle}
           />
         </label>
@@ -78,8 +82,8 @@ export function DurationInput({
             key={preset}
             type="button"
             onClick={() => onChange(draftFromMinutes(preset))}
-            className="min-h-9 rounded-[9px] px-3 text-sm text-slate-300"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
+            className="min-h-9 rounded-sm px-3 text-sm text-text-secondary"
+            style={{ border: '1px solid var(--border-strong)' }}
           >
             {formatHoursMinutes(preset / 60)}
           </button>
@@ -93,14 +97,15 @@ export function DurationInput({
 export function AdjustmentNote({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return (
     <label className="flex flex-col gap-1.5">
+      {/* вся подпись — <label> вокруг поля, отдельная связь не нужна */}
       <FieldLabel>Комментарий</FieldLabel>
       <textarea
         rows={2}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Почему правка: забыл включить таймер, созвон без учёта…"
-        className="resize-none rounded-[14px] px-3.5 py-2.5 text-base leading-[1.45] text-slate-100 placeholder:text-[var(--s-placeholder)]"
-        style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+        className="resize-none rounded-sm px-3.5 py-2.5 border border-border bg-surface text-[length:var(--input-size)] leading-[1.45] text-text placeholder:text-text-tertiary focus:border-accent"
+        
       />
     </label>
   )

@@ -117,7 +117,7 @@ function SettingsPage({ title, children }: { title: string; children: React.Reac
     window.scrollTo(0, 0)
   }, [])
   return (
-    <div className="safe-top mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top-page mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
       <button
         type="button"
         onClick={() => navigate('/settings')}
@@ -489,7 +489,7 @@ export function Settings() {
       : undefined
 
   return (
-    <div className="safe-top mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top-page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
       <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Ещё</h1>
 
       <MenuGroup title="Группы">

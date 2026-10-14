@@ -84,15 +84,15 @@ export function ChipPicker({
               }
             }}
             placeholder={placeholder}
-            className="h-10 min-w-0 flex-1 rounded-xl px-3 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
-            style={{ background: 'var(--s-input)', border: '1px solid var(--s-accent)' }}
+            className="h-10 min-w-0 flex-1 rounded-sm px-3 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
+            
           />
           <button
             type="button"
             onClick={submit}
             disabled={!draft.trim()}
             aria-label="Создать"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm disabled:opacity-40"
             style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
           >
             <Check size={17} />
@@ -104,8 +104,8 @@ export function ChipPicker({
               setCreating(false)
             }}
             aria-label="Отменить создание"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-text-secondary"
+            style={{ border: '1px solid var(--border-strong)' }}
           >
             <Close size={16} />
           </button>

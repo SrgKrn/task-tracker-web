@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
 import { Ring } from '../components/Ring'
-import { EmptyState, FieldLabel, Overline, Segmented, Skeleton } from '../components/ui'
+import { ClientDot, EmptyState, FieldLabel, ListGroup, Overline, Segmented, Skeleton } from '../components/ui'
+import { Download } from '../components/Icon'
 import {
   addDays,
   daysBetweenInclusive,
   daysInCalendarMonth,
+  formatDayMonth,
+  formatShortDate,
   overlapsPeriod,
   PERIOD_PRESETS,
   rangeForPreset,
@@ -34,8 +37,9 @@ function loadGroupChoice(): string | null {
   }
 }
 
+/** «1 окт» — границы периода и подписи столбиков */
 function shortDate(iso: string): string {
-  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`
+  return formatDayMonth(iso)
 }
 
 /** рабочие дни (пн–пт) в [from, to] включительно; пустой отрезок — 0 */
@@ -120,7 +124,6 @@ export function Dashboard() {
   const daysInPeriod = daysBetweenInclusive(from, to)
   const dailyTarget = userSettings?.planned_hours_per_day ?? null
   const monthlyTarget = userSettings?.planned_hours_per_month ?? null
-  const isProrated = !dailyTarget && !!monthlyTarget
   const budgetForPeriod = dailyTarget
     ? dailyTarget * daysInPeriod
     : monthlyTarget
@@ -158,6 +161,12 @@ export function Dashboard() {
   /* «13,3 ч» само по себе не отвечает на вопрос «это много или мало» —
      сравниваем с предыдущим отрезком той же длины */
   const prevRange = useMemo(() => {
+    // целый календарный месяц сравниваем с прошлым календарным месяцем: 1–15 октября — с 1–15
+    // сентября, а не с 31 августа – 14 сентября
+    if (from.endsWith('-01') && daysBetweenInclusive(from, to) === daysInCalendarMonth(from)) {
+      const prevFrom = toDateString(new Date(Number(from.slice(0, 4)), Number(from.slice(5, 7)) - 2, 1))
+      return { from: prevFrom, to: addDays(from, -1) }
+    }
     const days = daysBetweenInclusive(from, to)
     const end = new Date(`${from}T00:00:00`)
     end.setDate(end.getDate() - 1)
@@ -166,7 +175,17 @@ export function Dashboard() {
     return { from: toDateString(start), to: toDateString(end) }
   }, [from, to])
 
-  const { data: prevEntries = [] } = useTimeEntriesInRange(prevRange.from, prevRange.to)
+  /*
+   * Идущий период сравниваем с тем же числом дней прошлого: середина месяца против целого
+   * прошлого месяца всегда давала минус — «−101,9 ч к прошлому периоду» 14 октября.
+   */
+  const todayIso = todayStr()
+  const elapsed = todayIso >= from && todayIso < to ? daysBetweenInclusive(from, todayIso) : null
+  const prevTo =
+    elapsed !== null
+      ? [addDays(prevRange.from, elapsed - 1), prevRange.to].sort()[0] // в коротком прошлом месяце — не дальше его конца
+      : prevRange.to
+  const { data: prevEntries = [] } = useTimeEntriesInRange(prevRange.from, prevTo)
   const prevFactHours = useMemo(
     () => prevEntries.reduce((sum, e) => sum + entryMinutes(e), 0) / 60,
     [prevEntries],
@@ -185,7 +204,8 @@ export function Dashboard() {
     for (const e of entries) map.set(e.effective_date, (map.get(e.effective_date) ?? 0) + entryMinutes(e) / 60)
     return map
   }, [entries])
-  const maxDay = Math.max(1, ...days.map((d) => factByDay.get(d) ?? 0))
+  const maxDay = Math.max(1, dailyTarget ?? 0, ...days.map((d) => factByDay.get(d) ?? 0))
+  const [pickedDay, setPickedDay] = useState<string | null>(null)
 
   /*
    * Темп: куда период выйдет, если работать дальше так же. Считаем по рабочим дням:
@@ -212,12 +232,24 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
-      <div className="safe-top flex flex-col gap-3 px-5 pt-3.5 pb-3">
-        <div className="flex flex-col gap-0.5">
-          <Overline>
-            {shortDate(from)} — {shortDate(to)}
-          </Overline>
-          <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
+      {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
+      <div className="safe-top">
+      <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <Overline>
+              {shortDate(from)} — {shortDate(to)}
+            </Overline>
+            <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сводка</h1>
+          </div>
+          {/* отчёт — там, где смотрят цифры, а не в «Ещё» */}
+          <Link
+            to="/settings/export"
+            className="-mr-2 inline-flex h-[var(--tap)] items-center gap-1.5 rounded-sm px-3 font-medium text-text-secondary hover:bg-surface-sunken hover:text-text"
+          >
+            <Download size={16} />
+            Отчёт
+          </Link>
         </div>
         {/* период — выбор одного из трёх, поэтому сегменты, а не чипы фильтра. Подписи
             короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}
@@ -239,7 +271,7 @@ export function Dashboard() {
               value={customFrom}
               onChange={(v) => setCustomFrom(v ?? todayStr())}
             />
-            <span className="font-mono text-sm text-slate-600">—</span>
+            <span className="text-sm text-text-secondary">—</span>
             <DatePicker
               small
               className="flex-1"
@@ -249,6 +281,7 @@ export function Dashboard() {
             />
           </div>
         )}
+      </div>
       </div>
 
       {loading && (
@@ -271,34 +304,33 @@ export function Dashboard() {
       {!loading && (
         <>
           {/* кольцо периода */}
-          <div
-            className="flex items-center gap-[18px] px-5 pb-[18px]"
-            style={{ borderBottom: '1px solid var(--s-hairline-2)' }}
-          >
+          <div className="flex items-center gap-[18px] border-b border-divider px-5 pb-[18px]">
             <Ring
               size={104}
               pct={sumPct}
-              state={sumPct > 100 ? 'over' : 'running'}
-              centerBg="var(--s-bg)"
-              marker
+              state={sumPct > 100 ? 'over' : 'idle'}
+              centerBg="var(--bg)"
             >
               <span className="flex flex-col items-center gap-px">
-                <span className="tabular font-mono text-xl font-semibold text-slate-50">{sumPct}%</span>
+                <span className="tabular font-mono text-xl font-medium text-text">{sumPct}%</span>
                 <span className="text-xs text-text-secondary">плана</span>
               </span>
             </Ring>
 
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               <div className="flex flex-col gap-px">
-                <FieldLabel>Часов затрачено</FieldLabel>
-                <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
+                <FieldLabel>Факт / план по задачам</FieldLabel>
+                <span className="tabular font-mono text-xl font-medium text-text">
                   {formatHoursRu(totalFactHours)}{' '}
-                  <span className="text-base text-[var(--s-placeholder)]">/ {formatHoursRu(totalPlanHours)} ч</span>
+                  <span className="text-base text-text-secondary">/ {formatHoursRu(totalPlanHours)} ч</span>
                 </span>
                 {prevFactHours > 0 && (
-                  <span className="tabular font-mono text-xs text-slate-500">
-                    {deltaHours >= 0 ? '+' : '−'}
-                    {formatHoursRu(Math.abs(deltaHours))} ч к прошлому периоду
+                  <span className="text-sm text-text-secondary">
+                    <span className="tabular font-mono">
+                      {deltaHours >= 0 ? '+' : '−'}
+                      {formatHoursRu(Math.abs(deltaHours))} ч
+                    </span>{' '}
+                    {elapsed !== null ? `к ${shortDate(prevTo)}` : 'к прошлому периоду'}
                   </span>
                 )}
               </div>
@@ -307,9 +339,7 @@ export function Dashboard() {
               {closedCount > 0 && (
                 <div className="flex flex-col gap-px">
                   <FieldLabel>Задач закрыто</FieldLabel>
-                  <span className="tabular font-mono text-xl font-semibold leading-[1.1] text-slate-50">
-                    {closedCount}
-                  </span>
+                  <span className="tabular font-mono text-xl font-medium text-text">{closedCount}</span>
                 </div>
               )}
             </div>
@@ -318,35 +348,55 @@ export function Dashboard() {
           {/* по дням периода: выходные бледнее, сегодня — акцентом, будущее пустое */}
           {days.length > 1 && (
             <div className="px-5 pt-3.5">
-              <div className="flex h-14 items-end gap-[2px]" aria-label="Часы по дням периода">
+              <div className="relative flex h-14 items-end gap-[2px]" aria-label="Часы по дням периода">
+                {/* пунктир нормы дня: видно, где был провал, а где переработка */}
+                {dailyTarget && (
+                  <span
+                    className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
+                    style={{ bottom: `${(dailyTarget / maxDay) * 100}%` }}
+                    aria-hidden
+                  />
+                )}
                 {days.map((d) => {
                   const fact = factByDay.get(d) ?? 0
-                  const dow = new Date(`${d}T00:00:00`).getDay()
-                  const weekend = dow === 0 || dow === 6
+                  const picked = d === pickedDay
                   return (
-                    <span
+                    <button
                       key={d}
-                      title={`${shortDate(d)}: ${formatHoursRu(fact)} ч`}
-                      className="min-w-0 flex-1 rounded-[2px]"
-                      style={{
-                        height: fact > 0 ? `${Math.max(8, (fact / maxDay) * 100)}%` : '3px',
-                        background:
-                          d === today
-                            ? 'var(--s-accent)'
-                            : fact > 0
-                              ? weekend
-                                ? 'var(--s-accent-muted)'
-                                : 'var(--s-bar-past)'
-                              : d > today
-                                ? 'var(--s-bar-future)'
-                                : 'var(--s-bar-empty)',
-                      }}
-                    />
+                      type="button"
+                      onClick={() => setPickedDay(picked ? null : d)}
+                      aria-label={`${shortDate(d)}: ${formatHoursRu(fact)} ч`}
+                      aria-pressed={picked}
+                      className="flex h-full min-w-0 flex-1 items-end"
+                    >
+                      <span
+                        className="w-full rounded-t-xs"
+                        style={{
+                          height: fact > 0 ? `${Math.max(8, (fact / maxDay) * 100)}%` : '3px',
+                          background: picked
+                            ? 'var(--text)'
+                            : d === today
+                              ? 'var(--accent)'
+                              : fact > 0
+                                ? 'var(--bar-past)'
+                                : d > today
+                                  ? 'var(--bar-future)'
+                                  : 'var(--bar-empty)',
+                        }}
+                      />
+                    </button>
                   )
                 })}
               </div>
-              <div className="flex justify-between pt-1 font-mono text-xs text-slate-600">
+              <div className="flex justify-between pt-1 text-xs text-text-secondary">
                 <span>{shortDate(days[0])}</span>
+                {pickedDay ? (
+                  <span className="text-text">
+                    {formatShortDate(pickedDay)} · <span className="tabular font-mono">{formatHoursRu(factByDay.get(pickedDay) ?? 0)} ч</span>
+                  </span>
+                ) : (
+                  <span>Нажмите на день</span>
+                )}
                 <span>{shortDate(days[days.length - 1])}</span>
               </div>
             </div>
@@ -355,19 +405,16 @@ export function Dashboard() {
           {/* темп: прогноз выхода периода, остаток часов и рабочих дней */}
           {pace && (
             <div className="px-5 pt-3">
-              <div
-                className="flex flex-col gap-1.5 rounded-2xl p-3.5"
-                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-              >
+              <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-3.5">
                 <Overline>Темп</Overline>
-                <p className="text-base leading-[1.45] text-slate-100">
+                <p className="text-base leading-[1.45] text-text">
                   {formatHoursRu(pace.perDay)} ч в рабочий день — к {shortDate(to)} выйдет{' '}
-                  <span className={`tabular font-mono font-semibold ${pace.forecastPct > 100 ? 'text-terra-400' : 'text-brass-600'}`}>
+                  <span className={`tabular font-mono font-medium ${pace.forecastPct > 100 ? 'text-danger-text' : 'text-text'}`}>
                     ≈{pace.forecastPct}%
                   </span>{' '}
                   плана
                 </p>
-                <p className="font-mono text-xs leading-[1.5] text-slate-500">
+                <p className="text-sm leading-[1.5] text-text-secondary first-letter:uppercase">
                   {pace.remaining > 0
                     ? `осталось ${formatHoursRu(pace.remaining)} ч и ${plural(pace.left, WORKDAYS)}${
                         pace.needPerDay !== null ? ` — по ${formatHoursRu(pace.needPerDay)} ч в день` : ''
@@ -381,40 +428,40 @@ export function Dashboard() {
           {/* личная цель по загрузке */}
           {budgetForPeriod !== null && (
             <div className="px-5 pt-3.5">
-              <div
-                className="flex flex-col gap-2 rounded-2xl p-3.5"
-                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-              >
-                <Overline>Общий план</Overline>
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3.5">
+                <div className="flex flex-col">
+                  <Overline>Норма периода</Overline>
+                  <span className="text-sm text-text-secondary">
+                    {dailyTarget
+                      ? `${formatHoursRu(dailyTarget)} ч × ${daysInPeriod} дн. — личная цель из «Ещё → План часов»`
+                      : 'Месячная цель из «Ещё → План часов», пропорционально дням периода'}
+                  </span>
+                </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="flex flex-col gap-px">
-                    <FieldLabel>План</FieldLabel>
-                    <span className="tabular font-mono text-md font-semibold text-slate-100">
+                    <FieldLabel>Норма</FieldLabel>
+                    <span className="tabular font-mono text-md font-medium text-text">
                       {formatHoursRu(budgetForPeriod)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-px">
                     <FieldLabel>Факт</FieldLabel>
-                    <span className="tabular font-mono text-md font-semibold text-slate-100">
+                    <span className="tabular font-mono text-md font-medium text-text">
                       {formatHoursRu(totalFactHours)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-px">
-                    <FieldLabel>Сверх</FieldLabel>
+                    <FieldLabel>Сверх плана</FieldLabel>
                     <span
-                      className={`tabular font-mono text-md font-semibold ${
-                        totalOverHours > 0 ? 'text-terra-400' : 'text-slate-100'
+                      className={`tabular font-mono text-md font-medium ${
+                        totalOverHours > 0 ? 'text-danger-text' : 'text-text'
                       }`}
                     >
                       {formatHoursRu(totalOverHours)}
                     </span>
                   </div>
                 </div>
-                {isProrated && (
-                  <p className="font-mono text-xs leading-[1.5] text-slate-600">
-                    План рассчитан из месячной цели пропорционально числу дней в периоде.
-                  </p>
-                )}
+
               </div>
             </div>
           )}
@@ -434,7 +481,9 @@ export function Dashboard() {
             </div>
           )}
 
-          <div className="flex flex-col gap-[9px] px-5 pb-2 lg:grid lg:grid-cols-2 lg:gap-3">
+          <div className="px-5 pb-2">
+          {rows.length > 0 && (
+          <ListGroup>
             {rows.map((row) => {
               // процента от нулевого плана не существует: раньше проект без плана
               // показывал ровно «100%», что просто неправда
@@ -446,42 +495,34 @@ export function Dashboard() {
                 <Link
                   key={row.id || 'none'}
                   to={row.id ? `/items/${row.id}` : '/tasks'}
-                  className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3"
-                  style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+                  className="flex min-h-[var(--row-task)] items-center gap-3 px-3 py-2.5 active:bg-surface-sunken"
                 >
-                  <Ring
-                    size={38}
-                    pct={pct}
-                    color={over ? 'var(--s-danger)' : pct >= 50 ? 'var(--s-accent)' : 'var(--s-accent-muted)'}
-                  >
-                    <span
-                      className={`tabular font-mono text-xs font-medium ${
-                        over ? 'text-terra-400' : pct >= 50 ? 'text-brass-600' : 'text-slate-400'
-                      }`}
-                    >
-                      {hasPlan ? `${pct}%` : '—'}
-                    </span>
-                  </Ring>
+                  {/* кольцо без текста: «126%» в кольце 38 px было кеглем около 9 px */}
+                  <Ring size={32} pct={pct} state={over ? 'over' : 'idle'} />
                   <div className="min-w-0 flex-1">
-                    <p
-                      title={row.name}
-                      className="truncate text-base font-medium leading-[1.3] text-slate-100"
-                    >
-                      {row.name}
+                    <p title={row.name} className="flex min-w-0 items-center gap-1.5 text-base font-medium text-text">
+                      <ClientDot color={row.id ? model.itemById.get(row.id)?.color : null} />
+                      <span className="truncate">{row.name}</span>
                     </p>
-                    {/* счётчик задач больше не вытесняется словом «переработка»: о ней
-                        уже говорят терракотовое кольцо и процент больше ста */}
-                    <span className="block truncate font-mono text-xs leading-[1.4] text-slate-500">
-                      {hasPlan
-                        ? `${formatHoursRu(row.factHours)} / ${formatHoursRu(row.planHours)} ч`
-                        : `${formatHoursRu(row.factHours)} ч · без плана`}{' · '}
-                      {plural(row.counted, TASKS)}
+                    <span className="flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
+                      <span className="tabular shrink-0 font-mono text-xs">
+                        {hasPlan
+                          ? `${formatHoursRu(row.factHours)} / ${formatHoursRu(row.planHours)} ч`
+                          : `${formatHoursRu(row.factHours)} ч · без плана`}
+                      </span>
+                      <span aria-hidden>·</span>
+                      <span className="truncate">{plural(row.counted, TASKS)}</span>
                     </span>
                   </div>
+                  <span className={`tabular shrink-0 font-mono text-base ${over ? 'text-danger-text' : 'text-text-secondary'}`}>
+                    {hasPlan ? `${pct}%` : '—'}
+                  </span>
                 </Link>
               )
             })}
-            {rows.length === 0 && <EmptyState>За этот период нет плана или трекинга.</EmptyState>}
+          </ListGroup>
+          )}
+            {rows.length === 0 && <EmptyState title="Пока пусто">За этот период нет ни плана, ни учёта.</EmptyState>}
           </div>
         </>
       )}

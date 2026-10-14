@@ -94,13 +94,14 @@ export function NextSprintSheet({
   return (
     <Sheet open={open} onClose={onCancel} title="Новый период">
       <div className="flex flex-col gap-1.5">
-        <FieldLabel>Название</FieldLabel>
+        <FieldLabel htmlFor="next-sprint-name">Название</FieldLabel>
         <input
+          id="next-sprint-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например: Спринт 7 или Октябрь"
-          className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
-          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+          className="h-[46px] rounded-sm px-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
+          
         />
       </div>
 
@@ -120,13 +121,13 @@ export function NextSprintSheet({
         <button
           type="button"
           onClick={() => setEditingPlan(true)}
-          className="flex h-10 w-full items-center justify-between gap-2 rounded-xl px-3 text-left"
+          className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left"
           style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
         >
-          <span className="tabular font-mono text-base text-slate-100">
+          <span className="tabular font-mono text-base text-text">
             {plan > 0 ? formatHoursMinutes(plan) : 'не задан'}
           </span>
-          <ChevronDown size={14} className="text-slate-600" />
+          <ChevronDown size={14} className="text-text-secondary" />
         </button>
       </div>
 
@@ -134,7 +135,7 @@ export function NextSprintSheet({
         <div className="flex flex-col gap-1.5">
           <span className="flex items-baseline justify-between">
             <FieldLabel>Перенести подзадачи</FieldLabel>
-            <span className="tabular font-mono text-xs text-slate-600">
+            <span className="tabular font-mono text-xs text-text-secondary">
               {carryIds.size} из {unfinished.length}
             </span>
           </span>
@@ -150,10 +151,10 @@ export function NextSprintSheet({
                   aria-checked={checked}
                   onClick={() => toggle(t.id)}
                   className="flex min-h-11 items-center gap-3 text-left"
-                  style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
+                  style={{ borderBottom: '1px solid var(--divider)' }}
                 >
                   <span
-                    className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px]"
+                    className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-xs"
                     style={
                       checked
                         ? { background: 'var(--s-accent)', color: 'var(--s-on-accent)' }
@@ -162,10 +163,10 @@ export function NextSprintSheet({
                   >
                     {checked && <Check size={12} />}
                   </span>
-                  <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-slate-100' : 'text-slate-500'}`}>
+                  <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-text' : 'text-text0'}`}>
                     {t.name}
                   </span>
-                  <span className="tabular shrink-0 font-mono text-xs text-slate-500">
+                  <span className="tabular shrink-0 font-mono text-xs text-text0">
                     {t.planned_hours > 0 ? `остаток ${formatHoursMinutes(rest)}` : 'без плана'}
                   </span>
                 </button>
@@ -175,7 +176,7 @@ export function NextSprintSheet({
         </div>
       )}
 
-      <p className="text-xs leading-[1.5] text-slate-600">
+      <p className="text-sm leading-[1.5] text-text-secondary">
         Часы, история и закрытые подзадачи остаются в «{task.name}».
       </p>
 

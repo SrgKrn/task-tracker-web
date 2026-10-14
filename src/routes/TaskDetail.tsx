@@ -8,14 +8,14 @@ import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
 import { SubtractSheet, type SubtractSource } from '../components/SubtractSheet'
 import { NextSprintSheet } from '../components/NextSprintSheet'
 import { SprintComposition } from '../components/SprintComposition'
-import { ArrowLeft } from '../components/Icon'
+import { ArrowLeft, Minus, MoreDots, Plus } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
-import { FieldLabel, Segmented, Tag } from '../components/ui'
+import { Button, ClientDot, Segmented, Sheet } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
-import { formatShortDate, todayStr } from '../lib/period'
+import { formatDueDate, todayStr } from '../lib/period'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import {
@@ -37,7 +37,7 @@ import {
   useTrimSession,
 } from '../lib/queries/timer'
 import { useAddComment } from '../lib/queries/comments'
-import { elapsedHours, entrySeconds, formatClock, formatHoursMinutes, formatHoursRu, useTicker } from '../lib/time'
+import { elapsedHours, entrySeconds, formatClock, formatHoursMinutes, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 
 export function TaskDetail() {
@@ -88,7 +88,9 @@ export function TaskDetail() {
    * до истории приходилось листать шесть экранов. Теперь разделы на вкладках, а шапка с
    * кольцом и кнопкой учёта всегда сверху.
    */
-  const [tab, setTab] = useState<'time' | 'composition' | 'files' | 'history'>('time')
+  // свойства теперь над вкладками — вкладки только для истории, состава и файлов
+  const [tab, setTab] = useState<'composition' | 'files' | 'history'>('history')
+  const [menuOpen, setMenuOpen] = useState(false)
   const isRunning = activeTimer?.task_id === id
   // учёт идёт по подзадаче: кольцо спринта растёт вместе с ней, хотя кнопка здесь «Начать»
   const runningInside = !!task && !isRunning && runningWithin(task, subtasks, activeTimer?.task_id)
@@ -167,10 +169,10 @@ export function TaskDetail() {
     if (patch.planned_hours !== undefined) {
       return `План: ${patch.planned_hours > 0 ? formatHoursMinutes(patch.planned_hours) : 'не задан'}`
     }
-    if (patch.start_date !== undefined) return `Срок с: ${patch.start_date ? formatShortDate(patch.start_date) : 'не задан'}`
-    if (patch.end_date !== undefined) return `Срок до: ${patch.end_date ? formatShortDate(patch.end_date) : 'не задан'}`
+    if (patch.start_date !== undefined) return `Начало: ${patch.start_date ? formatDueDate(patch.start_date).toLowerCase() : 'не задано'}`
+    if (patch.end_date !== undefined) return `Срок: ${patch.end_date ? formatDueDate(patch.end_date).toLowerCase() : 'не задан'}`
     if (patch.status_id !== undefined) {
-      return `Статус: ${statuses.find((s) => s.id === patch.status_id)?.label ?? 'без статуса'}`
+      return `Этап: ${statuses.find((s) => s.id === patch.status_id)?.label ?? 'без этапа'}`
     }
     if (patch.is_daily !== undefined) return patch.is_daily ? 'Теперь ежедневная' : 'Больше не ежедневная'
     if (patch.parent_id !== undefined) {
@@ -296,51 +298,39 @@ export function TaskDetail() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:h-screen lg:max-w-none lg:w-full">
-      <div className="safe-top flex items-center justify-between px-5 pt-3.5">
-        {/* -my-2.5 гасит вертикальный паддинг в вёрстке: он нужен только пальцу */}
-        <button
-          type="button"
-          onClick={() => navigate(backTo)}
-          className="-my-2.5 flex min-w-0 items-center gap-2 py-2.5 text-base text-slate-400"
-        >
-          <ArrowLeft size={15} />
-          <span className="truncate">{parent ? parent.name : 'Назад'}</span>
-        </button>
-        <div className="-my-2.5 flex shrink-0 gap-3.5 pl-3 text-base">
-          <button type="button" onClick={() => setDuplicating(true)} className="py-2.5 text-slate-400">
-            Дублировать
-          </button>
-          <button type="button" onClick={() => setConfirmingDelete(true)} className="py-2.5 text-terra-400">
-            Удалить
-          </button>
+      {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
+      <div className="safe-top">
+        <div className="flex items-center justify-between gap-2 px-3 pt-2">
+          <Button variant="ghost" className="min-w-0" onClick={() => navigate(backTo)}>
+            <ArrowLeft size={16} />
+            <span className="truncate">{parent ? parent.name : 'Назад'}</span>
+          </Button>
+          {/* «Дублировать» и «Удалить» — в меню: красное «Удалить» прямо у «Назад»
+              было опасным действием на виду, под пальцем */}
+          <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" onClick={() => setMenuOpen(true)}>
+            <MoreDots size={18} />
+          </Button>
         </div>
       </div>
 
       {/* шапка задачи */}
-      <div
-        className="flex flex-col gap-3.5 px-5 pt-4 pb-4"
-        style={{ borderBottom: '1px solid var(--s-hairline-2)' }}
-      >
-        <div className="flex items-center gap-2">
-          {status && <Tag tone={status.is_final ? 'success' : 'accent'}>{status.label}</Tag>}
-          <span className="truncate font-mono text-sm text-slate-500">
+      <div className="flex flex-col gap-3 px-5 pt-1 pb-4">
+        {values.length > 0 && (
+          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-text-secondary">
             {/* каждое значение — ссылка на свою карточку: там вся история и файлы по нему */}
             {values.map((v, i) => (
-              <span key={v.item.id}>
-                {i > 0 && ' · '}
-                <Link
-                  to={`/items/${v.item.id}`}
-                  title={v.group.item_name}
-                  className={`underline-offset-4 hover:underline ${v.group.show_in_list ? 'text-brass-600' : ''}`}
-                >
+              <span key={v.item.id} className="flex min-w-0 items-center gap-1.5">
+                {i > 0 && <span aria-hidden>·</span>}
+                {v.group.show_in_list && <ClientDot color={v.item.color} />}
+                <Link to={`/items/${v.item.id}`} title={v.group.item_name} className="truncate underline-offset-4 hover:underline">
                   {v.item.name}
                 </Link>
               </span>
             ))}
           </span>
-        </div>
-        {/* название правится прямо в заголовке: форма ниже идёт в режиме compact,
-            и поля имени в ней нет — переименовать задачу было нечем */}
+        )}
+
+        {/* название правится прямо в заголовке */}
         {renaming ? (
           <textarea
             autoFocus
@@ -358,8 +348,8 @@ export function TaskDetail() {
                 setDraftName(task.name)
               }
             }}
-            className="resize-none rounded-xl px-3 py-2 text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
-            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-accent)' }}
+            aria-label="Название задачи"
+            className="resize-none rounded-sm border border-accent bg-surface px-2.5 py-2 text-xl font-semibold tracking-[-0.01em] text-text"
           />
         ) : (
           <h1
@@ -368,56 +358,75 @@ export function TaskDetail() {
               setDraftName(task.name)
               setRenaming(true)
             }}
-            className="cursor-text text-xl font-semibold leading-[1.2] tracking-[-.02em] text-slate-100"
+            className="cursor-text text-xl font-semibold tracking-[-0.01em] text-text"
             style={{ textWrap: 'pretty' }}
           >
             {task.name}
           </h1>
         )}
 
-        {original && (
-          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-sm text-slate-500">
-            На основе «<span className="text-brass-600">{original.name}</span>»
+        {/* связь с прошлым периодом — только если название другое: «На основе «Спринт Wclass»»
+            у «Спринт Wclass» ничего не сообщало */}
+        {original && original.name !== task.name && (
+          <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-sm text-text-secondary">
+            Продолжение: <span className="text-accent-text">{original.name}</span>
           </Link>
         )}
 
-        <div className="flex items-center gap-[18px] pt-0.5">
-          <Ring size={112} pct={done ? 100 : pct} state={ringState} centerBg="var(--s-bg)" marker={isRunning}>
+        <div className="flex items-center gap-4 pt-1">
+          <Ring size={104} pct={done ? 100 : pct} state={ringState} centerBg="var(--bg)" marker={isRunning}>
             <span className="flex flex-col items-center gap-px">
-              {/* число и «ч» — одним неразрывным куском: «14,4 ч» в кольце переносилось на две
-                  строки; длинное число уменьшается, а не ломает кольцо */}
-              <span
-                className={`tabular whitespace-nowrap font-mono font-semibold ${
-                  isRunning
-                    ? 'text-xl text-brass-600'
-                    : formatHoursRu(fact).length > 4
-                      ? 'text-xl text-slate-50'
-                      : 'text-xl text-slate-50'
-                }`}
-              >
-                {isRunning && activeTimer ? (
-                  formatClock(activeTimer.started_at)
-                ) : (
-                  <>
-                    {formatHoursRu(fact)}
-                    <span className="ml-0.5 text-base font-medium text-slate-400">ч</span>
-                  </>
-                )}
+              <span className="tabular whitespace-nowrap font-mono text-lg font-medium text-text">
+                {isRunning && activeTimer
+                  ? formatClock(activeTimer.started_at)
+                  : task.planned_hours > 0
+                    ? `${Math.round(pct)}%`
+                    : '—'}
               </span>
-              <span className="text-sm font-medium text-text-secondary">
-                {isRunning ? 'идёт учёт' : 'факт'}
-              </span>
+              <span className="text-xs text-text-secondary">{isRunning ? 'идёт учёт' : 'плана'}</span>
             </span>
           </Ring>
 
+          {/* факт один раз и с одной точностью: раньше он стоял трижды — «18 ч» в кольце,
+              «18 / 24 ч» рядом и «17 ч 58 мин» в блоке правки */}
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <div className="flex flex-col gap-px">
-              <FieldLabel>Факт / план</FieldLabel>
-              <span className="tabular font-mono text-lg font-semibold leading-[1.1] text-slate-50">
-                {formatHoursRu(fact)}{' '}
-                <span className="text-base text-[var(--s-placeholder)]">/ {formatHoursRu(task.planned_hours)} ч</span>
-              </span>
+            {/* число и кнопки правки — в одной строке: правят именно его */}
+            <div className="flex items-start gap-2">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <button
+                  type="button"
+                  onClick={() => setEditingFact(true)}
+                  className="tabular self-start whitespace-nowrap text-left font-mono text-md font-medium text-text underline decoration-dotted decoration-[var(--border-strong)] underline-offset-4"
+                  aria-label={`Факт ${formatHoursMinutes(fact)}, изменить`}
+                >
+                  {formatHoursMinutes(fact)}
+                </button>
+                <span className="text-sm text-text-secondary">
+                  {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)}` : 'без плана'}
+                </span>
+              </div>
+              {/* минус — окно: сколько отнять и откуда (отдельной правкой или из сессии);
+                  плюс — сколько добавить и комментарий */}
+              <Button
+                className="w-10 shrink-0 px-0"
+                aria-label="Отнять время"
+                onClick={() => setSubtracting(15)}
+                disabled={adjustFactHours.isPending || (task.fact_hours <= 0 && !isRunning)}
+              >
+                <Minus size={16} />
+              </Button>
+              <Button
+                className="w-10 shrink-0 px-0"
+                aria-label="Добавить время"
+                onClick={() => setAdding(true)}
+                disabled={adjustFactHours.isPending}
+              >
+                <Plus size={16} />
+              </Button>
             </div>
+            {subtasks.length > 0 && (
+              <span className="-mt-1.5 text-sm text-text-secondary">в самом спринте {formatHoursMinutes(task.fact_hours)}</span>
+            )}
             <TimerButton
               taskId={task.id}
               activeTimer={activeTimer}
@@ -426,25 +435,51 @@ export function TaskDetail() {
             />
           </div>
         </div>
+
+        {/* за какой день засчитать правку: без этого исправление старых часов
+            вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
+          <span className="shrink-0">Правки — в день</span>
+          <DatePicker
+            small
+            className="w-[132px]"
+            ariaLabel="День, к которому относится правка"
+            value={adjustDate}
+            onChange={(v) => setAdjustDate(v ?? todayStr())}
+          />
+          {adjustDate !== todayStr() && (
+            <button type="button" onClick={() => setAdjustDate(todayStr())} className="min-h-11 shrink-0 px-1 font-medium text-accent-text">
+              Сегодня
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* свойства — списком над вкладками: этап, план, сроки, группы, «ежедневная» */}
+      <div className="px-5">
+        <TaskForm
+          initial={formValues}
+          statuses={statuses}
+          compact
+          sprints={sprintOptions}
+          onFieldChange={saveField}
+        />
       </div>
 
       {/* вкладки: состава у подзадачи нет — база держит ровно два уровня */}
-      <div className="px-5 pt-3.5">
+      <div className="px-5 pt-4">
         <Segmented
           stretch
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'time', label: 'Время' },
+            { value: 'history', label: 'История' },
             ...(isSubtask ? [] : [{ value: 'composition' as const, label: subtasks.length ? `Состав · ${subtasks.length}` : 'Состав' }]),
             { value: 'files', label: 'Файлы' },
-            { value: 'history', label: 'История' },
           ]}
         />
       </div>
 
-      {/* на десктопе форма упирается в предел ширины: поле на шесть символов,
-          растянутое на пол-экрана, выглядит как ошибка вёрстки */}
       <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:max-w-[560px] lg:flex-1 lg:overflow-y-auto">
         {tab === 'composition' && !isSubtask && (
           <SprintComposition
@@ -467,95 +502,46 @@ export function TaskDetail() {
           />
         )}
 
-        {tab === 'time' && (
-          <>
-            {/* правка факта — отдельной карточкой: она пишет запись в историю, а не меняет поле */}
-            <div
-              className="flex flex-col gap-2.5 rounded-2xl p-3"
-              style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
-            >
-              <span className="flex items-baseline justify-between gap-2">
-                {/* правка пишется в сам спринт: часы подзадач правятся в их карточках */}
-                <FieldLabel>{subtasks.length > 0 ? 'Часы в сам спринт' : 'Факт (правка)'}</FieldLabel>
-              </span>
-              <div
-                className="flex h-[52px] items-center justify-between rounded-xl py-1.5 pr-1.5 pl-3"
-                style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-              >
-                {/* по цифре можно ударить и ввести точное значение: набирать «3 ч 40 мин»
-                    шагами по 15 минут — дюжина нажатий */}
-                <button
-                  type="button"
-                  onClick={() => setEditingFact(true)}
-                  className="tabular -my-2 rounded-sm py-2 font-mono text-base font-medium text-slate-100 underline decoration-dotted decoration-slate-600 underline-offset-4"
-                >
-                  {formatHoursMinutes(task.fact_hours)}
-                </button>
-                {/* пока правка летит на сервер, кнопки заблокированы: серия быстрых тапов
-                    иначе накрутила бы несколько правок от одного и того же исходного значения */}
-                <span className="flex gap-1.5">
-                  {/* минус открывает окно: сколько отнять, откуда (отдельной правкой или из сессии
-                      таймера) и комментарий к правке */}
-                  <button
-                    type="button"
-                    onClick={() => setSubtracting(15)}
-                    disabled={adjustFactHours.isPending || (task.fact_hours <= 0 && !isRunning)}
-                    aria-label="Отнять время"
-                    className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
-                    style={{ border: '1px solid var(--s-border-strong-2)' }}
-                  >
-                    −
-                  </button>
-                  {/* плюс открывает окно: сколько добавить и комментарий. Раньше кнопка молча
-                      прибавляла ровно 15 минут — час набирался четырьмя нажатиями */}
-                  <button
-                    type="button"
-                    onClick={() => setAdding(true)}
-                    disabled={adjustFactHours.isPending}
-                    aria-label="Добавить время"
-                    className="flex h-10 w-10 items-center justify-center rounded-[10px] text-lg text-slate-300 disabled:opacity-40"
-                    style={{ border: '1px solid var(--s-border-strong-2)' }}
-                  >
-                    +
-                  </button>
-                </span>
-              </div>
-
-              {/* за какой день засчитать правку: без этого исправление старых часов
-                  вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
-              <div className="flex items-center gap-2 pb-0.5">
-                <span className="shrink-0 text-xs text-slate-500">Засчитать в день</span>
-                <DatePicker
-                  small
-                  className="w-[128px]"
-                  ariaLabel="День, к которому относится правка"
-                  value={adjustDate}
-                  onChange={(v) => setAdjustDate(v ?? todayStr())}
-                />
-                {adjustDate !== todayStr() && (
-                  <button
-                    type="button"
-                    onClick={() => setAdjustDate(todayStr())}
-                    className="shrink-0 text-xs text-brass-600"
-                  >
-                    Сегодня
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <TaskForm
-              initial={formValues}
-              statuses={statuses}
-              compact
-              sprints={sprintOptions}
-              onFieldChange={saveField}
-            />
-          </>
-        )}
-
         {tab === 'history' && <TaskTimeline taskId={task.id} isRunning={isRunning} />}
       </div>
+
+      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Задача">
+        <div className="flex flex-col gap-2 pb-1">
+          <Button
+            size="lg"
+            className="justify-start"
+            onClick={() => {
+              setMenuOpen(false)
+              setDuplicating(true)
+            }}
+          >
+            Дублировать
+          </Button>
+          {!isSubtask && (
+            <Button
+              size="lg"
+              className="justify-start"
+              onClick={() => {
+                setMenuOpen(false)
+                setNextSprint(true)
+              }}
+            >
+              Новый период
+            </Button>
+          )}
+          <Button
+            size="lg"
+            variant="ghost"
+            className="justify-start text-danger-text"
+            onClick={() => {
+              setMenuOpen(false)
+              setConfirmingDelete(true)
+            }}
+          >
+            Удалить задачу
+          </Button>
+        </div>
+      </Sheet>
 
       {/* комментарий пишется в историю — поле ввода там, где её видно */}
       {tab === 'history' && <CommentBar taskId={task.id} />}

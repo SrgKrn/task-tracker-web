@@ -49,6 +49,30 @@ input[type="number"] {
   padding-top: 0.5rem;
 }
 
+/*
+ * Шапка страницы — отступ под «чёлку» прозрачной рамкой, а не padding: этот файл вне слоёв
+ * Tailwind, и padding отсюда перебивал собственный pt-* шапки — на телефонах без выреза
+ * заголовок прижимался к самому верху. Под плашкой учёта рамка не нужна.
+ */
+.safe-top-page {
+  border-top: env(safe-area-inset-top, 0px) solid transparent;
+}
+
+.app-top:has([data-top-bar]) ~ .app-content .safe-top-page,
+[data-top-bar] ~ .app-content .safe-top-page {
+  border-top-width: 0;
+}
+
+/* плашка сверху: отступ под «чёлку» плюс свой — одним значением, ничего не перебивая */
+.safe-top-bar {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
+/* отдельная карточка сверху (плашка учёта): отступ снаружи, а не внутри рамки */
+.safe-top-box {
+  margin-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }

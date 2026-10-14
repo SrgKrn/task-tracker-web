@@ -25,6 +25,12 @@ interface PickerFieldProps {
   chip?: boolean
   /** чип-кнопка действия, а не метка: крупнее, чтобы попадать пальцем */
   chipLarge?: boolean
+  /** строка списка свойств: подпись слева, значение справа */
+  row?: boolean
+  /** цвет точки у варианта (CSS-цвет): клиент — метка, этап — цвет этапа */
+  dotOf?: (id: string) => string | null
+  /** ссылка-действие под списком в окне выбора (например «Настроить этапы») */
+  footer?: React.ReactNode
 }
 
 /**
@@ -46,6 +52,9 @@ export function PickerField({
   hint,
   chip = false,
   chipLarge = false,
+  row = false,
+  dotOf,
+  footer,
 }: PickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -76,10 +85,27 @@ export function PickerField({
   }
 
   const shown = selected?.name ?? noneLabel ?? emptyLabel ?? placeholder
+  const dot = (id: string | null) => {
+    const color = id && dotOf ? dotOf(id) : null
+    return color ? <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden /> : null
+  }
 
   return (
-    <div className={chip ? 'flex min-w-0 max-w-full' : 'flex min-w-0 flex-col gap-1.5'}>
-      {chip ? (
+    <div className={chip || row ? 'flex min-w-0 max-w-full' : 'flex min-w-0 flex-col gap-1.5'}>
+      {row ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
+        >
+          <span className="shrink-0 text-text-secondary">{label}</span>
+          <span className={`flex min-w-0 flex-1 items-center justify-end gap-1.5 ${selected ? 'text-text' : 'text-text-tertiary'}`}>
+            {dot(value)}
+            <span className="truncate">{shown}</span>
+          </span>
+          <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+        </button>
+      ) : chip ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -109,23 +135,24 @@ export function PickerField({
             }}
           >
             <span className="truncate">{shown}</span>
-            <ChevronDown size={14} className="text-slate-600" />
+            <ChevronDown size={14} className="text-text-secondary" />
           </button>
         </>
       )}
 
       <Sheet open={open} onClose={close} title={label}>
         <div
-          className="flex h-11 items-center gap-2 rounded-xl px-3"
-          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+          className="flex h-11 items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary"
         >
-          <Search size={15} className="text-slate-600" />
+          <Search size={16} />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"
-            className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+            aria-label={`Поиск: ${label}`}
+            className="min-w-0 flex-1 bg-transparent text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
+            style={{ outline: 'none', boxShadow: 'none' }}
           />
         </div>
 
@@ -137,11 +164,11 @@ export function PickerField({
                 onChange(null)
                 close()
               }}
-              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-slate-400"
-              style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
+              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-text-secondary"
+              style={{ borderBottom: '1px solid var(--divider)' }}
             >
               {noneLabel}
-              {value === null && <Check size={16} className="text-brass-600" />}
+              {value === null && <Check size={16} className="text-accent" />}
             </button>
           )}
           {filtered.map((item) => (
@@ -152,19 +179,23 @@ export function PickerField({
                 onChange(item.id)
                 close()
               }}
-              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-slate-100"
-              style={{ borderBottom: '1px solid var(--s-hairline-3)' }}
+              className="flex min-h-12 items-center justify-between gap-3 px-1 text-left text-base text-text"
+              style={{ borderBottom: '1px solid var(--divider)' }}
             >
-              <span className="min-w-0 truncate">{item.name}</span>
-              {value === item.id && <Check size={16} className="shrink-0 text-brass-600" />}
+              <span className="flex min-w-0 items-center gap-2">
+                {dot(item.id)}
+                <span className="truncate">{item.name}</span>
+              </span>
+              {value === item.id && <Check size={16} className="shrink-0 text-accent" />}
             </button>
           ))}
           {filtered.length === 0 && !creating && (
-            <p className="py-4 text-center text-sm text-slate-600">Ничего не нашлось</p>
+            <p className="py-4 text-center text-sm text-text-secondary">Ничего не нашлось</p>
           )}
         </div>
 
-        {hint && <p className="-mt-1 text-xs leading-[1.45] text-slate-500">{hint}</p>}
+        {hint && <p className="-mt-1 text-sm leading-[1.45] text-text-secondary">{hint}</p>}
+        {footer}
 
         {!onCreate ? null : creating ? (
           <div className="flex items-center gap-2">
@@ -179,16 +210,14 @@ export function PickerField({
                 }
               }}
               placeholder={placeholder}
-              className="h-11 min-w-0 flex-1 rounded-xl px-3 text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
-              style={{ background: 'var(--s-input)', border: '1px solid var(--s-accent)' }}
+              className="h-11 min-w-0 flex-1 rounded-sm border border-accent bg-surface px-2.5 text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
             />
             <button
               type="button"
               onClick={create}
               disabled={!draft.trim()}
               aria-label="Создать"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40"
-              style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-accent text-on-accent disabled:opacity-50"
             >
               <Check size={17} />
             </button>

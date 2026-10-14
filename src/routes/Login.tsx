@@ -131,7 +131,7 @@ export function Login() {
   const fieldStyle = { background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }
 
   return (
-    <div className="safe-top safe-bottom flex min-h-full flex-col items-center justify-center px-5 py-10">
+    <div className="safe-top-page safe-bottom flex min-h-full flex-col items-center justify-center px-5 py-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-3">
           <Logo size={44} />
