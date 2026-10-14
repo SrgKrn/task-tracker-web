@@ -110,7 +110,7 @@ export function PicklistAdmin<T extends Item>({
       {header}
 
       {listTitle && (
-        <span className="mb-2 block font-mono text-xs font-medium uppercase tracking-[.16em] text-slate-500">
+        <span className="mb-2 block text-sm font-medium text-text-secondary">
           {listTitle}
         </span>
       )}

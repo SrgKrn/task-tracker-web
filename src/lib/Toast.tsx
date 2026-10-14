@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { Check, Close } from '../components/Icon'
 
 interface ToastAction {
   label: string
@@ -31,10 +32,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback(
     (message: string, tone: Toast['tone'], action?: ToastAction) => {
       const id = nextId++
-      setToasts((prev) => [...prev, { id, message, tone, action }])
-      // «готово» — коротко, чтобы не задерживать взгляд; с кнопкой отмены — успеть до
-      // неё дотянуться; ошибку — успеть прочитать: за 2 с её не замечали вовсе
-      setTimeout(() => dismiss(id), tone === 'error' ? 7000 : action ? 5000 : 2200)
+      // не больше трёх сразу: новый вытесняет самый старый
+      setToasts((prev) => [...prev, { id, message, tone, action }].slice(-3))
+      // «готово» — коротко; с «Вернуть» — успеть дотянуться; ошибку — успеть прочитать
+      setTimeout(() => dismiss(id), tone === 'error' ? 7000 : action ? 5000 : 3000)
     },
     [dismiss],
   )
@@ -48,31 +49,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showError, showSuccess }}>
       {children}
-      <div className="safe-top pointer-events-none fixed inset-x-0 top-2 z-[60] flex flex-col items-center gap-1.5 px-4">
+      {/* снизу по центру, над таб-баром: сверху и так живут плашка учёта и «нет сети».
+          На широком экране — в правом нижнем углу */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[var(--z-toast)] flex flex-col items-center gap-2 px-4 lg:right-6 lg:bottom-6 lg:left-auto lg:items-end">
         {toasts.map((t) => (
           <div
             key={t.id}
             role={t.tone === 'error' ? 'alert' : 'status'}
-            className={`toast-pop flex max-w-[92vw] items-center gap-2.5 backdrop-blur-sm ${
-              t.tone === 'error'
-                ? 'pointer-events-auto rounded-2xl py-2.5 pr-1.5 pl-3.5 text-base font-medium leading-snug shadow-popover'
-                : `rounded-full px-3.5 py-2 text-sm leading-tight ${t.action ? 'pointer-events-auto' : ''}`
-            }`}
-            style={
-              t.tone === 'error'
-                ? {
-                    background: 'var(--s-toast-err-bg)',
-                    border: '1px solid var(--s-danger-line)',
-                    color: 'var(--s-danger-text)',
-                  }
-                : {
-                    background: 'var(--s-toast-ok-bg)',
-                    border: '1px solid var(--s-success-line)',
-                    color: 'var(--s-success-text)',
-                  }
-            }
+            className="toast-pop pointer-events-auto flex max-w-[min(92vw,420px)] items-center gap-2.5 rounded-md border border-border bg-surface py-2 pr-2 pl-3 text-base text-text shadow-popover"
           >
-            {t.message}
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                t.tone === 'error' ? 'bg-danger-soft text-danger' : 'bg-success-soft text-success'
+              }`}
+              aria-hidden
+            >
+              {t.tone === 'error' ? <span className="text-xs font-semibold">!</span> : <Check size={14} />}
+            </span>
+            <span className="min-w-0 flex-1 py-0.5 leading-[1.4]">{t.message}</span>
             {t.action && (
               <button
                 type="button"
@@ -80,7 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   t.action?.onAction()
                   dismiss(t.id)
                 }}
-                className="shrink-0 font-semibold underline underline-offset-2"
+                className="hit-44 min-h-9 shrink-0 rounded-sm px-2 font-medium text-accent-text hover:bg-surface-sunken"
               >
                 {t.action.label}
               </button>
@@ -90,9 +84,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Закрыть"
-                className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-md leading-none opacity-70"
+                className="hit-44 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-surface-sunken"
               >
-                ×
+                <Close size={16} />
               </button>
             )}
           </div>

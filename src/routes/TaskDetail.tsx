@@ -404,7 +404,7 @@ export function TaskDetail() {
                   </>
                 )}
               </span>
-              <span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">
+              <span className="text-sm font-medium text-text-secondary">
                 {isRunning ? 'идёт учёт' : 'факт'}
               </span>
             </span>

@@ -50,7 +50,7 @@ export function ActiveTimerBar() {
 
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         {/* в одну строку: название спринта длиннее подписи и переносом раздувало док вдвое */}
-        <span className="block truncate font-mono text-xs uppercase tracking-[.12em] text-brass-700">
+        <span className="block truncate text-xs font-medium text-accent-text">
           Идёт учёт{parent ? ` · ${parent.name}` : label ? ` · ${label}` : ''}
         </span>
         <span className="block truncate text-base font-medium text-slate-100">{task.name}</span>

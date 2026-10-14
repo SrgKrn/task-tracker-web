@@ -73,11 +73,10 @@ input[type="number"] {
 }
 
 /*
- * Отклик на действие. До этого во всём приложении было пять hover-состояний,
- * ни одного состояния нажатия и два перехода: интерфейс никак не отвечал на
- * прикосновение, и до ответа сервера казалось, что нажатие не засчиталось.
- * Осветление яркостью работает поверх любых фонов — а их тут задают инлайн-стили,
- * поэтому классовый подход покрыл бы не всё.
+ * Отклик на нажатие по дизайн-системе: лёгкое сжатие (свойство scale — оно не перебивает
+ * transform и translate самих элементов). Прежнее осветление яркостью на светлой теме
+ * не давало отклика вовсе: белое светлее не становится. Цвет наведения и нажатия
+ * компоненты задают сами — классами по токенам (Button, Chip, Segmented).
  */
 button:not(:disabled),
 a[href],
@@ -85,38 +84,60 @@ label:has(input),
 [role="tab"] {
   cursor: pointer;
   transition:
-    filter var(--dur-fast) var(--ease-out),
-    opacity var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out);
 }
 
 button:not(:disabled):active,
-a[href]:active,
-label:has(input):active {
-  filter: brightness(1.22);
+[role="tab"]:active {
+  scale: 0.98;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  button:not(:disabled):hover,
-  a[href]:hover,
-  label:has(input):hover {
-    filter: brightness(1.12);
-  }
+/* ссылки-строки и подписи с полем — во всю ширину, сжатие на них дёргает раскладку */
+a[href]:active,
+label:has(input):active {
+  opacity: 0.72;
 }
 
 button:disabled {
   cursor: not-allowed;
 }
 
+/* появление снизу: тосты теперь у нижнего края, над таб-баром */
 @keyframes toast-pop {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.96);
+    transform: translateY(8px) scale(0.98);
   }
 }
 
+/* лист снизу и окно: выезд листа и проявление подложки — по токенам движения пакета */
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.sheet-in {
+  animation: sheet-in var(--duration-slow) var(--ease-out);
+}
+
+.overlay-in {
+  animation: overlay-in var(--duration-base) var(--ease-out);
+}
+
 .toast-pop {
-  animation: toast-pop 180ms ease-out;
+  animation: toast-pop var(--duration-base) var(--ease-out);
 }
 
 @keyframes skeleton-pulse {
@@ -138,6 +159,8 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   .toast-pop,
+  .sheet-in,
+  .overlay-in,
   .skeleton {
     animation: none;
   }

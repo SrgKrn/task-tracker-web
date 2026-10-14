@@ -21,6 +21,9 @@
   --timer-track: color-mix(in srgb, var(--accent) 25%, transparent);
   --timer-text: var(--accent-text);
 
+  /* Выбранный чип и активный пункт: мягкая заливка --surface-selected с этой рамкой */
+  --selected-border: color-mix(in srgb, var(--accent) 35%, transparent);
+
   /* Рамки блоков состояния — в пакете их нет */
   --success-line: color-mix(in srgb, var(--success) 35%, transparent);
   --danger-line: color-mix(in srgb, var(--danger) 40%, transparent);

@@ -389,7 +389,7 @@ function CompositionToggle({
         style={{ borderTop: '1px solid var(--s-hairline)' }}
       >
         <Plus size={14} />
-        <span className="font-mono text-xs uppercase tracking-[.12em]">Подзадача</span>
+        <span className="text-sm font-medium">Подзадача</span>
         {open && (
           <span className="ml-auto flex" style={{ transform: 'rotate(180deg)' }}>
             <ChevronDown size={14} />
@@ -427,7 +427,7 @@ function CompositionToggle({
           ))}
         </span>
       )}
-      <span className="font-mono text-xs uppercase tracking-[.12em]">Подзадачи</span>
+      <span className="text-sm font-medium">Подзадачи</span>
       <span className="tabular font-mono text-xs">
         {doneCount} из {subtasks.length}
       </span>

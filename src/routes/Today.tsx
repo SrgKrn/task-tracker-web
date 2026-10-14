@@ -232,7 +232,7 @@ export function Today() {
         <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--s-bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-xl font-semibold text-slate-50">{formatHoursRu(dayFact)}</span>
-            <span className="font-mono text-xs uppercase tracking-[.14em] text-slate-500">
+            <span className="text-sm font-medium text-text-secondary">
               из {formatHoursRu(dayNorm)} ч
             </span>
           </span>

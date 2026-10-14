@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
 import { Ring } from '../components/Ring'
-import { Chip, EmptyState, FieldLabel, Overline, Segmented, Skeleton } from '../components/ui'
+import { EmptyState, FieldLabel, Overline, Segmented, Skeleton } from '../components/ui'
 import {
   addDays,
   daysBetweenInclusive,
@@ -214,23 +214,22 @@ export function Dashboard() {
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
       <div className="safe-top flex flex-col gap-3 px-5 pt-3.5 pb-3">
         <div className="flex flex-col gap-0.5">
-          <Overline className="tracking-[.14em]">
+          <Overline>
             {shortDate(from)} — {shortDate(to)}
           </Overline>
           <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Сводка</h1>
         </div>
-        {/* прокрутка, а не перенос: на узком экране «Свой диапазон» уезжал на вторую
-            строку и ряд выглядел сломанным */}
-        <div className="sc -mx-5 flex gap-2 overflow-x-auto px-5">
-          {PERIOD_PRESETS.map((p) => (
-            <Chip key={p.key} active={preset === p.key} onClick={() => setPreset(p.key)}>
-              {p.label}
-            </Chip>
-          ))}
-          <Chip active={preset === 'custom'} onClick={() => setPreset('custom')}>
-            Свой диапазон
-          </Chip>
-        </div>
+        {/* период — выбор одного из трёх, поэтому сегменты, а не чипы фильтра. Подписи
+            короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}
+        <Segmented<PresetKey>
+          stretch
+          value={preset}
+          onChange={setPreset}
+          options={[
+            ...PERIOD_PRESETS.map((p) => ({ value: p.key, label: p.key === 'last_month' ? 'Прошлый' : p.label })),
+            { value: 'custom', label: 'Свой период' },
+          ]}
+        />
         {preset === 'custom' && (
           <div className="flex items-center gap-2 lg:max-w-xs">
             <DatePicker
@@ -285,7 +284,7 @@ export function Dashboard() {
             >
               <span className="flex flex-col items-center gap-px">
                 <span className="tabular font-mono text-xl font-semibold text-slate-50">{sumPct}%</span>
-                <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">плана</span>
+                <span className="text-xs text-text-secondary">плана</span>
               </span>
             </Ring>
 

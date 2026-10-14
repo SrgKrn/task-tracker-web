@@ -101,7 +101,7 @@ export function DayPlanSheet({ open, onClose, sections, planned, today, metaOf, 
         )}
         {visible.map((section) => (
           <div key={section.key} className="flex flex-col gap-1">
-            <span className="px-1 font-mono text-xs uppercase tracking-[.14em] text-slate-500">{section.title}</span>
+            <span className="px-1 text-sm font-medium text-text-secondary">{section.title}</span>
             {section.key === 'rest' && !q && !showRest ? (
               <button
                 type="button"

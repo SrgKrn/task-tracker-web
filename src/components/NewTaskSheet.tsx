@@ -4,7 +4,8 @@ import { DatePicker } from './DatePicker'
 import { DurationSheet } from './DurationSheet'
 import { GroupFields } from './GroupFields'
 import { PickerField } from './PickerField'
-import { FieldLabel, Segmented } from './ui'
+import { Minus, Plus } from './Icon'
+import { Button, FieldLabel, Segmented, Sheet, fieldClass } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { missingRequired, useGroupModel, type GroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
@@ -133,28 +134,16 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
-      style={{ background: 'var(--s-backdrop)' }}
-      onClick={onClose}
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Новая задача"
+      headerAction={
+        <Button variant="ghost" className="-mr-2" onClick={onClose}>
+          Отмена
+        </Button>
+      }
     >
-      <div
-        className="flex w-full flex-col gap-3.5 px-5 pt-[18px] pb-[30px] lg:max-w-md lg:rounded-[28px] lg:pb-6"
-        style={{
-          background: 'var(--s-surface-2)',
-          borderTop: '1px solid var(--s-border-strong)',
-          borderRadius: '28px 28px 44px 44px',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span className="mx-auto h-1 w-[38px] rounded-full" style={{ background: 'var(--s-border-strong-2)' }} />
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold leading-[1.2] text-slate-100">Новая задача</h3>
-          <button type="button" onClick={onClose} className="-my-2 py-2 pl-3 text-base text-slate-400">
-            Отмена
-          </button>
-        </div>
-
         <Segmented
           stretch
           value={kind}
@@ -170,8 +159,8 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Что нужно сделать"
-          className="h-[46px] rounded-[14px] px-3.5 text-md text-slate-100 placeholder:text-[var(--s-placeholder)]"
-          style={{ background: 'var(--s-input)', border: '1px solid var(--s-border-strong)' }}
+          aria-label="Название задачи"
+          className={`${fieldClass} h-12`}
         />
 
         {/* компактные строки вместо рядов чипов: на десятках проектов чипы растягивали лист
@@ -197,10 +186,9 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
               type="button"
               onClick={() => setPlan((v) => Math.max(0.25, v - 0.25))}
               aria-label="Убавить 15 минут"
-              className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-md text-slate-300"
-              style={{ border: '1px solid var(--s-border-strong-2)' }}
+              className="hit-44 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-secondary active:bg-surface-sunken"
             >
-              −
+              <Minus />
             </button>
             {/* по цифре открывается ввод: шагами по 15 минут набирать «3 ч 40 мин» долго */}
             <button
@@ -214,10 +202,9 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
               type="button"
               onClick={() => setPlan((v) => v + 0.25)}
               aria-label="Прибавить 15 минут"
-              className="hit-44 flex h-[34px] w-[34px] items-center justify-center rounded-full text-md text-slate-300"
-              style={{ border: '1px solid var(--s-border-strong-2)' }}
+              className="hit-44 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-secondary active:bg-surface-sunken"
             >
-              +
+              <Plus />
             </button>
           </div>
         </div>
@@ -229,35 +216,25 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
 
         {/* идущий учёт остановится — об этом надо знать до нажатия, а не после */}
         {activeTimer && runningTask && (
-          <p className="text-xs leading-[1.45] text-slate-500">
+          <p className="rounded-md bg-warning-soft px-3 py-2.5 text-sm leading-[1.45] text-warning-text">
             «Создать и начать» остановит идущий учёт по «{runningTask.name}» и запишет его.
           </p>
         )}
 
-        <div className="mt-0.5 flex gap-[9px]">
-          <button
-            type="button"
-            onClick={() => create(false)}
-            disabled={!canCreate}
-            title={whyDisabled}
-            className="h-12 flex-1 rounded-[15px] text-base font-medium disabled:opacity-50"
-            style={{ border: '1px solid var(--s-border-strong-2)', color: 'var(--color-slate-100)' }}
-          >
+        <div className="mt-1 flex gap-2">
+          <Button size="lg" className="flex-1" onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
             Создать
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="lg"
+            variant="primary"
+            className="flex-[1.4]"
             onClick={() => create(true)}
             disabled={!canCreate}
             title={whyDisabled}
-            className="h-12 flex-[1.4] rounded-[15px] text-base font-semibold"
-            style={{
-              background: canCreate ? 'var(--s-accent)' : 'var(--s-disabled-bg)',
-              color: canCreate ? 'var(--s-on-accent)' : 'var(--s-disabled-fg)',
-            }}
           >
             Создать и начать
-          </button>
+          </Button>
         </div>
         {whyDisabled && title.trim() && <p className="-mt-1.5 text-center text-xs text-slate-500">{whyDisabled}</p>}
 
@@ -273,7 +250,6 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
             setPlan(Math.max(0.25, value))
           }}
         />
-      </div>
-    </div>
+    </Sheet>
   )
 }

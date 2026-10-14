@@ -1,11 +1,11 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
  * Раньше кольцо было сплошным, а точка лежала на ободе и слипалась с ним в нашлёпку —
  * рисуем дугой с разрывом, чтобы читался замысел, а не дефект.
  */
-export function Logo({ size = 22, color = 'var(--s-accent)' }: { size?: number; color?: string }) {
+export function Logo({ size = 22, color = 'var(--accent)' }: { size?: number; color?: string }) {
   return (
     <svg
       width={size}
@@ -28,21 +28,71 @@ export function Logo({ size = 22, color = 'var(--s-accent)' }: { size?: number; 
   )
 }
 
-/** Надзаголовок / метка группы: Mono, разрядка, капс. */
+/**
+ * Заголовок группы. Раньше — моноширинный капс с разрядкой в 11 px: кириллица капсом
+ * в таком кегле теряет силуэт слов. По дизайн-системе — обычный регистр, 13 px, 500.
+ */
 export function Overline({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={`font-mono text-xs font-medium uppercase tracking-[.16em] text-slate-500 ${className}`}
-    >
-      {children}
-    </span>
-  )
+  return <span className={`text-sm font-medium text-text-secondary ${className}`}>{children}</span>
 }
 
-/** Микро-метка над полем. */
+/** Подпись над полем — тем же голосом, что и заголовок группы. */
 export function FieldLabel({ children }: { children: ReactNode }) {
+  return <span className="text-sm font-medium text-text-secondary">{children}</span>
+}
+
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export type ButtonSize = 'md' | 'lg'
+
+const BUTTON_VARIANT: Record<ButtonVariant, string> = {
+  primary: 'bg-accent text-on-accent hover:bg-accent-hover active:bg-accent-active',
+  secondary:
+    'border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-hover active:bg-surface-sunken',
+  ghost: 'text-text-secondary hover:bg-surface-sunken hover:text-text active:bg-surface-sunken',
+  danger: 'bg-danger text-white hover:brightness-95 active:brightness-90',
+}
+
+/** md — высота касания (44 на телефоне, 32 на широком экране), lg — подвал листа. */
+const BUTTON_SIZE: Record<ButtonSize, string> = {
+  md: 'h-[var(--tap)] px-3 text-base',
+  lg: 'h-12 px-4 text-base',
+}
+
+/**
+ * Кнопка дизайн-системы. Главная (primary) на экране одна, остальные — secondary или ghost.
+ * Отключённая — полупрозрачная, а не серая: так видно, какая это кнопка и что её ждёт.
+ * loading — спиннер вместо содержимого, ширина не меняется.
+ */
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  loading = false,
+  className = '',
+  children,
+  type = 'button',
+  disabled,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  loading?: boolean
+}) {
   return (
-    <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">{children}</span>
+    <button
+      type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`relative inline-flex items-center justify-center gap-1.5 rounded-sm font-medium disabled:opacity-50 ${BUTTON_SIZE[size]} ${BUTTON_VARIANT[variant]} ${className}`}
+      {...rest}
+    >
+      <span className={`inline-flex items-center gap-1.5 ${loading ? 'invisible' : ''}`}>{children}</span>
+      {loading && (
+        <span
+          className="absolute h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+          aria-hidden
+        />
+      )}
+    </button>
   )
 }
 
@@ -53,16 +103,20 @@ interface ChipProps {
   className?: string
 }
 
-/** Чип фильтра/группировки: активный — латунь, неактивный — графит с рамкой. */
+/**
+ * Чип фильтра. Выбранный — мягкая заливка, а не акцент: акцентом в приложении горит
+ * только идущий учёт и одна главная кнопка экрана.
+ */
 export function Chip({ active = false, onClick, children, className = '' }: ChipProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-9 shrink-0 rounded-[9px] px-[13px] py-[9px] text-sm ${
+      aria-pressed={active}
+      className={`min-h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium ${
         active
-          ? 'bg-[var(--s-accent)] font-medium text-[var(--s-on-accent)]'
-          : 'border border-slate-700 bg-slate-800 text-[var(--s-muted-text)]'
+          ? 'border-[var(--selected-border)] bg-surface-selected text-accent-text'
+          : 'border-border bg-surface text-text-secondary hover:border-border-strong active:bg-surface-sunken'
       } ${className}`}
     >
       {children}
@@ -72,8 +126,7 @@ export function Chip({ active = false, onClick, children, className = '' }: Chip
 
 /**
  * Сегментированный переключатель для взаимоисключающего выбора. Отдельный вид от чипов:
- * чипы — это множественный фильтр, и раньше ряды «Разделы / Проекты / Все» и ряды фильтров
- * выглядели одинаково, хотя работают по-разному.
+ * чипы — множественный фильтр. Дорожка утоплена, выбранный сегмент приподнят поверхностью.
  */
 export function Segmented<T extends string>({
   value,
@@ -91,8 +144,7 @@ export function Segmented<T extends string>({
 }) {
   return (
     <div
-      className={`flex shrink-0 gap-0.5 rounded-[11px] p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
-      style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
+      className={`flex shrink-0 gap-0.5 rounded-md bg-surface-sunken p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
       role="tablist"
     >
       {options.map((o) => {
@@ -104,12 +156,11 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-[9px] px-2.5 text-sm ${stretch ? 'min-h-9 flex-1' : 'min-h-8'}`}
-            style={{
-              background: active ? 'var(--s-accent)' : 'transparent',
-              color: active ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
-              fontWeight: active ? 500 : 400,
-            }}
+            className={`min-h-10 rounded-sm px-2.5 text-sm ${stretch ? 'flex-1' : ''} ${
+              active
+                ? 'bg-surface font-medium text-text shadow-sm ring-1 ring-border'
+                : 'text-text-secondary hover:text-text'
+            }`}
           >
             {o.label}
           </button>
@@ -119,24 +170,65 @@ export function Segmented<T extends string>({
   )
 }
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 /**
- * Лист снизу на телефоне, окно по центру на десктопе. Раньше эта разметка
- * дублировалась в каждом диалоге — теперь один каркас на всех.
+ * Фокус в окне: при открытии — внутрь (если поле само не забрало его через autoFocus),
+ * Tab ходит по кругу внутри, при закрытии фокус возвращается на кнопку, которая окно
+ * открыла. Возвращает обработчик клавиш для самого окна — у вложенных окон он
+ * срабатывает первым и дальше событие не пускает.
+ */
+function useDialogFocus(ref: RefObject<HTMLElement | null>, open: boolean) {
+  useEffect(() => {
+    if (!open) return
+    const trigger = document.activeElement as HTMLElement | null
+    const el = ref.current
+    if (el && !el.contains(document.activeElement)) el.focus()
+    return () => trigger?.focus?.()
+  }, [open, ref])
+
+  return (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Tab' || !ref.current) return
+    e.stopPropagation()
+    const items = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((n) => n.offsetParent !== null)
+    if (items.length === 0) return
+    const first = items[0]
+    const last = items[items.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+}
+
+/**
+ * Лист снизу на телефоне, окно по центру на широком экране — один каркас на все диалоги.
+ * Закрытие: Esc, подложка, кнопка в шапке (headerAction) или в подвале.
  */
 export function Sheet({
   open,
   onClose,
   title,
   children,
+  headerAction,
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: ReactNode
+  /** справа от заголовка — например «Отмена» */
+  headerAction?: ReactNode
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const onDialogKey = useDialogFocus(ref, open)
+
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
@@ -147,24 +239,24 @@ export function Sheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
-      style={{ background: 'var(--s-backdrop)' }}
+      className="overlay-in fixed inset-0 z-[var(--z-modal)] flex items-end bg-overlay lg:items-center lg:justify-center"
       onClick={onClose}
     >
       <div
+        ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex w-full flex-col gap-3.5 px-5 pt-[18px] pb-[30px] lg:max-w-md lg:rounded-[28px] lg:pb-6"
-        style={{
-          background: 'var(--s-surface-2)',
-          borderTop: '1px solid var(--s-border-strong)',
-          borderRadius: '28px 28px 44px 44px',
-        }}
+        tabIndex={-1}
+        onKeyDown={onDialogKey}
+        className="sheet-in safe-bottom flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 pb-6 shadow-modal outline-none lg:max-w-md lg:rounded-lg lg:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="mx-auto h-1 w-[38px] rounded-full" style={{ background: 'var(--s-border-strong-2)' }} />
-        <h3 className="text-lg font-semibold leading-[1.2] text-slate-100">{title}</h3>
+        <span className="mx-auto h-1 w-9 shrink-0 rounded-full bg-border-strong lg:hidden" aria-hidden />
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
+          {headerAction}
+        </div>
         {children}
       </div>
     </div>
@@ -178,35 +270,30 @@ export function SheetActions({
   confirmLabel,
   confirmDisabled = false,
   cancelLabel = 'Отмена',
+  danger = false,
 }: {
   onCancel: () => void
   onConfirm: () => void
   confirmLabel: string
   confirmDisabled?: boolean
   cancelLabel?: string
+  /** деструктивное подтверждение — кнопка danger вместо главной */
+  danger?: boolean
 }) {
   return (
-    <div className="mt-0.5 flex gap-[9px]">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="h-12 flex-1 rounded-[15px] text-base font-medium text-slate-300"
-        style={{ border: '1px solid var(--s-border-strong-2)' }}
-      >
+    <div className="mt-1 flex gap-2">
+      <Button size="lg" className="flex-1" onClick={onCancel}>
         {cancelLabel}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        size="lg"
+        variant={danger ? 'danger' : 'primary'}
+        className="flex-[2]"
         onClick={onConfirm}
         disabled={confirmDisabled}
-        className="h-12 flex-[2] rounded-[15px] text-base font-semibold"
-        style={{
-          background: confirmDisabled ? 'var(--s-disabled-bg)' : 'var(--s-accent)',
-          color: confirmDisabled ? 'var(--s-placeholder)' : 'var(--s-on-accent)',
-        }}
       >
         {confirmLabel}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -214,103 +301,96 @@ export function SheetActions({
 export type TagTone = 'neutral' | 'accent' | 'success' | 'danger'
 
 const TAG_TONE: Record<TagTone, string> = {
-  neutral: 'bg-[var(--s-tag)] text-slate-400',
-  accent: 'bg-[var(--s-accent-ghost)] text-[var(--s-accent-text)]',
-  success: 'bg-[var(--s-success-ghost)] text-[var(--s-success-text)]',
-  danger: 'bg-[var(--s-danger-ghost)] text-[var(--s-danger-text)]',
+  neutral: 'bg-surface-sunken text-text-secondary',
+  accent: 'bg-accent-soft text-accent-text',
+  success: 'bg-success-soft text-success-text',
+  danger: 'bg-danger-soft text-danger-text',
 }
 
-/** Тег статуса: пользовательские статусы нейтральны, латунь и зелень зарезервированы. */
+/** Тег-чип: 22 px, круглый. Цвет — только у смысловых тонов, пользовательские статусы нейтральны. */
 export function Tag({ tone = 'neutral', children }: { tone?: TagTone; children: ReactNode }) {
   return (
-    <span className={`shrink-0 rounded-sm px-2 py-[3px] text-xs font-medium ${TAG_TONE[tone]}`}>
+    <span
+      className={`inline-flex h-[22px] shrink-0 items-center rounded-full px-2 text-xs font-medium whitespace-nowrap ${TAG_TONE[tone]}`}
+    >
       {children}
     </span>
   )
 }
 
-/** Карточка-контейнер: рамка без тени — теней в системе только две. */
+/** Карточка-контейнер: рамка без тени — тени в системе только у всплывающих слоёв. */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-2xl border border-slate-700 bg-slate-800 ${className}`}>{children}</div>
-  )
+  return <div className={`rounded-md border border-border bg-surface ${className}`}>{children}</div>
 }
 
-/** Переключатель-пилюля (например «скрыть готовые»). */
+/** Переключатель-пилюля (например «скрыть готовые»). Нажимается вся строка с подписью. */
 export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
     <button
       type="button"
+      role="switch"
       onClick={() => onChange(!on)}
-      className="flex shrink-0 items-center gap-[7px]"
-      aria-pressed={on}
+      className="flex min-h-11 shrink-0 items-center gap-2"
+      aria-checked={on}
     >
       <span
-        className="flex h-[18px] w-[30px] items-center rounded-full p-[2px]"
-        style={{
-          background: on ? 'var(--s-accent)' : 'var(--s-ring-track)',
-          justifyContent: on ? 'flex-end' : 'flex-start',
-        }}
+        className={`flex h-5 w-[34px] items-center rounded-full p-0.5 transition-colors ${
+          on ? 'justify-end bg-accent' : 'justify-start bg-border-strong'
+        }`}
       >
-        <span className="h-[14px] w-[14px] rounded-full" style={{ background: 'var(--s-on-accent)' }} />
+        <span className="h-4 w-4 rounded-full bg-surface shadow-sm" />
       </span>
-      {label && <span className="whitespace-nowrap text-left text-xs text-[var(--s-muted-text)]">{label}</span>}
+      {label && <span className="text-left text-sm whitespace-nowrap text-text-secondary">{label}</span>}
     </button>
   )
 }
 
-/** Единый стиль поля ввода из макета. */
+/**
+ * Поле ввода: высота касания, шрифт 16 px на телефоне (иначе iOS приближает страницу),
+ * рамка темнеет при наведении, при фокусе — акцент и кольцо фокуса.
+ */
 export const fieldClass =
-  'h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-base text-slate-100 focus:border-brass-600'
+  'h-[var(--tap)] w-full rounded-sm border border-border bg-surface px-2.5 text-[length:var(--input-size)] text-text placeholder:text-text-tertiary hover:border-border-strong focus:border-accent focus:outline-none'
 
 /** Заглушка-плейсхолдер на время первой загрузки — вместо пустого экрана. */
-export function Skeleton({ className = '', rounded = '15px' }: { className?: string; rounded?: string }) {
-  return (
-    <span
-      className={`skeleton block ${className}`}
-      style={{ borderRadius: rounded, background: 'var(--s-surface)' }}
-      aria-hidden
-    />
-  )
+export function Skeleton({ className = '', rounded = 'var(--radius-md)' }: { className?: string; rounded?: string }) {
+  return <span className={`skeleton block bg-surface-sunken ${className}`} style={{ borderRadius: rounded }} aria-hidden />
 }
 
 /** Строка-заглушка под карточку задачи (кольцо + две строки текста). */
 export function TaskRowSkeleton() {
   return (
-    <div
-      className="flex items-center gap-3 rounded-[15px] px-[13px] py-[11px]"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-    >
+    <div className="flex min-h-14 items-center gap-3 rounded-md border border-border bg-surface px-3 py-2.5">
       <Skeleton className="h-8 w-8 shrink-0" rounded="999px" />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <Skeleton className="h-[13px] w-3/5" rounded="6px" />
-        <Skeleton className="h-[10px] w-2/5" rounded="6px" />
+        <Skeleton className="h-[13px] w-3/5" rounded="var(--radius-xs)" />
+        <Skeleton className="h-[10px] w-2/5" rounded="var(--radius-xs)" />
       </span>
     </div>
   )
 }
 
 /**
- * Пустое состояние: знак кольца вместо голого текста — экран не выглядит сломанным.
+ * Пустое состояние — приглашение к действию: знак-кольцо, заголовок, пояснение и одна
+ * кнопка. Без заголовка и кнопки — просто тихая подпись, как раньше.
  */
-export function EmptyState({ children }: { children: ReactNode }) {
+export function EmptyState({
+  children,
+  title,
+  action,
+}: {
+  children?: ReactNode
+  title?: string
+  action?: ReactNode
+}) {
   return (
     <div className="flex flex-col items-center gap-2.5 py-8 text-center">
-      <span
-        className="relative block h-9 w-9 rounded-full"
-        style={{ border: '1.5px dashed var(--s-border-strong-2)' }}
-      >
-        <span
-          className="absolute h-1.5 w-1.5 rounded-full"
-          style={{
-            top: -3,
-            left: '50%',
-            marginLeft: -3,
-            background: 'var(--s-border-strong-2)',
-          }}
-        />
+      <span className="relative block h-8 w-8 rounded-full border-[1.5px] border-dashed border-text-tertiary">
+        <span className="absolute -top-[3px] left-1/2 -ml-[3px] h-1.5 w-1.5 rounded-full bg-text-tertiary" />
       </span>
-      <p className="max-w-[260px] text-base leading-[1.5] text-slate-600">{children}</p>
+      {title && <p className="text-md font-semibold text-text">{title}</p>}
+      {children && <p className="max-w-[280px] text-sm leading-[1.5] text-text-secondary">{children}</p>}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   )
 }

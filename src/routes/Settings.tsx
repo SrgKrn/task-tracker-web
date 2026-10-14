@@ -157,7 +157,7 @@ function BudgetForm() {
       </div>
       <div className="flex gap-[9px]">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">В день</span>
+          <span className="text-sm font-medium text-text-secondary">В день</span>
           <input
             type="number"
             min="0"
@@ -168,7 +168,7 @@ function BudgetForm() {
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">В месяц</span>
+          <span className="text-sm font-medium text-text-secondary">В месяц</span>
           <input
             type="number"
             min="0"

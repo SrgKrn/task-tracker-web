@@ -111,7 +111,7 @@ function PlanAllocation({
       style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-hairline)' }}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-xs uppercase tracking-[.12em] text-slate-500">План разложен</span>
+        <span className="text-sm font-medium text-text-secondary">План разложен</span>
         <span className="tabular font-mono text-sm text-slate-300">
           {plan > 0
             ? `${formatHoursRu(allocated)} из ${formatHoursRu(plan)} ч`

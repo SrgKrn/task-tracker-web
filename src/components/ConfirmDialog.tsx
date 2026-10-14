@@ -1,3 +1,5 @@
+import { Sheet, SheetActions } from './ui'
+
 interface ConfirmDialogProps {
   open: boolean
   title: string
@@ -8,6 +10,10 @@ interface ConfirmDialogProps {
   onCancel: () => void
 }
 
+/**
+ * Подтверждение — тот же лист, что и остальные диалоги: фокус внутри, Esc и подложка
+ * закрывают. Деструктивное действие — кнопка danger справа, «Отмена» слева от неё.
+ */
 export function ConfirmDialog({
   open,
   title,
@@ -17,45 +23,10 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={{ background: 'var(--s-backdrop)' }}
-      onClick={onCancel}
-    >
-      <div
-        className="safe-bottom w-full max-w-sm p-5 sm:rounded-[28px]"
-        style={{
-          background: 'var(--s-surface-2)',
-          border: '1px solid var(--s-border-strong)',
-          borderRadius: '28px 28px 44px 44px',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold leading-[1.2] text-slate-100">{title}</h2>
-        {description && <p className="mt-2 text-base leading-[1.5] text-slate-400">{description}</p>}
-        <div className="mt-5 flex gap-[9px]">
-          <button
-            onClick={onCancel}
-            className="h-12 flex-1 rounded-[15px] text-base font-medium text-slate-300"
-            style={{ border: '1px solid var(--s-border-strong-2)' }}
-          >
-            Отмена
-          </button>
-          <button
-            onClick={onConfirm}
-            className="h-12 flex-1 rounded-[15px] text-base font-semibold"
-            style={{
-              background: danger ? 'var(--s-danger)' : 'var(--s-accent)',
-              color: 'var(--s-on-accent)',
-            }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Sheet open={open} onClose={onCancel} title={title}>
+      {description && <p className="text-base leading-[1.5] text-text-secondary">{description}</p>}
+      <SheetActions onCancel={onCancel} onConfirm={onConfirm} confirmLabel={confirmLabel} danger={danger} />
+    </Sheet>
   )
 }

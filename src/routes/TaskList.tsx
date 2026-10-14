@@ -153,7 +153,7 @@ export function TaskList() {
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
       <div className="safe-top flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
         <div className="flex flex-col gap-0.5">
-          <Overline className="tracking-[.14em]">
+          <Overline>
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
             <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
           </Overline>
@@ -293,7 +293,7 @@ export function TaskList() {
             options={[{ value: 'none', label: 'Все' }, ...model.groups.map((g) => ({ value: g.id, label: g.name }))]}
           />
         </div>
-        <Switch on={hideCompleted} onChange={setHideCompleted} label="скрыть готовые" />
+        <Switch on={hideCompleted} onChange={setHideCompleted} label="Без готовых" />
       </div>
 
       <div className="flex flex-col gap-4 px-5 pb-2">
