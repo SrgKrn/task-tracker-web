@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
-import { Tag } from './ui'
+import { ClientDot, StageChip } from './ui'
 import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
-import type { ActiveTimer, Status, Task } from '../lib/types'
+import { formatDueDate } from '../lib/period'
+import { stageTone } from '../lib/stage'
+import type { ActiveTimer, LabelColor, Status, Task } from '../lib/types'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 import { isOverdue, rollupFact, runningWithin } from '../lib/tree'
 
@@ -18,6 +20,8 @@ interface TaskListItemProps {
   status: Status | undefined
   /** значения групп «в строке» — например «Ромашка» или «Битрикс24 · Ромашка» */
   label?: string
+  /** цвет точки клиента (model.colorOf) */
+  color?: LabelColor | null
   activeTimer: ActiveTimer | null | undefined
   onStartTimer: () => void
   onStopTimer: () => void
@@ -52,6 +56,7 @@ export function TaskListItem({
   task,
   status,
   label = '',
+  color = null,
   activeTimer,
   onStartTimer,
   onStopTimer,
@@ -118,18 +123,19 @@ export function TaskListItem({
   const overdue = isOverdue(task, status)
 
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
-  const cardBg = isRunning ? 'var(--s-surface-active)' : 'var(--s-surface)'
+  // под учётом — мягкая заливка и полоска акцента слева; рамку строки даёт общий список
+  const cardBg = isRunning ? 'var(--timer-bg)' : 'var(--surface)'
+  const { data: statuses = [] } = useStatuses()
+  const tone = status ? stageTone(status, statuses) : null
 
-  // мета держится в одну строку: раньше приписка «просрочено» переносила её на вторую
-  // и строка становилась на треть выше соседних. Состояние показываем тегом справа —
-  // там для него есть отдельное место, и оно не спорит с группами за ширину.
-  // спринт подзадачи — отдельной строкой над названием, а не хвостом меты, где его обрезало
-  const category = label
   // «1,8 / 0 ч» выглядело как ошибка: у задачи без плана нет знаменателя
   const hours = hasPlan
     ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
     : `${formatHoursRu(fact)} ч · без плана`
-  const meta = `${hours}${category ? ` · ${category}` : ''}`
+  // просрочка — датой и словом, а не красными часами: красные часы читались как переработка
+  const overdueLabel =
+    overdue && !done && task.end_date ? `просрочено, ${formatDueDate(task.end_date).toLowerCase()}` : ''
+  const meta = [overdueLabel, hours, label].filter(Boolean).join(' · ')
 
   // часы справа: у раскрытого спринта они уже тикают в строке подзадачи — второй раз не нужны
   const showClock = isRunning && !!activeTimer && (isRunningSelf || (!open && !subtasksBelow))
@@ -163,10 +169,11 @@ export function TaskListItem({
   }
 
   const close = () => setOffset(0)
+  const swipeButton = 'flex-1 text-sm font-medium'
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="relative overflow-hidden rounded-[15px]">
+    <div className="flex flex-col">
+      <div className="relative overflow-hidden">
         {swipeable && (
           <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
             {addSubtaskAction && (
@@ -177,8 +184,7 @@ export function TaskListItem({
                   setOpen(true)
                   startAdding(task.id)
                 }}
-                className="flex-1 text-sm font-medium"
-                style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+                className={`${swipeButton} bg-accent-soft text-accent-text`}
               >
                 Подзадача
               </button>
@@ -190,8 +196,7 @@ export function TaskListItem({
                   close()
                   onUnplan()
                 }}
-                className="flex-1 text-sm font-medium"
-                style={{ background: 'var(--s-accent-ghost)', color: 'var(--s-accent-text)' }}
+                className={`${swipeButton} bg-accent-soft text-accent-text`}
               >
                 Не сегодня
               </button>
@@ -203,8 +208,7 @@ export function TaskListItem({
                   close()
                   onDuplicate()
                 }}
-                className="flex-1 text-sm font-medium text-slate-300"
-                style={{ background: 'var(--s-swipe)' }}
+                className={`${swipeButton} bg-surface-sunken text-text`}
               >
                 Дублировать
               </button>
@@ -216,8 +220,7 @@ export function TaskListItem({
                   close()
                   onDelete()
                 }}
-                className="flex-1 text-sm font-medium"
-                style={{ background: 'var(--s-danger-ghost)', color: 'var(--s-danger-text)' }}
+                className={`${swipeButton} bg-danger-soft text-danger-text`}
               >
                 Удалить
               </button>
@@ -226,12 +229,12 @@ export function TaskListItem({
         )}
 
         <div
-          className="relative flex flex-col rounded-[15px] px-[13px] py-[11px]"
+          className="relative flex min-h-[var(--row-task)] flex-col justify-center px-3 py-2.5"
           style={{
             background: cardBg,
-            border: `1px solid ${isRunning ? 'var(--s-accent)' : 'var(--s-border)'}`,
+            boxShadow: isRunning ? 'inset 2px 0 0 var(--accent)' : undefined,
             transform: `translateX(${offset}px)`,
-            transition: animating ? 'transform 180ms ease-out' : 'none',
+            transition: animating ? 'transform var(--duration-base) var(--ease-out)' : 'none',
           }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
@@ -249,15 +252,10 @@ export function TaskListItem({
                 if (isRunning) onStopTimer()
                 else onStartTimer()
               }}
-              ariaLabel={isRunning ? 'Остановить учёт' : 'Начать учёт'}
+              // с названием: на экране десять одинаковых «Начать учёт» диктору не различить
+              ariaLabel={`${isRunning ? 'Остановить учёт' : 'Начать учёт'}: ${task.name}`}
             >
-              {isRunning ? (
-                <StopGlyph />
-              ) : done ? (
-                <Check size={14} className="text-sage-400" />
-              ) : (
-                <PlayGlyph />
-              )}
+              {isRunning ? <StopGlyph /> : done ? <Check size={14} className="text-success" /> : <PlayGlyph />}
             </Ring>
 
             <Link
@@ -272,17 +270,17 @@ export function TaskListItem({
               }}
             >
               {parentName && (
-                <span className="flex min-w-0 items-center gap-1 text-xs leading-[1.4] text-slate-500">
+                <span className="flex min-w-0 items-center gap-1 text-xs leading-[1.4] text-text-secondary">
                   <CornerDownRight size={11} />
                   <span className="truncate">{parentName}</span>
                 </span>
               )}
-              {/* две строки вместо одной: тег статуса справа оставлял имени ~190px,
+              {/* две строки вместо одной: чип справа оставлял имени мало места,
                   и половина названий обрывалась на середине прямо на главном экране */}
               <p
                 title={task.name}
-                className={`text-base leading-[1.3] ${
-                  done ? 'font-normal text-[var(--s-faint-text)] line-through' : 'font-medium text-slate-100'
+                className={`text-base leading-[1.35] ${
+                  done ? 'font-normal text-text-secondary line-through' : 'font-medium text-text'
                 }`}
                 style={{
                   display: '-webkit-box',
@@ -293,25 +291,32 @@ export function TaskListItem({
               >
                 {task.name}
               </p>
+              {/* мета в одну строку: просрочка первой — её нельзя обрезать, часы моноширинным,
+                  клиент обычным шрифтом с цветной точкой */}
               <span
                 title={meta}
-                className={`block truncate font-mono text-xs leading-[1.4] ${
-                  overdue && !done ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
-                }`}
+                className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm leading-[1.35] whitespace-nowrap text-text-secondary"
               >
-                {meta}
+                {overdueLabel && <span className="shrink-0 font-medium text-danger-text">{overdueLabel}</span>}
+                {overdueLabel && <span aria-hidden>·</span>}
+                <span className="tabular shrink-0 font-mono text-xs">{hours}</span>
+                {label && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <ClientDot color={color} />
+                    <span className="min-w-0 truncate">{label}</span>
+                  </>
+                )}
               </span>
             </Link>
 
             {showClock && activeTimer ? (
-              <span className="tabular shrink-0 font-mono text-base font-semibold text-brass-600">
+              <span className="tabular shrink-0 font-mono text-base font-medium text-accent-text">
                 {formatClock(activeTimer.started_at)}
               </span>
-            ) : done ? null : overdue ? (
-              <Tag tone="danger">просрочено</Tag>
-            ) : status ? (
-              <Tag>{status.label}</Tag>
-            ) : null}
+            ) : (
+              <StageChip tone={tone} label={status?.label} />
+            )}
           </div>
 
           {showComposition && (
@@ -341,13 +346,15 @@ export function TaskListItem({
       </div>
 
       {open && (
-        <SubtaskList
-          id={`subtasks-${task.id}`}
-          parent={task}
-          subtasks={subtasks ?? []}
-          hideDone={hideDoneSubtasks}
-          nested
-        />
+        <div className="bg-surface px-3">
+          <SubtaskList
+            id={`subtasks-${task.id}`}
+            parent={task}
+            subtasks={subtasks ?? []}
+            hideDone={hideDoneSubtasks}
+            nested
+          />
+        </div>
       )}
     </div>
   )
@@ -383,10 +390,9 @@ function CompositionToggle({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={`subtasks-${taskId}`}
-        className={`-mb-[11px] mt-2 ml-11 flex h-10 items-center gap-2 text-left ${
-          open ? 'text-brass-600' : 'text-slate-500'
+        className={`-mb-2.5 mt-2 ml-11 flex h-10 items-center gap-2 border-t border-divider text-left ${
+          open ? 'text-text' : 'text-text-secondary'
         }`}
-        style={{ borderTop: '1px solid var(--s-hairline)' }}
       >
         <Plus size={14} />
         <span className="text-sm font-medium">Подзадача</span>
@@ -405,10 +411,9 @@ function CompositionToggle({
       onClick={onToggle}
       aria-expanded={open}
       aria-controls={`subtasks-${taskId}`}
-      className={`-mb-[11px] mt-2 ml-11 flex h-10 items-center gap-2.5 text-left ${
-        open ? 'text-brass-600' : 'text-slate-500'
+      className={`-mb-2.5 mt-2 ml-11 flex h-10 items-center gap-2.5 border-t border-divider text-left ${
+        open ? 'text-text' : 'text-text-secondary'
       }`}
-      style={{ borderTop: '1px solid var(--s-hairline)' }}
     >
       {subtasks.length <= MAX_PIPS && (
         <span className="flex gap-[3px]" aria-hidden="true">
@@ -418,10 +423,10 @@ function CompositionToggle({
               className="h-[5px] w-[5px] rounded-[1.5px]"
               style={{
                 background: isDone(c)
-                  ? 'var(--s-success)'
+                  ? 'var(--success)'
                   : c.id === runningTaskId
-                    ? 'var(--s-accent)'
-                    : 'var(--s-ring-track)',
+                    ? 'var(--accent)'
+                    : 'var(--border-strong)',
               }}
             />
           ))}

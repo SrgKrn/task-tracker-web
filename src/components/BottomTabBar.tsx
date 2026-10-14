@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { Plus } from './Icon'
 import { NAV_TABS, type NavTab } from './navTabs'
 
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
@@ -11,10 +12,14 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
       <Link
         key={tab.to}
         to={tab.to}
-        className="flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-xs font-medium"
-        style={{ color: active ? 'var(--s-accent-text)' : 'var(--s-tab-idle)' }}
+        aria-current={active ? 'page' : undefined}
+        className={`flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-xs font-medium ${
+          active ? 'text-accent-text' : 'text-text-secondary'
+        }`}
       >
-        <tab.Icon size={20} />
+        <span className={active ? 'text-accent' : undefined}>
+          <tab.Icon size={20} />
+        </span>
         {tab.label}
       </Link>
     )
@@ -22,8 +27,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
 
   return (
     <nav
-      className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex items-end pt-[9px] pb-[26px] lg:hidden"
-      style={{ background: 'var(--s-chrome)', borderTop: '1px solid var(--s-hairline)' }}
+      className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex items-end border-t border-border bg-surface pt-[9px] pb-[26px] lg:hidden"
     >
       <div className="mx-auto flex w-full max-w-lg items-end">
         {item(today)}
@@ -33,14 +37,9 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
             type="button"
             onClick={onCreate}
             aria-label="Новая задача"
-            className="mb-1.5 flex h-[50px] w-[50px] items-center justify-center rounded-full text-xl leading-none"
-            style={{
-              background: 'var(--s-accent)',
-              color: 'var(--s-on-accent)',
-              boxShadow: 'var(--shadow-popover)',
-            }}
+            className="mb-1.5 flex h-[50px] w-[50px] items-center justify-center rounded-full bg-accent text-on-accent shadow-popover"
           >
-            +
+            <Plus size={22} />
           </button>
         </span>
         {item(summary)}

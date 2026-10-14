@@ -51,6 +51,21 @@ export function formatShortDate(dateStr: string): string {
     .replace('.', '')
 }
 
+const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сент', 'окт', 'нояб', 'дек']
+
+/**
+ * Срок по-человечески: «Сегодня», «Завтра», «Вчера», иначе «9 окт», год — только если не
+ * текущий. Раньше в разных местах стояли «09.10», «20.09.26» и «14.10, 18:14».
+ */
+export function formatDueDate(dateStr: string, today = todayStr()): string {
+  if (dateStr === today) return 'Сегодня'
+  if (dateStr === addDays(today, 1)) return 'Завтра'
+  if (dateStr === addDays(today, -1)) return 'Вчера'
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const label = `${d} ${MONTHS_SHORT[m - 1]}`
+  return y === Number(today.slice(0, 4)) ? label : `${label} ${y}`
+}
+
 /** [пн, вс] текущей недели — под столбики недельного ритма на «Сегодня». */
 export function currentWeekRange(): { from: string; to: string; days: string[] } {
   const now = new Date()

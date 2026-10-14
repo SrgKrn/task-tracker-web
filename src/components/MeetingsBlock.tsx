@@ -134,16 +134,15 @@ export function MeetingsBlock({
   }
 
   return (
-    <div className="flex flex-col gap-[9px] px-5 pt-5">
+    <div className="flex flex-col gap-2 px-5 pt-5">
       <div className="flex items-baseline justify-between">
         <Overline>Встречи</Overline>
-        <Link to="/settings/calendar" className="-my-3.5 py-3.5 pl-3 text-sm text-slate-500">
+        <Link to="/settings/calendar" className="-my-3.5 py-3.5 pl-3 text-sm text-text-secondary">
           Календарь
         </Link>
       </div>
       <div
-        className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
-        style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
+        className="flex flex-col divide-y divide-divider overflow-hidden rounded-md border border-border bg-surface"
       >
         {shown.map((ev) => {
           const start = new Date(ev.starts_at).getTime()
@@ -157,11 +156,11 @@ export function MeetingsBlock({
           return (
             <div key={ev.id} className="flex flex-col gap-2 px-3.5 py-3">
               <div className="flex items-baseline gap-2.5">
-                <span className={`tabular shrink-0 font-mono text-sm ${ongoing ? 'text-brass-600' : 'text-slate-500'}`}>
+                <span className={`tabular shrink-0 font-mono text-sm ${ongoing ? 'text-accent-text' : 'text-text-secondary'}`}>
                   {clock(ev.starts_at)}–{clock(ev.ends_at)}
                 </span>
                 <span
-                  className={`min-w-0 flex-1 truncate text-base ${muted ? 'text-slate-500' : 'text-slate-100'}`}
+                  className={`min-w-0 flex-1 truncate text-base ${muted ? 'text-text-secondary' : 'text-text'}`}
                   title={ev.title}
                 >
                   {ev.title}
@@ -171,7 +170,7 @@ export function MeetingsBlock({
                     type="button"
                     onClick={() => dismiss(ev)}
                     aria-label="Не учитывать встречу"
-                    className="hit-44 flex h-5 w-5 shrink-0 items-center justify-center text-slate-500"
+                    className="hit-44 flex h-5 w-5 shrink-0 items-center justify-center text-text-secondary"
                   >
                     <Close size={13} />
                   </button>
@@ -179,12 +178,12 @@ export function MeetingsBlock({
               </div>
 
               {ev.status === 'logged' && ev.task_id && (
-                <span className="flex items-center gap-1.5 text-xs text-[var(--s-success-text)]">
+                <span className="flex items-center gap-1.5 text-xs text-success-text">
                   <Check size={12} /> записано {formatHoursMinutes(minutes / 60)} в «{titleOf(ev.task_id)}»
                 </span>
               )}
               {ev.status === 'new' && covered && (past || ongoing) && (
-                <span className="text-xs text-slate-500">в это время уже шёл учёт</span>
+                <span className="text-xs text-text-secondary">в это время уже шёл учёт</span>
               )}
 
               {ev.status === 'new' && past && !covered && (
@@ -194,8 +193,7 @@ export function MeetingsBlock({
                       type="button"
                       disabled={logMeeting.isPending}
                       onClick={() => log(ev, suggestion)}
-                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-sm font-medium disabled:opacity-50"
-                      style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+                      className="min-h-10 max-w-full truncate rounded-sm bg-accent px-3 py-2 text-sm font-medium text-on-accent disabled:opacity-50"
                     >
                       Засчитать {formatHoursMinutes(minutes / 60)} в «{titleOf(suggestion)}»
                     </button>
@@ -220,8 +218,7 @@ export function MeetingsBlock({
                     <button
                       type="button"
                       onClick={() => startTimer.mutate(suggestion, { onError })}
-                      className="min-h-9 max-w-full truncate rounded-[9px] px-3 py-2 text-sm font-medium"
-                      style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+                      className="min-h-10 max-w-full truncate rounded-sm bg-accent px-3 py-2 text-sm font-medium text-on-accent"
                     >
                       ▶ Начать учёт в «{titleOf(suggestion)}»
                     </button>
@@ -247,12 +244,12 @@ export function MeetingsBlock({
             type="button"
             onClick={() => setExpanded(!expanded)}
             aria-expanded={!collapsed}
-            className="flex min-h-11 items-center justify-between gap-2 px-3.5 text-left text-sm text-slate-500"
+            className="flex min-h-11 items-center justify-between gap-2 px-3.5 text-left text-sm text-text-secondary"
           >
             <span>
               {collapsed ? `Все встречи дня · ${visible.length}` : 'Свернуть'}
               {collapsed && waitingElsewhere > 0 && (
-                <span className="text-brass-600"> · ещё {waitingElsewhere} ждут учёта</span>
+                <span className="text-accent-text"> · ещё {waitingElsewhere} ждут учёта</span>
               )}
             </span>
             <span className="flex transition-transform duration-200" style={{ transform: collapsed ? undefined : 'rotate(180deg)' }}>

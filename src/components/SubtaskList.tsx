@@ -10,6 +10,7 @@ import { useCreateTask, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 import { isOverdue } from '../lib/tree'
+import { formatDueDate } from '../lib/period'
 import type { ActiveTimer, Status, Task } from '../lib/types'
 
 interface SubtaskListProps {
@@ -78,8 +79,7 @@ export function SubtaskList({
   return (
     <div
       id={id}
-      className={`flex flex-col gap-1.5 ${nested ? 'ml-4 pt-1.5 pl-3' : ''}`}
-      style={nested ? { borderLeft: '1px solid var(--s-hairline)' } : undefined}
+      className={`flex flex-col gap-1.5 ${nested ? 'ml-4 border-l border-divider pt-0.5 pb-3 pl-3' : ''}`}
     >
       {visible.map((task) => {
         const status = task.status_id ? statusById.get(task.status_id) : undefined
@@ -98,7 +98,7 @@ export function SubtaskList({
       })}
 
       {hiddenCount > 0 && (
-        <span className="px-1 font-mono text-xs text-slate-600">скрыто готовых: {hiddenCount}</span>
+        <span className="px-1 text-sm text-text-secondary">Скрыто готовых: {hiddenCount}</span>
       )}
 
       <AddSubtask parent={parent} />
@@ -132,20 +132,17 @@ function SubtaskRow({
   const pct = hasPlan ? (fact / task.planned_hours) * 100 : 0
   const overdue = isOverdue(task, status)
   const ringState: RingState = done ? 'done' : pct > 100 ? 'over' : isRunning ? 'running' : 'idle'
-  const bg = isRunning ? 'var(--s-surface-active)' : 'var(--s-surface-2)'
+  const bg = isRunning ? 'var(--timer-bg)' : 'var(--surface-sunken)'
 
   const hours = hasPlan
     ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
     : `${formatHoursRu(fact)} ч`
-  const due = task.end_date ? ` · до ${task.end_date.slice(8, 10)}.${task.end_date.slice(5, 7)}` : ''
+  const due = task.end_date ? formatDueDate(task.end_date) : ''
 
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl py-2 pr-2.5 pl-2"
-      style={{
-        background: bg,
-        border: `1px solid ${isRunning ? 'var(--s-accent-line)' : 'var(--s-hairline)'}`,
-      }}
+      className="flex min-h-12 items-center gap-2.5 rounded-sm py-2 pr-2.5 pl-2"
+      style={{ background: bg, boxShadow: isRunning ? 'inset 2px 0 0 var(--accent)' : undefined }}
     >
       <Ring
         size={26}
@@ -162,7 +159,7 @@ function SubtaskRow({
         {isRunning ? (
           <StopGlyph size={7} />
         ) : done ? (
-          <Check size={11} className="text-sage-400" />
+          <Check size={11} className="text-success" />
         ) : (
           <PlayGlyph size={6} />
         )}
@@ -171,23 +168,23 @@ function SubtaskRow({
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         <span
           title={task.name}
-          className={`block text-base leading-[1.3] ${done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
+          className={`block text-base leading-[1.3] ${done ? 'text-text-secondary line-through' : 'text-text'}`}
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
         >
           {task.name}
         </span>
-        <span
-          className={`block truncate font-mono text-xs leading-[1.4] ${
-            overdue ? 'text-terra-400' : done ? 'text-slate-600' : 'text-slate-500'
-          }`}
-        >
-          {hours}
-          {due}
+        <span className="flex min-w-0 items-center gap-1.5 text-sm leading-[1.4] whitespace-nowrap text-text-secondary">
+          <span className="tabular shrink-0 font-mono text-xs">{hours}</span>
+          {due && (
+            <span className={`truncate ${overdue ? 'font-medium text-danger-text' : ''}`}>
+              · {overdue ? `просрочено, ${due.toLowerCase()}` : `до ${due.toLowerCase()}`}
+            </span>
+          )}
         </span>
       </Link>
 
       {isRunning && activeTimer ? (
-        <span className="tabular shrink-0 font-mono text-sm font-semibold text-brass-600">
+        <span className="tabular shrink-0 font-mono text-sm font-medium text-accent-text">
           {formatClock(activeTimer.started_at)}
         </span>
       ) : canClose ? (
@@ -199,15 +196,12 @@ function SubtaskRow({
           }}
           aria-pressed={done}
           aria-label={done ? `Вернуть в работу: ${task.name}` : `Закрыть: ${task.name}`}
-          className="hit-44 flex shrink-0 items-center gap-1 rounded-sm px-2 py-[3px] text-xs font-medium"
-          style={
-            done
-              ? { background: 'var(--s-success-ghost)', color: 'var(--s-success-text)' }
-              : { border: '1px solid var(--s-border)', color: 'var(--color-slate-400)' }
-          }
+          className={`hit-44 flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-medium ${
+            done ? 'bg-success-soft text-success-text' : 'border border-border bg-surface text-text-secondary'
+          }`}
         >
           {done && <Check size={11} />}
-          {done ? 'готово' : 'закрыть'}
+          {done ? 'Готово' : 'Закрыть'}
         </button>
       ) : null}
     </div>
@@ -250,8 +244,7 @@ function AddSubtask({ parent }: { parent: Task }) {
       <button
         type="button"
         onClick={() => startAdding(parent.id)}
-        className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-left text-sm text-slate-500"
-        style={{ border: '1px dashed var(--s-border-strong-2)' }}
+        className="flex min-h-11 items-center gap-2 rounded-sm border border-dashed border-border-strong px-3 text-left text-sm text-text-secondary"
       >
         <Plus size={14} />
         Подзадача
@@ -265,8 +258,7 @@ function AddSubtask({ parent }: { parent: Task }) {
         e.preventDefault()
         submit()
       }}
-      className="flex items-center gap-1.5 rounded-xl py-1 pr-1 pl-3"
-      style={{ background: 'var(--s-surface)', border: '1px solid var(--s-accent)' }}
+      className="flex items-center gap-1.5 rounded-sm border border-accent bg-surface py-1 pr-1 pl-3"
     >
       <input
         id={addInputId(parent.id)}
@@ -289,15 +281,14 @@ function AddSubtask({ parent }: { parent: Task }) {
         }}
         placeholder="Название подзадачи"
         aria-label={`Новая подзадача в «${parent.name}»`}
-        className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
-        // фокус уже показывает латунная рамка всей строки — вторая рамка вокруг поля лишняя
-        style={{ outline: 'none' }}
+        className="min-w-0 flex-1 bg-transparent text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
+        // фокус уже показывает рамка всей строки — второе кольцо вокруг поля лишнее
+        style={{ outline: 'none', boxShadow: 'none' }}
       />
       <button
         type="submit"
         disabled={!name.trim() || createTask.isPending}
-        className="h-8 shrink-0 rounded-sm px-3 text-sm font-semibold disabled:opacity-40"
-        style={{ background: 'var(--s-accent)', color: 'var(--s-on-accent)' }}
+        className="h-9 shrink-0 rounded-sm bg-accent px-3 text-sm font-medium text-on-accent disabled:opacity-50"
       >
         Добавить
       </button>

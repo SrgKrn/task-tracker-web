@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
-import { SortArrows } from '../components/Icon'
-import { Chip, EmptyState, Overline, Segmented, Switch, TaskRowSkeleton } from '../components/ui'
+import { Search, SortArrows } from '../components/Icon'
+import { Button, Chip, EmptyState, ListGroup, Overline, Segmented, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod } from '../lib/period'
 import { useGroupModel } from '../lib/groups'
@@ -151,65 +151,51 @@ export function TaskList() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
-      <div className="safe-top flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
+      {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный pt-* блока */}
+      <div className="safe-top">
+      <div className="flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
         <div className="flex flex-col gap-0.5">
           <Overline>
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
             <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
           </Overline>
-          <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-slate-100">Задачи</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Задачи</h1>
         </div>
-        <button
-          type="button"
+        {/* сортировка подписана: значок без текста не говорил, какой порядок сейчас */}
+        <Button
+          variant="ghost"
+          className="-mr-2 shrink-0"
           onClick={() => setSortByDue((v) => !v)}
-          title="Сортировать по сроку"
-          className="hit-44 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] font-mono text-base font-medium"
-          style={{
-            background: 'var(--s-surface)',
-            border: `1px solid ${sortByDue ? 'var(--s-accent)' : 'var(--s-border)'}`,
-            color: sortByDue ? 'var(--s-accent-text)' : 'var(--s-muted-text)',
-          }}
+          aria-label={sortByDue ? 'Сейчас по сроку, переключить на порядок создания' : 'Сейчас по порядку создания, переключить на срок'}
         >
-          <SortArrows size={16} className="mx-auto" />
-        </button>
+          <SortArrows size={16} />
+          {sortByDue ? 'По сроку' : 'По созданию'}
+        </Button>
+      </div>
       </div>
 
       <div className="flex gap-2 px-5 pb-2.5">
-        <div
-          className="flex h-[38px] flex-1 items-center gap-2 rounded-[11px] px-3"
-          style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-        >
-          <span className="h-3 w-3 shrink-0 rounded-full" style={{ border: '1.5px solid var(--s-placeholder)' }} />
+        {/* поиск по дизайн-системе: утопленное поле без рамки, лупа слева */}
+        <label className="flex h-[var(--tap)] flex-1 items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary">
+          <Search size={16} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию"
-            className="min-w-0 flex-1 bg-transparent text-base text-slate-100 placeholder:text-[var(--s-placeholder)]"
+            aria-label="Поиск задач"
+            className="min-w-0 flex-1 bg-transparent text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
+            style={{ outline: 'none', boxShadow: 'none' }}
           />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFilters((v) => !v)}
-          className="flex h-[38px] shrink-0 items-center rounded-[11px] px-[13px] text-sm"
-          style={{
-            background: filtersActive ? 'var(--s-accent)' : 'var(--s-surface)',
-            border: `1px solid ${filtersActive ? 'var(--s-accent)' : 'var(--s-border)'}`,
-            color: filtersActive ? 'var(--s-on-accent)' : 'var(--s-muted-text)',
-          }}
-        >
-          Период
-        </button>
+        </label>
+        <Chip active={filtersActive || showFilters} onClick={() => setShowFilters((v) => !v)} className="min-h-[var(--tap)]">
+          Фильтры
+        </Chip>
       </div>
 
       {showFilters && (
-        <div
-          className="mx-5 mb-3 flex flex-col gap-3.5 rounded-[14px] p-3"
-          style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
-        >
+        <div className="mx-5 mb-3 flex flex-col gap-3.5 rounded-md border border-border bg-surface p-3">
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-xs leading-[1.4] text-slate-500">
-              Задачи, чей срок пересекается с периодом
-            </span>
+            <span className="text-sm text-text-secondary">Срок пересекается с периодом</span>
             <div className="flex items-center gap-2">
               <DatePicker
                 small
@@ -218,7 +204,7 @@ export function TaskList() {
                 value={periodFrom || null}
                 onChange={(v) => setPeriodFrom(v ?? '')}
               />
-              <span className="font-mono text-sm text-slate-600">—</span>
+              <span className="text-sm text-text-secondary">—</span>
               <DatePicker
                 small
                 className="flex-1"
@@ -233,7 +219,7 @@ export function TaskList() {
                     setPeriodFrom('')
                     setPeriodTo('')
                   }}
-                  className="shrink-0 text-sm text-brass-600"
+                  className="min-h-11 shrink-0 px-1 text-sm font-medium text-accent-text"
                 >
                   Сброс
                 </button>
@@ -272,7 +258,7 @@ export function TaskList() {
                       }}
                     >
                       {o.name}
-                      <span className="tabular ml-1.5 font-mono text-xs opacity-60">
+                      <span className="tabular ml-1.5 font-mono text-xs opacity-70">
                         {counts.get(`${group.id}|${o.id}`) ?? 0}
                       </span>
                     </Chip>
@@ -307,18 +293,22 @@ export function TaskList() {
           <>
             {groups.map((group) => (
               <div key={group.id} className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between">
-                  <Overline>{group.title}</Overline>
-                  <span className="tabular font-mono text-xs text-slate-600">
-                    <FactSum tasks={group.items} childrenOf={childrenOf} activeTimer={activeTimer} plan={group.plan} />
-                  </span>
-                </div>
+                {activeGroupBy !== 'none' && (
+                  <div className="flex items-baseline justify-between">
+                    <Overline>{group.title}</Overline>
+                    <span className="tabular font-mono text-xs text-text-secondary">
+                      <FactSum tasks={group.items} childrenOf={childrenOf} activeTimer={activeTimer} plan={group.plan} />
+                    </span>
+                  </div>
+                )}
+                <ListGroup>
                 {group.items.map((task) => (
                   <TaskListItem
                     key={task.id}
                     task={task}
                     status={task.status_id ? statusById.get(task.status_id) : undefined}
                     label={model.listLabel(task)}
+                    color={model.colorOf(task)}
                     activeTimer={activeTimer}
                     onStartTimer={() => startTimer.mutate(task.id, { onError })}
                     onStopTimer={() => stopTimer.mutate(undefined, { onError })}
@@ -334,21 +324,27 @@ export function TaskList() {
                     hideDoneSubtasks={hideCompleted}
                   />
                 ))}
+                </ListGroup>
               </div>
             ))}
             {groups.length === 0 && (
-              <EmptyState>
-                {tasks.length === 0 ? (
-                  <>
-                    Задач пока нет.{' '}
-                    <Link to="/tasks/new" className="text-brass-600">
-                      Создать первую
+              tasks.length === 0 ? (
+                <EmptyState
+                  title="Создайте первую задачу"
+                  action={
+                    <Link
+                      to="/tasks/new"
+                      className="inline-flex h-[var(--tap)] items-center rounded-sm bg-accent px-4 font-medium text-on-accent"
+                    >
+                      Создать задачу
                     </Link>
-                  </>
-                ) : (
-                  'Ничего не нашлось. Измените запрос или сбросьте фильтры.'
-                )}
-              </EmptyState>
+                  }
+                >
+                  Задача — это спринт или работа по клиенту с планом часов.
+                </EmptyState>
+              ) : (
+                <EmptyState title="Ничего не нашлось">Измените запрос или сбросьте фильтры.</EmptyState>
+              )
             )}
           </>
         )}

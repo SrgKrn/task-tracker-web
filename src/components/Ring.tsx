@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 
 export type RingState = 'idle' | 'running' | 'done' | 'over'
 
+/** терракотой горит только кольцо под учётом; прогресс без учёта — графит */
 const STATE_COLOR: Record<RingState, string> = {
-  idle: 'var(--s-accent-muted)',
-  running: 'var(--s-accent)',
-  done: 'var(--s-success)',
-  over: 'var(--s-danger)',
+  idle: 'var(--ring-idle)',
+  running: 'var(--ring-running)',
+  done: 'var(--ring-done)',
+  over: 'var(--ring-over)',
 }
 
 interface RingProps {
@@ -39,21 +40,22 @@ export function Ring({
   state = 'idle',
   color,
   track,
-  centerBg = 'var(--s-surface)',
+  centerBg = 'var(--surface)',
   marker = false,
   onClick,
   ariaLabel,
   children,
 }: RingProps) {
   const fill = color ?? STATE_COLOR[state]
-  const trackColor = track ?? (size >= 100 ? 'var(--s-ring-track-lg)' : 'var(--s-ring-track)')
+  const trackColor = track ?? 'var(--ring-track)'
   const inset = Math.max(4, Math.round(size * 0.12 * 10) / 10)
 
   /*
    * Переработка идёт вторым витком. Раньше заливка обрезалась на 100%, и 133% выглядели
    * ровно как 233% — кольцо переставало работать именно там, где сообщает главное.
-   * Первый виток остаётся латунным (план выполнен), поверх него терракотой ложится
-   * превышение. Второй виток тоже упирается в полный круг: 200% и больше — сплошной.
+   * Первый виток становится нейтральным (план закрыт), поверх него малиновым ложится
+   * превышение: терракота и малиновый одной яркости и на кольце 32 px сливались.
+   * Второй виток тоже упирается в полный круг: 200% и больше — сплошной.
    */
   const overflow = !color && pct > 100 ? Math.min(pct - 100, 100) : 0
   const deg = Math.max(0, Math.min(pct, 100)) * 3.6
@@ -61,7 +63,7 @@ export function Ring({
 
   const background =
     overflow > 0
-      ? `conic-gradient(var(--s-danger) 0deg ${overflowDeg}deg, var(--s-accent) ${overflowDeg}deg 360deg)`
+      ? `conic-gradient(var(--ring-over) 0deg ${overflowDeg}deg, var(--ring-over-base) ${overflowDeg}deg 360deg)`
       : `conic-gradient(${fill} 0deg ${deg}deg, ${trackColor} ${deg}deg 360deg)`
 
   const body = (
@@ -79,8 +81,7 @@ export function Ring({
             top: -4,
             left: '50%',
             marginLeft: -4,
-            background: 'var(--s-accent)',
-            boxShadow: '0 0 12px var(--s-accent-glow)',
+            background: 'var(--accent)',
           }}
         />
       )}
@@ -91,7 +92,7 @@ export function Ring({
     width: size,
     height: size,
     background,
-    transition: 'background var(--dur-slow) var(--ease-out)',
+    transition: 'background var(--duration-slow) var(--ease-out)',
   }
 
   if (!onClick) {
@@ -118,7 +119,7 @@ export function Ring({
 }
 
 /** ▶ — задача не запущена */
-export function PlayGlyph({ color = 'var(--color-slate-300)', size = 8 }: { color?: string; size?: number }) {
+export function PlayGlyph({ color = 'var(--text-secondary)', size = 8 }: { color?: string; size?: number }) {
   return (
     <span
       style={{
@@ -134,6 +135,6 @@ export function PlayGlyph({ color = 'var(--color-slate-300)', size = 8 }: { colo
 }
 
 /** ■ — идёт учёт */
-export function StopGlyph({ size = 8, color = 'var(--s-accent)' }: { size?: number; color?: string }) {
+export function StopGlyph({ size = 8, color = 'var(--accent)' }: { size?: number; color?: string }) {
   return <span style={{ width: size, height: size, borderRadius: 2, background: color }} />
 }

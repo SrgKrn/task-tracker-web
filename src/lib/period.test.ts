@@ -4,6 +4,7 @@ import {
   currentWeekRange,
   daysBetweenInclusive,
   daysInCalendarMonth,
+  formatDueDate,
   nextFriday,
   overlapsPeriod,
   toDateString,
@@ -36,6 +37,15 @@ describe('даты', () => {
     expect(daysBetweenInclusive('2026-10-05', '2026-10-05')).toBe(1)
     expect(daysInCalendarMonth('2028-02-10')).toBe(29)
     expect(daysInCalendarMonth('2026-02-10')).toBe(28)
+  })
+
+  it('formatDueDate — слова для ближайших дней, год только у чужого года', () => {
+    expect(formatDueDate('2026-10-14', '2026-10-14')).toBe('Сегодня')
+    expect(formatDueDate('2026-10-15', '2026-10-14')).toBe('Завтра')
+    expect(formatDueDate('2026-10-13', '2026-10-14')).toBe('Вчера')
+    expect(formatDueDate('2026-10-09', '2026-10-14')).toBe('9 окт')
+    expect(formatDueDate('2026-09-20', '2026-10-14')).toBe('20 сент')
+    expect(formatDueDate('2027-01-05', '2026-12-30')).toBe('5 янв 2027')
   })
 
   it('неделя — семь дней с понедельника', () => {

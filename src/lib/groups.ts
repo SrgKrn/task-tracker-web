@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useGroupItems, useGroups } from './queries/groups'
-import type { Group, GroupItem, Task } from './types'
+import type { Group, GroupItem, LabelColor, Task } from './types'
 
 type WithItems = Pick<Task, 'item_ids'>
 
@@ -23,6 +23,8 @@ export interface GroupModel {
   valuesOf: (task: WithItems) => { group: Group; item: GroupItem }[]
   /** подпись задачи в списках: значения групп «в строке» через точку */
   listLabel: (task: WithItems) => string
+  /** цвет точки в строке: первое значение «в строке», у которого цвет задан */
+  colorOf: (task: WithItems) => LabelColor | null
   /** группы, которые входят в эту («Проекты» для «Клиентов») */
   childGroupsOf: (groupId: string) => Group[]
   loading: boolean
@@ -62,6 +64,7 @@ export function buildGroupModel(groups: Group[], items: GroupItem[], loading = f
         .filter((v) => v.group.show_in_list)
         .map((v) => v.item.name)
         .join(' · '),
+    colorOf: (task) => valuesOf(task).find((v) => v.group.show_in_list && v.item.color)?.item.color ?? null,
     childGroupsOf: (groupId) => groups.filter((g) => g.parent_group_id === groupId),
     loading,
   }

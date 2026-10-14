@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Plus } from '../components/Icon'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, Plus } from '../components/Icon'
 import { PickerField } from '../components/PickerField'
 import { PicklistAdmin } from '../components/PicklistAdmin'
 import { FieldLabel, Overline, Sheet, SheetActions, fieldClass } from '../components/ui'
@@ -20,7 +20,7 @@ import {
 } from '../lib/queries/groups'
 import { useTasks } from '../lib/queries/tasks'
 import { plural } from '../lib/time'
-import type { Group, GroupItem } from '../lib/types'
+import type { Group, GroupItem, LabelColor } from '../lib/types'
 
 const VALUES: [string, string, string] = ['значение', 'значения', 'значений']
 /** «у 1 задачи», «у 5 задач» */
@@ -222,6 +222,19 @@ function NewGroupSheet({
 }
 
 /** Страница группы: её настройки, значения со связями и удаление. */
+/** метки дизайн-системы по порядку; названия — для выбора и для экранного диктора */
+const LABELS: LabelColor[] = ['label-1', 'label-2', 'label-3', 'label-4', 'label-5', 'label-6', 'label-7', 'label-8']
+const LABEL_NAMES: Record<LabelColor, string> = {
+  'label-1': 'Терракота',
+  'label-2': 'Синий',
+  'label-3': 'Фиолетовый',
+  'label-4': 'Розовый',
+  'label-5': 'Янтарный',
+  'label-6': 'Зелёный',
+  'label-7': 'Оливковый',
+  'label-8': 'Графит',
+}
+
 export function GroupPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -236,6 +249,7 @@ export function GroupPage() {
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [coloring, setColoring] = useState<GroupItem | null>(null)
 
   const group = id ? model.groupById.get(id) : undefined
   const items = id ? model.itemsOf(id) : []
@@ -273,6 +287,25 @@ export function GroupPage() {
         archivedOf={(i) => i.archived}
         onToggleArchived={(i, archived) => updateItem.mutate({ id: i.id, fields: { archived } }, { onError })}
         onOpen={(i) => navigate(`/items/${i.id}`)}
+        // цвет — только у групп «в строке»: у остальных точка в строке задачи не видна
+        leadingOf={
+          group.show_in_list
+            ? (i) => (
+                <button
+                  type="button"
+                  onClick={() => setColoring(i)}
+                  aria-label={`Цвет: ${i.name} — ${i.color ? LABEL_NAMES[i.color] : 'без цвета'}`}
+                  className="hit-44 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border"
+                >
+                  {i.color ? (
+                    <span className="h-3.5 w-3.5 rounded-full" style={{ background: `var(--${i.color})` }} />
+                  ) : (
+                    <span className="h-3.5 w-3.5 rounded-full border border-dashed border-text-tertiary" />
+                  )}
+                </button>
+              )
+            : undefined
+        }
         extraOf={
           parentGroup
             ? (i) => (
@@ -313,6 +346,42 @@ export function GroupPage() {
           </div>
         }
       />
+      <Sheet open={coloring !== null} onClose={() => setColoring(null)} title={`Цвет: ${coloring?.name ?? ''}`}>
+        <p className="text-sm text-text-secondary">Точка этого цвета стоит у задач в списках, на плашке учёта и в сводке.</p>
+        <div className="grid grid-cols-4 gap-3 pb-1">
+          {LABELS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                if (coloring) updateItem.mutate({ id: coloring.id, fields: { color: c } }, { onError })
+                setColoring(null)
+              }}
+              aria-label={LABEL_NAMES[c]}
+              aria-pressed={coloring?.color === c}
+              className="flex flex-col items-center gap-1.5 rounded-md py-2 active:bg-surface-sunken"
+            >
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white"
+                style={{ background: `var(--${c})` }}
+              >
+                {coloring?.color === c && <Check size={18} />}
+              </span>
+              <span className="text-xs text-text-secondary">{LABEL_NAMES[c]}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (coloring) updateItem.mutate({ id: coloring.id, fields: { color: null } }, { onError })
+            setColoring(null)
+          }}
+          className="min-h-11 rounded-sm text-base font-medium text-text-secondary active:bg-surface-sunken"
+        >
+          Без цвета
+        </button>
+      </Sheet>
       <ConfirmDialog
         open={confirmingDelete}
         title={`Удалить группу «${group.name}»?`}

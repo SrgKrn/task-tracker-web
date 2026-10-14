@@ -21,6 +21,9 @@ export interface Group {
 }
 
 /** Значение группы: конкретный проект, раздел, клиент. */
+/** метка дизайн-системы: цвет значения группы, сам цвет — из токенов --label-N */
+export type LabelColor = 'label-1' | 'label-2' | 'label-3' | 'label-4' | 'label-5' | 'label-6' | 'label-7' | 'label-8'
+
 export interface GroupItem {
   id: string
   user_id: string
@@ -36,6 +39,8 @@ export interface GroupItem {
   /** папка на Google Диске */
   drive_folder_id: string | null
   drive_folder_name: string | null
+  /** метка дизайн-системы 'label-1' … 'label-8' (цвет — из токенов темы); null — без цвета */
+  color: LabelColor | null
   created_at: string
   updated_at: string
 }

@@ -37,6 +37,8 @@ interface PicklistAdminProps<T extends Item> {
   listTitle?: string
   /** вторая строка под названием (во что входит значение) */
   extraOf?: (item: T) => ReactNode
+  /** перед названием (цвет значения) */
+  leadingOf?: (item: T) => ReactNode
 }
 
 export function PicklistAdmin<T extends Item>({
@@ -60,6 +62,7 @@ export function PicklistAdmin<T extends Item>({
   footer,
   listTitle,
   extraOf,
+  leadingOf,
 }: PicklistAdminProps<T>) {
   const navigate = useNavigate()
   const [newName, setNewName] = useState('')
@@ -170,6 +173,8 @@ export function PicklistAdmin<T extends Item>({
                   <ChevronDown size={14} />
                 </button>
               </div>
+
+              {leadingOf?.(item)}
 
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                 {editingId === item.id ? (

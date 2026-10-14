@@ -6,13 +6,14 @@ import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
-import { Logo, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
+import { Button, ClientDot, ListGroup, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { PlayGlyph } from '../components/Ring'
 import {
   addDays,
   currentWeekRange,
+  formatDueDate,
   formatShortDate,
   formatTodayLabel,
   nextFriday,
@@ -124,6 +125,7 @@ export function Today() {
         task={task}
         status={task.status_id ? statusById.get(task.status_id) : undefined}
         label={model.listLabel(task)}
+        color={model.colorOf(task)}
         activeTimer={activeTimer}
         onStartTimer={() => startTimer.mutate(task.id, { onError })}
         onStopTimer={() => stopTimer.mutate(undefined, { onError })}
@@ -210,94 +212,83 @@ export function Today() {
   )
 
   const maxDayValue = Math.max(dayNorm, ...week.days.map((d) => factByDay.get(d) ?? 0))
+  const normPct = (dayNorm / maxDayValue) * 100
+  const dayOver = dayFact - dayNorm
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-none lg:w-full">
-      {/* шапка бренда — только на мобайле, на десктопе бренд живёт в сайдбаре */}
-      <div className="safe-top flex items-center justify-between px-5 pt-4 pb-1.5 lg:hidden">
-        <div className="flex items-center gap-2.5">
-          <Logo />
-          <span className="text-base font-semibold tracking-[.01em] text-slate-100">Semternity</span>
-        </div>
-        <Link
-          to="/settings"
-          className="hit-44 block h-[30px] w-[30px] rounded-full"
-          style={{ background: 'var(--s-avatar)', border: '1px solid var(--s-avatar-border)' }}
-          aria-label="Настройки"
-        />
-      </div>
-
-      {/* кольцо суток */}
-      <div className="flex items-center gap-[18px] px-5 pt-4 pb-[18px] lg:pt-6">
-        <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--s-bg)" marker>
+      {/* кольцо суток. Строки бренда с пустым аватаром больше нет: она занимала 48 px и ничего
+          не делала — дата уже над заголовком, аккаунт в «Ещё» */}
+      {/* отступ под «чёлку» — на обёртке: класс safe-top перебивает собственный отступ блока */}
+      <div className="safe-top">
+      <div className="flex items-center gap-[18px] px-5 pt-5 pb-[18px] lg:pt-6">
+        <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
-            <span className="tabular font-mono text-xl font-semibold text-slate-50">{formatHoursRu(dayFact)}</span>
-            <span className="text-sm font-medium text-text-secondary">
-              из {formatHoursRu(dayNorm)} ч
-            </span>
+            <span className="tabular font-mono text-xl font-medium text-text">{formatHoursRu(dayFact)}</span>
+            <span className="text-sm text-text-secondary">из {formatHoursRu(dayNorm)} ч</span>
           </span>
         </Ring>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Overline>{formatTodayLabel()}</Overline>
-          <h1 className="text-xl font-semibold leading-[1.05] tracking-[-.02em] text-slate-100">Сегодня</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
-            полных планов всех задач дня. Задача на 12 часов, растянутая на три недели,
-            целиком падала в сегодняшний план, и в восьмичасовом дне выходило «план 27 ч».
-            Показываем то, что действительно относится к сегодняшнему дню.
+            полных планов всех задач дня. Показываем то, что относится к сегодняшнему дню.
+            Фразы — обычным шрифтом: моноширинный остаётся только у чисел.
           */}
-          <div className="flex flex-col gap-1.5">
-            <span className="flex items-center gap-2">
-              <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--s-accent)' }} />
-              <span className="font-mono text-sm text-[var(--s-text-soft)]">
-                {dayFact >= dayNorm
-                  ? 'норма дня выполнена'
-                  : `осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+          <div className="flex flex-col gap-1.5 text-sm">
+            <span className="flex items-center gap-2 text-text">
+              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
+              <span>
+                {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+                {dayOver >= 0.05 && (
+                  <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
+                )}
               </span>
             </span>
-            <span className="flex items-center gap-2">
-              <span
-                className="h-[7px] w-[7px] shrink-0 rounded-full"
-                style={{ background: 'var(--s-accent-muted)' }}
-              />
-              <span className="font-mono text-sm text-[var(--s-faint-text)]">
-                {todayCountLabel}
-              </span>
+            <span className="flex items-center gap-2 text-text-secondary">
+              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
+              <span className="first-letter:uppercase">{todayCountLabel}</span>
             </span>
           </div>
         </div>
       </div>
+      </div>
 
       {/*
-        Недельный ритм. Раньше полоса была 34px высотой с минимумом 12%: при факте
-        1,6 / 3,5 / 3 ч столбики отличались на несколько пикселей и читались как семь
-        одинаковых чёрточек. Стало выше, с подписанными значениями — иначе узнать
-        «сколько было во вторник» было нельзя вообще ничем.
+        Недельный ритм: тонкие столбики и пунктир нормы дня — сразу видно, какой день был
+        выше нормы, а какой ниже. Значения подписаны: иначе «сколько было во вторник» не узнать.
       */}
       <div className="px-5">
-        <div className="flex h-14 items-end gap-1.5">
+        <div className="relative flex h-14 items-end gap-1.5">
+          <span
+            className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
+            style={{ bottom: `${normPct}%` }}
+            aria-hidden
+          />
           {week.days.map((day) => {
             const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
             const isToday = day === today
             const isFuture = day > today
-            const height = fact > 0 ? Math.max(10, Math.min(100, (fact / maxDayValue) * 100)) : 3
+            const height = fact > 0 ? Math.max(8, Math.min(100, (fact / maxDayValue) * 100)) : 3
             return (
-              <span
-                key={day}
-                className="flex-1 rounded-[3px]"
-                title={`${formatHoursRu(fact)} ч`}
-                style={{
-                  height: `${height}%`,
-                  background: isToday
-                    ? 'var(--s-accent)'
-                    : fact > 0
-                      ? 'var(--s-bar-past)'
-                      : isFuture
-                        ? 'var(--s-bar-future)'
-                        : 'var(--s-bar-empty)',
-                }}
-              />
+              <span key={day} className="flex h-full flex-1 items-end justify-center">
+                <span
+                  className="w-3/5 max-w-7 rounded-t-xs"
+                  title={`${formatHoursRu(fact)} ч`}
+                  style={{
+                    height: `${height}%`,
+                    background: isToday
+                      ? 'var(--accent)'
+                      : fact > 0
+                        ? 'var(--bar-past)'
+                        : isFuture
+                          ? 'var(--bar-future)'
+                          : 'var(--bar-empty)',
+                  }}
+                />
+              </span>
             )
           })}
         </div>
@@ -307,11 +298,13 @@ export function Today() {
             const isToday = day === today
             return (
               <span key={day} className="flex flex-1 flex-col items-center gap-px">
-                <span className={`font-mono text-xs ${isToday ? 'text-brass-600' : 'text-slate-600'}`}>
+                <span className={`text-xs ${isToday ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>
                   {WEEKDAYS[i]}
                 </span>
                 <span
-                  className={`tabular font-mono text-xs ${isToday ? 'text-brass-600' : 'text-slate-500'}`}
+                  className={`tabular font-mono text-xs ${
+                    isToday ? 'text-accent-text' : fact > dayNorm ? 'text-text' : 'text-text-secondary'
+                  }`}
                 >
                   {fact > 0 ? formatHoursRu(fact) : '—'}
                 </span>
@@ -321,6 +314,63 @@ export function Today() {
         </div>
       </div>
 
+      {/* просроченное — сразу под днём: самое срочное должно быть видно без прокрутки,
+          а не под девятью задачами в самом низу */}
+      {overdueTasks.length > 0 && (
+        <div className="flex flex-col gap-2 px-5 pt-5">
+          <Overline className="text-danger-text">Просрочено · {overdueTasks.length}</Overline>
+          <ListGroup className="border-[var(--danger-line)]">
+            {overdueTasks.map((task) => {
+              const fact = rollupFact(task, childrenOf.get(task.id))
+              const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
+              // у подзадачи важнее спринт, чем группы: «Созвон» без спринта ни о чём не говорит
+              const category = task.parent_id ? (taskById.get(task.parent_id)?.name ?? '') : model.listLabel(task)
+              return (
+                <div key={task.id} className="flex min-h-[var(--row-task)] items-center gap-3 px-3 py-2.5">
+                  <Ring
+                    size={32}
+                    pct={pct}
+                    state="over"
+                    track="var(--ring-track-danger)"
+                    onClick={() => {
+                      tap()
+                      startTimer.mutate(task.id, { onError })
+                    }}
+                    ariaLabel={`Начать учёт: ${task.name}`}
+                  >
+                    <PlayGlyph />
+                  </Ring>
+
+                  <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
+                    <p title={task.name} className="truncate text-base font-medium text-text">
+                      {task.name}
+                    </p>
+                    {/* срок первым: именно он объясняет, почему задача здесь, и при обрезке
+                        должен уцелеть, а не название клиента */}
+                    <span className="flex min-w-0 items-center gap-1.5 text-sm whitespace-nowrap text-text-secondary">
+                      <span className="shrink-0 font-medium text-danger-text">
+                        срок {task.end_date ? formatDueDate(task.end_date, today).toLowerCase() : ''}
+                      </span>
+                      {category && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <ClientDot color={task.parent_id ? null : model.colorOf(task)} />
+                          <span className="min-w-0 truncate">{category}</span>
+                        </>
+                      )}
+                    </span>
+                  </Link>
+
+                  <Button variant="ghost" className="-mr-1 shrink-0 text-danger-text" onClick={() => setPostponing(task)}>
+                    Перенести
+                  </Button>
+                </div>
+              )
+            })}
+          </ListGroup>
+        </div>
+      )}
+
       {/* встречи из календаря: прошедшие — засчитать, идущая — начать учёт */}
       <MeetingsBlock
         date={today}
@@ -329,150 +379,81 @@ export function Today() {
       />
 
       {/* задачи дня */}
-      <div className="flex flex-col gap-[9px] px-5 pt-5 pb-2">
-        <div className="flex items-baseline justify-between">
+      <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
+        <div className="flex min-h-11 items-center justify-between">
           <Overline>На сегодня</Overline>
-          <div className="flex items-center gap-4">
-            {todayTasks.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setPlanning(true)}
-                className="-my-3.5 py-3.5 text-sm font-medium text-brass-600"
-              >
-                Выбрать
-              </button>
-            )}
-            <Link to="/tasks" className="-my-3.5 py-3.5 text-sm text-brass-600">
-              <span className="flex items-center gap-1">Все задачи <ArrowRight size={13} /></span>
-            </Link>
-          </div>
+          {/* одна ссылка вместо двух: «Все задачи» и так во вкладке внизу */}
+          {todayTasks.length > 0 && (
+            <Button variant="ghost" className="-mr-2 text-accent-text" onClick={() => setPlanning(true)}>
+              Изменить план
+            </Button>
+          )}
         </div>
 
         {isLoading && (
-          <div className="flex flex-col gap-[9px]">
+          <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (
               <TaskRowSkeleton key={i} />
             ))}
           </div>
         )}
 
-        {!isLoading &&
-          topRows.map((task) => {
-            const below = nestedOf(task.id)
-            return (
-              <div key={task.id} className="flex flex-col gap-1.5">
-                {renderRow(task, below.length > 0)}
-                {/* подзадачи спринта — под ним, с линией вложенности: рядом с ним на равных
-                    они читались как отдельные задачи с тем же учётом */}
-                {below.length > 0 && (
-                  <div className="ml-4 flex flex-col gap-1.5 pl-3" style={{ borderLeft: '2px solid var(--s-hairline-2)' }}>
-                    {below.map((sub) => (
-                      <div key={sub.id}>{renderRow(sub, false)}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        {!isLoading && topRows.length > 0 && (
+          <ListGroup>
+            {topRows.map((task) => {
+              const below = nestedOf(task.id)
+              return (
+                <div key={task.id} className="flex flex-col">
+                  {renderRow(task, below.length > 0)}
+                  {/* подзадачи спринта — под ним, с линией вложенности: рядом с ним на равных
+                      они читались как отдельные задачи с тем же учётом */}
+                  {below.length > 0 && (
+                    <div className="ml-7 flex flex-col divide-y divide-divider border-l border-divider">
+                      {below.map((sub) => (
+                        <div key={sub.id}>{renderRow(sub, false)}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </ListGroup>
+        )}
 
         {/* день ещё не спланирован: главное действие экрана — выбрать, не листая весь список */}
         {!isLoading && todayTasks.length === 0 && (
           <button
             type="button"
             onClick={() => setPlanning(true)}
-            className="flex min-h-[72px] items-center gap-3.5 rounded-[18px] px-4 py-3 text-left"
-            style={{ background: 'var(--s-accent-ghost)', border: '1px solid var(--s-accent)' }}
+            className="flex min-h-[72px] items-center gap-3.5 rounded-md border border-[var(--selected-border)] bg-surface-selected px-4 py-3 text-left"
           >
             <span className="min-w-0 flex-1">
-              <span className="block text-md font-semibold text-slate-100">Что делаем сегодня?</span>
-              <span className="block text-sm text-[var(--s-text-soft)]">
+              <span className="block text-md font-semibold text-text">Что делаем сегодня?</span>
+              <span className="block text-sm text-text-secondary">
                 {suggestedCount > 0
                   ? `Отметьте задачи на день — ${suggestedCount} уже предложено`
                   : 'Отметьте задачи на день — это займёт полминуты'}
               </span>
             </span>
-            <ArrowRight size={18} className="text-brass-600" />
+            <ArrowRight size={18} className="text-accent-text" />
           </button>
-        )}
-
-        {overdueTasks.length > 0 && (
-          <div className="mt-1.5 flex flex-col gap-[9px]">
-            <Overline>Требует внимания</Overline>
-            {overdueTasks.map((task) => {
-              const fact = rollupFact(task, childrenOf.get(task.id))
-              const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
-              // у подзадачи важнее спринт, чем группы: «Созвон» без спринта ни о чём не говорит
-              const category = task.parent_id ? (taskById.get(task.parent_id)?.name ?? '') : model.listLabel(task)
-              return (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 rounded-2xl px-3.5 py-3"
-                  style={{ background: 'var(--s-danger-ghost)', border: '1px solid var(--s-danger-line)' }}
-                >
-                  <Ring
-                    size={34}
-                    pct={pct}
-                    state="over"
-                    track="var(--s-danger-track)"
-                    centerBg="var(--s-danger-center)"
-                    onClick={() => {
-                      tap()
-                      startTimer.mutate(task.id, { onError })
-                    }}
-                    ariaLabel="Начать учёт"
-                  >
-                    <span className="tabular font-mono text-xs font-medium text-terra-400">{pct}%</span>
-                  </Ring>
-
-                  {/* мета в одну строку с обрезкой: раньше она переносилась, наезжала на
-                      «Перенести» и уводила кольцо от центра карточки */}
-                  <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-                    <p
-                      title={task.name}
-                      className="truncate text-base font-medium leading-[1.3] text-slate-100"
-                    >
-                      {task.name}
-                    </p>
-                    {/* срок идёт первым: именно он объясняет, почему задача в этом блоке,
-                        и при обрезке должен уцелеть, а не название проекта */}
-                    <span className="block truncate font-mono text-sm text-terra-400">
-                      срок {task.end_date?.slice(8, 10)}.{task.end_date?.slice(5, 7)}
-                      {category ? ` · ${category}` : ''}
-                    </span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setPostponing(task)}
-                    className="-my-3 shrink-0 py-3 pl-2 text-sm font-medium text-terra-400"
-                  >
-                    Перенести
-                  </button>
-                </div>
-              )
-            })}
-          </div>
         )}
       </div>
 
       {/* недавние: продолжить то, чем занимались, одним касанием кольца */}
       {!isLoading && recentTasks.length > 0 && (
-        <div className="flex flex-col gap-[9px] px-5 pt-3 pb-2">
+        <div className="flex flex-col gap-2 px-5 pt-3 pb-2">
           <Overline>Недавние</Overline>
-          <div
-            className="flex flex-col overflow-hidden rounded-2xl [&>*+*]:border-t [&>*+*]:border-[var(--s-hairline-2)]"
-            style={{ background: 'var(--s-surface)', border: '1px solid var(--s-border)' }}
-          >
+          <ListGroup>
             {recentTasks.map((task) => {
               const parent = task.parent_id ? taskById.get(task.parent_id) : undefined
-              const meta = [parent?.name, model.listLabel(parent ?? task)].filter(Boolean).join(' · ')
+              const client = model.listLabel(parent ?? task)
               return (
-                <div key={task.id} className="flex items-center gap-3 px-3 py-2">
+                <div key={task.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
                   <Ring
                     size={30}
                     pct={0}
                     state="idle"
-                    centerBg="var(--s-surface)"
                     onClick={() => {
                       tap()
                       startTimer.mutate(task.id, { onError })
@@ -482,13 +463,20 @@ export function Today() {
                     <PlayGlyph />
                   </Ring>
                   <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 py-1">
-                    <span className="block truncate text-base text-slate-100">{task.name}</span>
-                    {meta && <span className="block truncate font-mono text-xs text-slate-500">{meta}</span>}
+                    <span className="block truncate text-base text-text">{task.name}</span>
+                    {(parent || client) && (
+                      <span className="flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
+                        {parent && <span className="min-w-0 truncate">{parent.name}</span>}
+                        {parent && client && <span aria-hidden>·</span>}
+                        {client && <ClientDot color={model.colorOf(parent ?? task)} />}
+                        {client && <span className="min-w-0 truncate">{client}</span>}
+                      </span>
+                    )}
                   </Link>
                 </div>
               )
             })}
-          </div>
+          </ListGroup>
         </div>
       )}
 
@@ -511,22 +499,21 @@ export function Today() {
       <Sheet open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">
         {postponing && (
           <div className="flex flex-col gap-2 pb-2">
-            <p className="truncate text-base text-slate-400">{postponing.name}</p>
+            <p className="truncate text-base text-text-secondary">{postponing.name}</p>
             {[
-              { date: today, label: 'сегодня', title: 'На сегодня' },
-              { date: addDays(today, 1), label: 'завтра', title: 'На завтра' },
-              { date: nextFriday(today), label: formatShortDate(nextFriday(today)), title: `На пятницу, ${formatShortDate(nextFriday(today)).replace(/^[^,]+, /, '')}` },
+              { date: today, title: 'На сегодня' },
+              { date: addDays(today, 1), title: 'На завтра' },
+              { date: nextFriday(today), title: 'На пятницу' },
             ].map((o) => (
-              <button
+              <Button
                 key={o.date}
-                type="button"
-                onClick={() => postpone(postponing, o.date, o.label)}
-                className="flex h-12 items-center justify-between rounded-[14px] px-4 text-base font-medium text-slate-100"
-                style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-border)' }}
+                size="lg"
+                className="justify-between"
+                onClick={() => postpone(postponing, o.date, formatDueDate(o.date, today).toLowerCase())}
               >
                 {o.title}
-                <span className="font-mono text-sm text-slate-500">{formatShortDate(o.date)}</span>
-              </button>
+                <span className="font-mono text-sm font-normal text-text-secondary">{formatShortDate(o.date)}</span>
+              </Button>
             ))}
           </div>
         )}

@@ -1,4 +1,6 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import type { StageTone } from '../lib/stage'
+import type { LabelColor } from '../lib/types'
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
@@ -33,7 +35,9 @@ export function Logo({ size = 22, color = 'var(--accent)' }: { size?: number; co
  * в таком кегле теряет силуэт слов. По дизайн-системе — обычный регистр, 13 px, 500.
  */
 export function Overline({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <span className={`text-sm font-medium text-text-secondary ${className}`}>{children}</span>
+  // свой цвет (например «Просрочено» малиновым) заменяет вторичный, а не спорит с ним в CSS
+  const color = /\btext-(text|danger|accent|success|warning)/.test(className) ? '' : 'text-text-secondary'
+  return <span className={`text-sm font-medium ${color} ${className}`}>{children}</span>
 }
 
 /** Подпись над полем — тем же голосом, что и заголовок группы. */
@@ -315,6 +319,52 @@ export function Tag({ tone = 'neutral', children }: { tone?: TagTone; children: 
     >
       {children}
     </span>
+  )
+}
+
+const STAGE_CLASS: Record<StageTone | 'none', string> = {
+  todo: 'bg-status-todo-bg text-status-todo-text',
+  progress: 'bg-status-progress-bg text-status-progress-text',
+  done: 'bg-status-done-bg text-status-done-text',
+  none: 'bg-status-backlog-bg text-status-backlog-text',
+}
+
+/**
+ * Чип этапа: точка и название, цвет — по тону этапа (палитра статусов, а не акцент).
+ * Без этапа — серый «Без этапа»: чип стоит у каждой строки, а не через одну.
+ */
+export function StageChip({ tone, label }: { tone: StageTone | null; label?: string }) {
+  return (
+    <span
+      className={`inline-flex h-[22px] max-w-[132px] shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium ${STAGE_CLASS[tone ?? 'none']}`}
+    >
+      <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-current opacity-80" aria-hidden />
+      <span className="truncate">{tone ? label : 'Без этапа'}</span>
+    </span>
+  )
+}
+
+/** Цветная точка клиента (значения группы) — 8 px, цвет из меток дизайн-системы. */
+export function ClientDot({ color, size = 8 }: { color: LabelColor | null | undefined; size?: number }) {
+  if (!color) return null
+  return (
+    <span
+      className="shrink-0 rounded-full"
+      style={{ width: size, height: size, background: `var(--${color})` }}
+      aria-hidden
+    />
+  )
+}
+
+/**
+ * Сгруппированный список: строки внутри общей подложки с разделителями, без рамки у каждой
+ * строки. Раньше каждая задача была отдельной карточкой — на экран влезало на две-три меньше.
+ */
+export function ListGroup({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`flex flex-col divide-y divide-divider overflow-hidden rounded-md border border-border bg-surface ${className}`}>
+      {children}
+    </div>
   )
 }
 
