@@ -46,3 +46,31 @@
     --input-size: 16px;
   }
 }
+
+/*
+ * Десктоп (≥ 1024 px, 0.29): «сайтовые» поля и ширина колонки, как в Linear/Notion/Todoist.
+ * Поля растут с экраном, ширина контента ограничена — свободное место уходит в поля поровну.
+ */
+:root {
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 56px;
+  --page-gutter: 32px;
+  --page-top: 32px;
+  --page-narrow: 720px; /* «Ещё», группы, этапы, формы */
+  --page-wide: 1120px; /* «Сегодня», «Сводка» — в две колонки */
+  --list-w: 400px; /* список задач слева от карточки */
+  --detail-max: 760px; /* карточка задачи справа */
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --page-gutter: 48px;
+    --page-top: 40px;
+  }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --page-gutter: 64px;
+  }
+}

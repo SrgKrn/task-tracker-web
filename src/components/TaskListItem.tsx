@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useMatch } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
 import { ClientDot, StageChip } from './ui'
@@ -124,7 +124,9 @@ export function TaskListItem({
 
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
   // под учётом — мягкая заливка и полоска акцента слева; рамку строки даёт общий список
-  const cardBg = isRunning ? 'var(--timer-bg)' : 'var(--surface)'
+  // открытая справа задача (десктоп) подсвечена, как выбранная строка в дизайн-системе (9.5)
+  const selected = useMatch('/tasks/:id')?.params.id === task.id
+  const cardBg = isRunning ? 'var(--timer-bg)' : selected ? 'var(--surface-selected)' : 'var(--surface)'
   const { data: statuses = [] } = useStatuses()
   const tone = status ? stageTone(status, statuses) : null
 
@@ -229,10 +231,14 @@ export function TaskListItem({
         )}
 
         <div
-          className="relative flex min-h-[var(--row-task)] flex-col justify-center px-3 py-2.5"
+          className="task-row relative flex min-h-[var(--row-task)] flex-col justify-center px-3 py-2.5"
+          data-quiet={isRunning || selected ? undefined : ''}
           style={{
-            background: cardBg,
-            boxShadow: isRunning ? 'inset 2px 0 0 var(--accent)' : undefined,
+            // фон через переменную: при наведении её меняет index.css, и центр кольца следом
+            // (у обычной строки переменная задана в index.css — инлайн её бы не перебить)
+            ['--row-bg' as string]: isRunning || selected ? cardBg : undefined,
+            background: 'var(--row-bg)',
+            boxShadow: isRunning || selected ? 'inset 2px 0 0 var(--accent)' : undefined,
             transform: `translateX(${offset}px)`,
             transition: animating ? 'transform var(--duration-base) var(--ease-out)' : 'none',
           }}
@@ -245,7 +251,7 @@ export function TaskListItem({
               size={32}
               pct={done ? 100 : pct}
               state={ringState}
-              centerBg={cardBg}
+              centerBg="var(--row-bg)"
               onClick={() => {
                 tap()
                 // идёт подзадача — кольцо спринта её останавливает; иначе учёт идёт в сам спринт

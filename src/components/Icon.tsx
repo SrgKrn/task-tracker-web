@@ -108,3 +108,7 @@ export const TabMore = (p: IconProps) =>
 /** «входит в» — строка спринта над подзадачей */
 export const CornerDownRight = (p: IconProps) =>
   svg(<><path d="m15 10 5 5-5 5" /><path d="M4 4v7a4 4 0 0 0 4 4h12" /></>, p)
+export const PanelLeft = (p: IconProps) => svg(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>, p)
+export const LogOut = (p: IconProps) => svg(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>, p)
+export const Play = (p: IconProps) => svg(<path d="M7 5v14l11-7z" />, p)
+export const Keyboard = (p: IconProps) => svg(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>, p)

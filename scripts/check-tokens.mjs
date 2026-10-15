@@ -15,7 +15,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SPACING_BASELINE = 92
+const SPACING_BASELINE = 90
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src')
 

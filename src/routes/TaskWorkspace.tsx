@@ -76,12 +76,12 @@ export function TaskWorkspace() {
   return (
     <div className="lg:flex lg:items-start">
       <div
-        className={`${hasDetail ? 'hidden lg:block' : 'block'} sc lg:sc-fade lg:sticky lg:top-0 lg:max-h-screen lg:w-[380px] lg:shrink-0 lg:overflow-y-auto`}
+        className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane sc lg:sc-fade`}
       >
         <TaskList />
       </div>
       <div
-        className={`${hasDetail ? 'block' : 'hidden lg:flex'} min-w-0 flex-1 lg:min-h-screen lg:items-center lg:justify-center`}
+        className={`${hasDetail ? 'block' : 'hidden lg:flex lg:items-center lg:justify-center'} task-detail-pane min-w-0 flex-1`}
         style={{ borderLeft: '1px solid var(--divider)' }}
       >
         {hasDetail ? <Outlet /> : <TaskWorkspaceEmpty />}

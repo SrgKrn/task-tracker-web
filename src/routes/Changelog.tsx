@@ -28,11 +28,11 @@ export function Changelog() {
   }, [isFetched, settings?.seen_release])
 
   return (
-    <div className="safe-top-page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-10 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top-page page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-10">
       <button
         type="button"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/settings'))}
-        className="-my-2.5 mb-1.5 flex items-center gap-2 self-start py-2.5 text-base text-text-secondary"
+        className="-my-2.5 mb-1.5 flex items-center gap-2 self-start py-2.5 text-base text-text-secondary lg:hidden"
       >
         <ArrowLeft size={15} />
         Назад

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
+import { Close } from './Icon'
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
@@ -266,13 +267,23 @@ export function Sheet({
         aria-label={title}
         tabIndex={-1}
         onKeyDown={onDialogKey}
-        className="sheet-in safe-bottom flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 pb-6 shadow-modal outline-none lg:max-w-md lg:rounded-lg lg:p-6"
+        className="sheet-in safe-bottom flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 pb-6 shadow-modal outline-none lg:max-h-[85vh] lg:max-w-120 lg:rounded-lg lg:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <span className="mx-auto h-1 w-9 shrink-0 rounded-full bg-border-strong lg:hidden" aria-hidden />
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
-          {headerAction}
+          {headerAction ?? (
+            // на десктопе окно закрывают и крестиком (дизайн-система 9.8); на телефоне — свайп/подложка
+            <button
+              type="button"
+              onClick={onClose}
+              className="-mr-2 hidden h-8 w-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text lg:flex"
+              aria-label="Закрыть"
+            >
+              <Close size={16} />
+            </button>
+          )}
         </div>
         {children}
       </div>
@@ -480,3 +491,17 @@ export function EmptyState({
     </div>
   )
 }
+
+/** Клавиша в подсказке: «⌘K», «C». По дизайн-системе (9.11) — mono xs на sunken с рамкой. */
+export function Kbd({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={`inline-flex min-w-5 items-center justify-center rounded-xs border border-border bg-surface-sunken px-1 font-mono text-xs leading-4 font-normal text-text-secondary ${className}`}
+    >
+      {children}
+    </kbd>
+  )
+}
+
+/** ⌘ на маке, Ctrl — на остальных: подпись к сочетаниям */
+export const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'

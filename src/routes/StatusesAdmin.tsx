@@ -34,7 +34,7 @@ export function StatusesAdmin() {
         finalOf={(s) => s.is_final}
         onToggleFinal={(s, value) => setStatusFinal.mutate({ id: s.id, isFinal: value }, { onError })}
       />
-      <p className="mx-auto max-w-lg px-5 text-sm leading-[1.5] text-text-secondary">
+      <p className="page mx-auto max-w-lg px-5 text-sm leading-[1.5] text-text-secondary">
         «Финальный» этап закрывает задачу: её прячет переключатель «Без готовых», и она считается в
         закрытых в «Сводке». Цвет этапа зависит от порядка: первый — серо-синий, промежуточные — синие,
         финальный — зелёный.

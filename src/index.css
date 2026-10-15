@@ -199,3 +199,107 @@ button:disabled {
 .sc {
   scrollbar-width: none;
 }
+
+/*
+ * Каркас десктопа (0.29). Страницы свёрстаны под телефон: у их блоков собственные поля
+ * 20 px (px-5) и отступ сверху 14–20 px. Поэтому обёртка добавляет только недостающее —
+ * в сумме выходит --page-gutter по бокам и --page-top сверху, а мобильная вёрстка не тронута.
+ * Классы вне слоёв Tailwind и поэтому перебивают lg:max-w-* страниц.
+ */
+@media (min-width: 1024px) {
+  .app-content {
+    padding: calc(var(--page-top) - 16px) calc(var(--page-gutter) - 20px) 48px;
+  }
+
+  /* «Задачи» — рабочее место во всю высоту: список и карточка сами держат свои поля */
+  .app-content.app-content-full {
+    padding: 0;
+  }
+
+  /* список задач и карточка — каждая панель во всю высоту и со своей прокруткой */
+  .task-list-pane {
+    position: sticky;
+    top: 0;
+    width: var(--list-w);
+    flex-shrink: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding-top: calc(var(--page-top) - 16px);
+  }
+
+  .task-detail-pane {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    padding: calc(var(--page-top) - 24px) calc(var(--page-gutter) - 20px) 0;
+  }
+
+  .page {
+    width: 100%;
+    max-width: var(--page-narrow);
+    margin-inline: auto;
+  }
+
+  .page.page-wide {
+    max-width: var(--page-wide);
+  }
+
+  /* «Ещё» на десктопе: меню слева, пункт справа */
+  .settings-shell {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+    max-width: var(--page-wide);
+    margin-inline: auto;
+  }
+}
+
+/* «Сводка» на десктопе: две колонки, правая (темп, норма) — на месте при прокрутке */
+@media (min-width: 1024px) {
+  .dash-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-auto-flow: row dense;
+    column-gap: 40px;
+    align-items: start;
+  }
+
+  .dash-grid > * {
+    grid-column: 1;
+  }
+
+  .dash-grid > .dash-aside {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    position: sticky;
+    top: 24px;
+  }
+}
+
+.task-row {
+  --row-bg: var(--surface);
+}
+
+/* наведение на строку задачи — только там, где есть мышь; фон и центр кольца меняются вместе */
+@media (hover: hover) and (min-width: 1024px) {
+  .task-row[data-quiet]:hover {
+    --row-bg: var(--surface-hover);
+  }
+}
+
+/* на десктопе лист — окно по центру: не выезжает снизу, а проявляется */
+@keyframes dialog-in {
+  from {
+    transform: scale(0.98);
+    opacity: 0;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .sheet-in {
+    animation-name: dialog-in;
+    animation-duration: var(--duration-base);
+  }
+}

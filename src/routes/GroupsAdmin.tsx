@@ -65,8 +65,8 @@ export function GroupsAdmin() {
   }
 
   return (
-    <div className="safe-top-page mx-auto max-w-lg px-5 pt-3.5 pb-8 lg:max-w-2xl">
-      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-text-secondary">
+    <div className="safe-top-page page mx-auto max-w-lg px-5 pt-3.5 pb-8">
+      <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-text-secondary lg:hidden">
         <ArrowLeft size={15} />
         Ещё
       </button>

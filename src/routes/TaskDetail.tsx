@@ -297,7 +297,7 @@ export function TaskDetail() {
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:h-screen lg:max-w-none lg:w-full">
+    <div className="mx-auto flex max-w-lg flex-col lg:h-full lg:w-full lg:max-w-[var(--detail-max)]">
       {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
       <div className="safe-top">
         <div className="flex items-center justify-between gap-2 px-3 pt-2">
@@ -480,7 +480,7 @@ export function TaskDetail() {
         />
       </div>
 
-      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:max-w-[560px] lg:flex-1 lg:overflow-y-auto">
+      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:flex-1 lg:overflow-y-auto">
         {tab === 'composition' && !isSubtask && (
           <SprintComposition
             task={task}

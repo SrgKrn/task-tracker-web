@@ -22,7 +22,7 @@ export function NewTask() {
   const { showError } = useToast()
 
   return (
-    <div className="safe-top-page mx-auto max-w-lg px-5 pt-4 pb-6 lg:mx-0 lg:w-full lg:max-w-none">
+    <div className="safe-top-page page mx-auto max-w-lg px-5 pt-4 pb-6">
       <button type="button" onClick={() => navigate('/tasks')} className="mb-4 flex items-center gap-2 text-base text-text-secondary">
         <ArrowLeft size={15} />Назад
       </button>

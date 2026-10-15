@@ -214,10 +214,11 @@ export function Today() {
 
   const maxDayValue = Math.max(dayNorm, ...week.days.map((d) => factByDay.get(d) ?? 0))
   const normPct = (dayNorm / maxDayValue) * 100
+  const weekTotal = week.days.reduce((sum, d) => sum + (factByDay.get(d) ?? 0), 0) + liveHours
   const dayOver = dayFact - dayNorm
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-none lg:w-full">
+    <div className="page page-wide mx-auto flex max-w-lg flex-col">
       {/* кольцо суток. Строки бренда с пустым аватаром больше нет: она занимала 48 px и ничего
           не делала — дата уже над заголовком, аккаунт в «Ещё» */}
       {/* отступ под «чёлку» — на обёртке: класс safe-top перебивает собственный отступ блока */}
@@ -261,8 +262,14 @@ export function Today() {
         Недельный ритм: тонкие столбики и пунктир нормы дня — сразу видно, какой день был
         выше нормы, а какой ниже. Значения подписаны: иначе «сколько было во вторник» не узнать.
       */}
-      <div className="px-5">
-        <div className="relative flex h-14 items-end gap-1.5">
+      {/* десктоп: неделя — справа и остаётся на месте при прокрутке, списки дня — слева */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-10">
+      <div className="px-5 lg:sticky lg:top-6 lg:order-2 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4">
+        <div className="mb-3 hidden items-baseline justify-between lg:flex">
+          <Overline>Неделя</Overline>
+          <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
+        </div>
+        <div className="relative flex h-14 items-end gap-1.5 lg:h-24">
           <span
             className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
             style={{ bottom: `${normPct}%` }}
@@ -315,6 +322,7 @@ export function Today() {
         </div>
       </div>
 
+      <div className="min-w-0 lg:order-1">
       {/* просроченное — сразу под днём: самое срочное должно быть видно без прокрутки,
           а не под девятью задачами в самом низу */}
       {overdueTasks.length > 0 && (
@@ -480,6 +488,8 @@ export function Today() {
           </ListGroup>
         </div>
       )}
+      </div>
+      </div>
 
       {planning && (
         <DayPlanSheet

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { useLiveTimerNotification } from '../lib/push'
@@ -7,6 +7,7 @@ import { useActiveTimer } from '../lib/queries/timer'
 import { useTheme } from '../lib/theme'
 import { ActiveTimerBar } from './ActiveTimerBar'
 import { BottomTabBar } from './BottomTabBar'
+import { AppCommands } from './CommandPalette'
 import { DesktopSidebar } from './DesktopSidebar'
 import { NetworkBanner } from './NetworkBanner'
 import { NewTaskSheet } from './NewTaskSheet'
@@ -33,10 +34,14 @@ function useAppEffects() {
 
 function SignedIn() {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const openCreate = useCallback(() => setSheetOpen(true), [])
   useAppEffects()
   // в карточке задачи у плашки учёта своя шапка с кнопками — при прокрутке плашка
   // наезжала на неё; там плашка уезжает вместе со страницей
-  const onTaskCard = /^\/(tasks|items)\/[^/]+/.test(useLocation().pathname)
+  const { pathname } = useLocation()
+  const onTaskCard = /^\/(tasks|items)\/[^/]+/.test(pathname)
+  // «Задачи» — рабочее место во всю высоту экрана, поля держат сами панели
+  const fullBleed = pathname === '/tasks' || pathname.startsWith('/tasks/')
 
   return (
     <div className="min-h-full lg:flex">
@@ -50,7 +55,7 @@ function SignedIn() {
           {!onTaskCard && <ActiveTimerBar />}
         </div>
         {onTaskCard && <ActiveTimerBar />}
-        <div className="app-content pb-24 lg:pb-0">
+        <div className={`app-content pb-24 lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <Suspense fallback={null}>
             <Outlet />
@@ -61,6 +66,8 @@ function SignedIn() {
       <BottomTabBar onCreate={() => setSheetOpen(true)} />
       <ReleaseBanner />
       <NewTaskSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      {/* ⌘K и горячие клавиши — для клавиатуры; на телефоне просто не срабатывают */}
+      <AppCommands onCreate={openCreate} />
     </div>
   )
 }

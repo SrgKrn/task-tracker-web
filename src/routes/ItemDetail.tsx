@@ -67,7 +67,7 @@ export function ItemDetail() {
     .filter((c) => c.items.length > 0)
 
   return (
-    <div className="safe-top-page mx-auto flex max-w-lg flex-col gap-4 px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
+    <div className="safe-top-page page mx-auto flex max-w-lg flex-col gap-4 px-5 pt-3.5 pb-8">
       <button
         type="button"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(`/groups/${group.id}`))}

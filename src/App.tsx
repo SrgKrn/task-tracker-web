@@ -1,3 +1,4 @@
+import { SettingsShell } from './components/SettingsMenu'
 import { lazy } from 'react'
 import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { ProtectedLayout } from './components/ProtectedLayout'
@@ -55,14 +56,14 @@ export default function App() {
           <Route path=":id" element={<TaskDetail />} />
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/groups" element={<GroupsAdmin />} />
-        <Route path="/groups/:id" element={<GroupPage />} />
-        <Route path="/items/:id" element={<ItemDetail />} />
+        <Route path="/groups" element={<SettingsShell><GroupsAdmin /></SettingsShell>} />
+        <Route path="/groups/:id" element={<SettingsShell><GroupPage /></SettingsShell>} />
+        <Route path="/items/:id" element={<SettingsShell><ItemDetail /></SettingsShell>} />
         <Route path="/sections" element={<Navigate to="/groups" replace />} />
         <Route path="/projects" element={<Navigate to="/groups" replace />} />
         <Route path="/sections/:id" element={<LegacyItemRedirect />} />
         <Route path="/projects/:id" element={<LegacyItemRedirect />} />
-        <Route path="/statuses" element={<StatusesAdmin />} />
+        <Route path="/statuses" element={<SettingsShell><StatusesAdmin /></SettingsShell>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
         <Route path="/settings/notifications" element={<NotificationSettings />} />
@@ -71,7 +72,7 @@ export default function App() {
         <Route path="/settings/drive" element={<DriveSettings />} />
         <Route path="/settings/plan" element={<PlanSettings />} />
         <Route path="/settings/export" element={<ExportSettings />} />
-        <Route path="/changelog" element={<Changelog />} />
+        <Route path="/changelog" element={<SettingsShell><Changelog /></SettingsShell>} />
       </Route>
     </Routes>
   )

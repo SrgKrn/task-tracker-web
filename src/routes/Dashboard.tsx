@@ -221,11 +221,11 @@ export function Dashboard() {
   })()
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
+    <div className="page page-wide mx-auto flex max-w-lg flex-col">
       {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
       <div className="safe-top">
-      <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3">
-        <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:pb-5">
+        <div className="flex items-end justify-between gap-3 lg:order-1">
           <div className="flex flex-col gap-0.5">
             <Overline>
               {shortDate(from)} — {shortDate(to)}
@@ -245,6 +245,7 @@ export function Dashboard() {
             короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}
         <Segmented<PresetKey>
           stretch
+          className="lg:order-2 lg:w-96"
           value={preset}
           onChange={setPreset}
           options={[
@@ -253,7 +254,7 @@ export function Dashboard() {
           ]}
         />
         {preset === 'custom' && (
-          <div className="flex items-center gap-2 lg:max-w-xs">
+          <div className="flex items-center gap-2 lg:order-3 lg:basis-full lg:justify-end">
             <DatePicker
               small
               className="flex-1"
@@ -292,7 +293,8 @@ export function Dashboard() {
       )}
 
       {!loading && (
-        <>
+        // десктоп: слева кольцо, дни и разрезы, справа темп и норма (dash-grid в index.css)
+        <div className="dash-grid">
           {/* кольцо периода */}
           <div className="flex items-center gap-[18px] border-b border-divider px-5 pb-[18px]">
             <Ring
@@ -338,7 +340,7 @@ export function Dashboard() {
           {/* по дням периода: выходные бледнее, сегодня — акцентом, будущее пустое */}
           {days.length > 1 && (
             <div className="px-5 pt-3.5">
-              <div className="relative flex h-14 items-end gap-[2px]" aria-label="Часы по дням периода">
+              <div className="relative flex h-14 items-end gap-[2px] lg:h-28" aria-label="Часы по дням периода">
                 {/* пунктир нормы дня: видно, где был провал, а где переработка */}
                 {dailyTarget && (
                   <span
@@ -392,6 +394,7 @@ export function Dashboard() {
             </div>
           )}
 
+          <div className="dash-aside">
           {/* темп: прогноз выхода периода, остаток часов и рабочих дней */}
           {pace && (
             <div className="px-5 pt-3">
@@ -456,6 +459,8 @@ export function Dashboard() {
             </div>
           )}
 
+          </div>
+
           {groupBy && model.groups.length > 1 && (
             <div className="sc flex overflow-x-auto px-5 pt-3.5 pb-2.5">
               <Segmented
@@ -514,7 +519,7 @@ export function Dashboard() {
           )}
             {rows.length === 0 && <EmptyState title="Пока пусто">За этот период нет ни плана, ни учёта.</EmptyState>}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

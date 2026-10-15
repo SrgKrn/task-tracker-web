@@ -1,29 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { NotificationsCard, TelegramCard, ThemeCard } from '../components/AppPreferences'
 import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
+import { SettingsMenu, SettingsShell } from '../components/SettingsMenu'
 import {
   ArrowLeft,
-  Bell,
-  Calendar as CalendarIcon,
-  Check,
-  ChevronRight,
-  Download,
   Drive,
-  Drive as DriveIcon,
-  Send,
-  Sparkle,
 } from '../components/Icon'
 import { Button, ListGroup, Overline, Segmented, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
-import { useGroupModel } from '../lib/groups'
-import { usePush, type PushState } from '../lib/push'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
-import { useCalendarSources } from '../lib/queries/calendar'
-import { useTelegramStatus } from '../lib/telegram'
-import { useTheme, type ThemeChoice } from '../lib/theme'
 import type { ReportOptions } from '../lib/report'
 import { useGroupItems, useGroups } from '../lib/queries/groups'
 import { loadReport } from '../lib/queries/report'
@@ -35,75 +23,10 @@ import { useSaveDriveReportsFolder, useSaveUserSettings, useUserSettings } from 
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
-import { formatHoursRu } from '../lib/time'
 
 function firstOfMonthStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-/* ── меню «Ещё» ─────────────────────────────────────────────────── */
-
-/**
- * Плитка со значком слева от строки меню — одинаковая нейтральная у всех: разноцветные
- * плитки (зелёная у статусов, латунные у остальных) спорили с цветами этапов и акцентом.
- */
-function Glyph({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-text-secondary">
-      {children}
-    </span>
-  )
-}
-
-const GroupsGlyph = (
-  <span className="relative h-3.5 w-3.5">
-    <span className="absolute top-0 left-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid currentColor' }} />
-    <span className="absolute right-0 bottom-0 h-2 w-2 rounded-[2px]" style={{ border: '1.5px solid currentColor' }} />
-  </span>
-)
-const StatusGlyph = <Check size={15} />
-const ThemeGlyph = (
-  <span
-    className="h-3.5 w-3.5 rounded-full"
-    style={{ border: '1.5px solid currentColor', background: 'linear-gradient(90deg, currentColor 50%, transparent 50%)' }}
-  />
-)
-const PlanGlyph = (
-  <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ border: '1.5px solid currentColor' }}>
-    <span className="h-1 w-1 rounded-full bg-current" />
-  </span>
-)
-
-/** Группа строк меню — одна карточка, строки разделены линией, а не отдельными плашками. */
-function MenuGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-5 flex flex-col gap-2">
-      <Overline className="px-0.5">{title}</Overline>
-      <ListGroup>{children}</ListGroup>
-    </section>
-  )
-}
-
-function MenuRow({
-  to,
-  glyph,
-  title,
-  value,
-}: {
-  to: string
-  glyph: React.ReactNode
-  title: string
-  value?: string
-}) {
-  return (
-    <Link to={to} className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 active:bg-surface-sunken lg:hover:bg-surface-hover">
-      {glyph}
-      <span className="min-w-0 flex-1 truncate text-base text-text">{title}</span>
-      {value && <span className="max-w-[45%] truncate text-sm text-text-secondary">{value}</span>}
-      <ChevronRight size={15} className="shrink-0 text-text-secondary" />
-    </Link>
-  )
 }
 
 /** Экран одного пункта «Ещё»: назад в меню, заголовок и сама настройка. */
@@ -114,14 +37,17 @@ function SettingsPage({ title, children }: { title: string; children: React.Reac
     window.scrollTo(0, 0)
   }, [])
   return (
-    <div className="safe-top-page mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8 lg:mx-0 lg:max-w-2xl">
-      <Button variant="ghost" className="-ml-3 self-start" onClick={() => navigate('/settings')}>
-        <ArrowLeft size={16} />
-        Ещё
-      </Button>
-      <h1 className="mb-2 text-xl font-semibold tracking-[-0.01em] text-text">{title}</h1>
-      {children}
-    </div>
+    <SettingsShell>
+      <div className="safe-top-page page mx-auto flex max-w-lg flex-col gap-[9px] px-5 pt-3.5 pb-8">
+        {/* на десктопе меню и так слева — кнопка «назад» не нужна */}
+        <Button variant="ghost" className="-ml-3 self-start lg:hidden" onClick={() => navigate('/settings')}>
+          <ArrowLeft size={16} />
+          Ещё
+        </Button>
+        <h1 className="mb-2 text-xl font-semibold tracking-[-0.01em] text-text">{title}</h1>
+        {children}
+      </div>
+    </SettingsShell>
   )
 }
 
@@ -466,105 +392,17 @@ function ExportSection() {
   )
 }
 
-const THEME_LABEL: Record<ThemeChoice, string> = { dark: 'Тёмная', light: 'Светлая', system: 'Как в системе' }
-const PUSH_LABEL: Record<PushState, string> = {
-  on: 'Включены',
-  off: 'Выключены',
-  denied: 'Запрещены',
-  'needs-install': 'Нужна установка',
-  unsupported: 'Недоступны',
-}
-
 /**
  * «Ещё» — меню: раньше все настройки лежали на одной странице, и она была перегружена.
  * Справа у пунктов — текущее значение, чтобы не открывать каждый ради проверки.
  */
 export function Settings() {
   const { session } = useAuth()
-  const model = useGroupModel()
-  const { data: statuses = [] } = useStatuses()
-  const theme = useTheme()
-  const push = usePush()
-  const { data: telegram } = useTelegramStatus()
-  const { data: calendars = [] } = useCalendarSources()
-  const { data: google } = useGoogleStatus()
-  const { data: userSettings } = useUserSettings()
 
-  const plan = userSettings?.planned_hours_per_day
-    ? `${formatHoursRu(Number(userSettings.planned_hours_per_day))} ч в день`
-    : userSettings?.planned_hours_per_month
-      ? `${formatHoursRu(Number(userSettings.planned_hours_per_month))} ч в месяц`
-      : 'Не задан'
-  const tg = telegram?.linked
-    ? telegram.linked.username
-      ? `@${telegram.linked.username}`
-      : 'Подключён'
-    : telegram?.configured
-      ? 'Не подключён'
-      : undefined
-
-  return (
-    <div className="safe-top-page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4 lg:mx-0 lg:max-w-2xl">
-      <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Ещё</h1>
-
-      {/* раньше «Группы → Группы» и «Этапы задач → Статусы» — по разделу на пункт */}
-      <MenuGroup title="Структура">
-        <MenuRow
-          to="/groups"
-          glyph={<Glyph>{GroupsGlyph}</Glyph>}
-          title="Группы"
-          value={model.groups.map((g) => g.name).join(', ') || 'Нет групп'}
-        />
-        <MenuRow to="/statuses" glyph={<Glyph>{StatusGlyph}</Glyph>} title="Этапы" value={String(statuses.length)} />
-      </MenuGroup>
-
-      <MenuGroup title="Настройки">
-        <MenuRow to="/settings/appearance" glyph={<Glyph>{ThemeGlyph}</Glyph>} title="Оформление" value={THEME_LABEL[theme]} />
-        <MenuRow
-          to="/settings/notifications"
-          glyph={<Glyph><Bell size={15} /></Glyph>}
-          title="Уведомления"
-          value={push.state ? PUSH_LABEL[push.state] : undefined}
-        />
-      </MenuGroup>
-
-      <MenuGroup title="Интеграции">
-        <MenuRow to="/settings/telegram" glyph={<Glyph><Send size={15} /></Glyph>} title="Telegram" value={tg} />
-        <MenuRow
-          to="/settings/calendar"
-          glyph={<Glyph><CalendarIcon size={15} /></Glyph>}
-          title="Google Календарь"
-          value={
-            calendars.length
-              ? calendars.some((c) => c.last_error)
-                ? 'Ошибка'
-                : calendars.find((c) => c.kind === 'google')?.name || 'Подключён'
-              : 'Не подключён'
-          }
-        />
-        <MenuRow
-          to="/settings/drive"
-          glyph={<Glyph><DriveIcon size={15} /></Glyph>}
-          title="Google Диск"
-          value={google?.linked?.drive ? google.linked.email || 'Подключён' : google?.configured ? 'Не подключён' : undefined}
-        />
-      </MenuGroup>
-
-      <MenuGroup title="Планы и аналитика">
-        <MenuRow to="/settings/plan" glyph={<Glyph>{PlanGlyph}</Glyph>} title="План часов" value={plan} />
-        <MenuRow to="/settings/export" glyph={<Glyph><Download size={15} /></Glyph>} title="Экспорт отчёта" value="PDF и Excel" />
-      </MenuGroup>
-
-      <MenuGroup title="О приложении">
-        <MenuRow
-          to="/changelog"
-          glyph={<Glyph><Sparkle size={15} /></Glyph>}
-          title="История изменений"
-          value={`Версия ${LATEST_RELEASE.version}`}
-        />
-      </MenuGroup>
-
-      <MenuGroup title="Аккаунт">
+  const account = (
+    <section className="mt-5 flex flex-col gap-2">
+      <Overline className="px-0.5 lg:hidden">Аккаунт</Overline>
+      <ListGroup>
         <div className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5">
           {/* инициал вместо пустого серого круга */}
           <span
@@ -581,17 +419,33 @@ export function Settings() {
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="flex min-h-[52px] items-center px-3.5 text-left text-base font-medium text-danger-text active:bg-surface-sunken"
+          className="flex min-h-[52px] items-center px-3.5 text-left text-base font-medium text-danger-text active:bg-surface-sunken lg:hover:bg-surface-hover"
         >
           Выйти
         </button>
-      </MenuGroup>
+      </ListGroup>
+    </section>
+  )
 
-      <span className="mt-4 pb-1 text-center font-mono text-xs text-text-secondary">
-        Версия {LATEST_RELEASE.version} · сборка от{' '}
-        {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-      </span>
-    </div>
+  return (
+    <SettingsShell>
+      <div className="safe-top-page page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4">
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">
+          <span className="lg:hidden">Ещё</span>
+          <span className="hidden lg:inline">Аккаунт</span>
+        </h1>
+        {/* на десктопе пункты — в колонке слева, здесь только аккаунт */}
+        <div className="flex flex-col lg:hidden">
+          <SettingsMenu />
+        </div>
+        {account}
+
+        <span className="mt-4 pb-1 text-center font-mono text-xs text-text-secondary lg:text-left">
+          Версия {LATEST_RELEASE.version} · сборка от{' '}
+          {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+    </SettingsShell>
   )
 }
 
