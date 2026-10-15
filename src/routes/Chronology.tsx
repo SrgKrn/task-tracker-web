@@ -396,7 +396,12 @@ function GroupRow({
 function Ribbon({ day, look }: { day: ChronoDay; look: Lookup }) {
   if (!day.ribbon.length) return null
   const { from, to } = day.scale
-  const ticks = [from, from + (to - from) / 4, from + (to - from) / 2, from + ((to - from) * 3) / 4, to].map(Math.round)
+  const span = to - from
+  const hours = Array.from({ length: span + 1 }, (_, i) => from + i)
+  // каждый час подписан; на растянутой шкале (работа за краем 8–20) числа на телефоне
+  // наезжают друг на друга — тогда подпись через час, засечки всё равно на каждом
+  const step = span > 14 ? 2 : 1
+  const at = (h: number) => `${((h - from) / span) * 100}%`
   return (
     <div className="flex flex-col gap-1" aria-hidden>
       <div className="relative h-3.5 overflow-hidden rounded-xs bg-surface-sunken">
@@ -414,11 +419,28 @@ function Ribbon({ day, look }: { day: ChronoDay; look: Lookup }) {
             />
           )
         })}
-      </div>
-      <div className="flex justify-between font-mono text-xs text-text-tertiary">
-        {ticks.map((t, i) => (
-          <span key={i}>{t}</span>
+        {/* засечки часов поверх полосы — видно, где какой час и внутри сессии */}
+        {hours.slice(1, -1).map((h) => (
+          <span key={h} className="absolute inset-y-0 w-px opacity-60" style={{ left: at(h), background: 'var(--bg)' }} />
         ))}
+      </div>
+      <div className="relative h-4 font-mono text-xs text-text-tertiary">
+        {hours.map((h, i) =>
+          // последний час подписан всегда; если он не попал в шаг — без соседней подписи слева
+          i === hours.length - 1 || ((h - from) % step === 0 && !(span % step !== 0 && i === hours.length - 2)) ? (
+            <span
+              key={h}
+              className="absolute top-0"
+              style={{
+                left: at(h),
+                // крайние подписи — по краю полосы, остальные — по центру своего часа
+                transform: i === 0 ? 'none' : i === hours.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+              }}
+            >
+              {h}
+            </span>
+          ) : null,
+        )}
       </div>
     </div>
   )
