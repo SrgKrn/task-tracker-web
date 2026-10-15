@@ -21,6 +21,7 @@ import { useClosedTaskCount, useTimeEntriesInRange } from '../lib/queries/dashbo
 import { useGroupModel } from '../lib/groups'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
+import { dayNormFor, normSettingsOf, periodNorm, workdaysBetween } from '../lib/norm'
 import { TASKS, entryMinutes, formatHoursRu, plural } from '../lib/time'
 import { headIdOf } from '../lib/tree'
 
@@ -42,16 +43,6 @@ function shortDate(iso: string): string {
   return formatDayMonth(iso)
 }
 
-/** рабочие дни (пн–пт) в [from, to] включительно; пустой отрезок — 0 */
-function workingDays(from: string, to: string): number {
-  if (from > to) return 0
-  let n = 0
-  for (let d = from; d <= to; d = addDays(d, 1)) {
-    const dow = new Date(`${d}T00:00:00`).getDay()
-    if (dow !== 0 && dow !== 6) n++
-  }
-  return n
-}
 
 export function Dashboard() {
   const [preset, setPreset] = useState<PresetKey>('this_month')
@@ -121,14 +112,12 @@ export function Dashboard() {
     return sum
   }, [heads, factByTask])
 
-  const daysInPeriod = daysBetweenInclusive(from, to)
-  const dailyTarget = userSettings?.planned_hours_per_day ?? null
-  const monthlyTarget = userSettings?.planned_hours_per_month ?? null
-  const budgetForPeriod = dailyTarget
-    ? dailyTarget * daysInPeriod
-    : monthlyTarget
-      ? monthlyTarget * (daysInPeriod / daysInCalendarMonth(from))
-      : null
+  // норма — по рабочим дням из «Ещё → План часов», а не по всем дням периода
+  const norm = normSettingsOf(userSettings)
+  const workDays = norm.workDays
+  const workdaysInPeriod = workdaysBetween(from, to, workDays)
+  const budgetForPeriod = periodNorm(from, to, norm)
+  const dailyTarget = dayNormFor(from, norm)
 
   const sumPct = totalPlanHours > 0 ? Math.round((totalFactHours / totalPlanHours) * 100) : 0
 
@@ -213,10 +202,11 @@ export function Dashboard() {
    * Только для периода, который идёт сейчас, — у прошедшего прогнозировать нечего.
    */
   const pacePlan = totalPlanHours > 0 ? totalPlanHours : (budgetForPeriod ?? 0)
-  const pace = useMemo(() => {
+  // расчёт копеечный — без useMemo, иначе React Compiler пропускает весь компонент
+  const pace = (() => {
     if (today < from || today > to || pacePlan <= 0) return null
-    const passed = workingDays(from, today)
-    const left = workingDays(addDays(today, 1), to)
+    const passed = workdaysBetween(from, today, workDays)
+    const left = workdaysBetween(addDays(today, 1), to, workDays)
     if (passed === 0) return null
     const perDay = totalFactHours / passed
     const forecast = totalFactHours + perDay * left
@@ -228,7 +218,7 @@ export function Dashboard() {
       left,
       needPerDay: left > 0 ? remaining / left : null,
     }
-  }, [today, from, to, pacePlan, totalFactHours])
+  })()
 
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:max-w-3xl">
@@ -432,9 +422,9 @@ export function Dashboard() {
                 <div className="flex flex-col">
                   <Overline>Норма периода</Overline>
                   <span className="text-sm text-text-secondary">
-                    {dailyTarget
-                      ? `${formatHoursRu(dailyTarget)} ч × ${daysInPeriod} дн. — личная цель из «Ещё → План часов»`
-                      : 'Месячная цель из «Ещё → План часов», пропорционально дням периода'}
+                    {norm.perMonth
+                      ? `${formatHoursRu(norm.perMonth)} ч в месяц · в периоде ${plural(workdaysInPeriod, WORKDAYS)}`
+                      : `${formatHoursRu(norm.perDay ?? 0)} ч в день × ${plural(workdaysInPeriod, WORKDAYS)}`}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">

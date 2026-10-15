@@ -1,6 +1,7 @@
 import { buildReport, previousPeriod, type ReportData, type ReportOptions } from '../report'
 import { supabase } from '../supabaseClient'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from '../types'
+import { normSettingsOf } from '../norm'
 
 /** местная полночь дня YYYY-MM-DD в ISO — граница для полей timestamptz */
 function localMidnightIso(iso: string, addDays = 0): string {
@@ -66,7 +67,7 @@ export async function loadReport(args: {
         .range(a, b),
     ),
     supabase.from('time_entries').select('effective_date').order('effective_date').limit(1).maybeSingle(),
-    supabase.from('user_settings').select('planned_hours_per_day, planned_hours_per_month').maybeSingle(),
+    supabase.from('user_settings').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week').maybeSingle(),
   ])
   if (first.error) throw first.error
   if (settings.error) throw settings.error
@@ -84,6 +85,7 @@ export async function loadReport(args: {
     firstEntryDate: (first.data as { effective_date: string } | null)?.effective_date ?? null,
     perDay: settings.data?.planned_hours_per_day != null ? Number(settings.data.planned_hours_per_day) : null,
     perMonth: settings.data?.planned_hours_per_month != null ? Number(settings.data.planned_hours_per_month) : null,
+    workDays: normSettingsOf(settings.data).workDays,
     generatedAt: new Date(),
     options,
   })

@@ -6,6 +6,7 @@ import { currentWeekRange, todayStr } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useTasks } from '../lib/queries/tasks'
 import { useUserSettings } from '../lib/queries/userSettings'
+import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
 
@@ -35,7 +36,7 @@ function TaskWorkspaceEmpty() {
     [entries],
   )
 
-  const dayNorm = userSettings?.planned_hours_per_day ?? DEFAULT_DAY_NORM
+  const dayNorm = dayNormFor(today, normSettingsOf(userSettings)) ?? DEFAULT_DAY_NORM
   const openCount = tasks.filter((t) => !t.parent_id).length
 
   return (

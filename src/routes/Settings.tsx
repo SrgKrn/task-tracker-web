@@ -15,7 +15,7 @@ import {
   Send,
   Sparkle,
 } from '../components/Icon'
-import { Button, ListGroup, Overline, fieldClass } from '../components/ui'
+import { Button, ListGroup, Overline, Segmented, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
@@ -34,6 +34,7 @@ import { useTasks } from '../lib/queries/tasks'
 import { useSaveDriveReportsFolder, useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
+import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
 import { formatHoursRu } from '../lib/time'
 
 function firstOfMonthStr(): string {
@@ -124,6 +125,15 @@ function SettingsPage({ title, children }: { title: string; children: React.Reac
   )
 }
 
+const WORK_DAY_OPTIONS = [3, 4, 5, 6, 7].map((n) => ({ value: String(n), label: String(n) }))
+const WORK_DAY_HINT: Record<number, string> = {
+  3: 'Пн–ср',
+  4: 'Пн–чт',
+  5: 'Пн–пт, суббота и воскресенье — выходные',
+  6: 'Пн–сб, воскресенье — выходной',
+  7: 'Без выходных',
+}
+
 function BudgetForm() {
   const { data: settings } = useUserSettings()
   const saveSettings = useSaveUserSettings()
@@ -131,8 +141,10 @@ function BudgetForm() {
 
   const [perDay, setPerDay] = useState('')
   const [perMonth, setPerMonth] = useState('')
+  const [workDays, setWorkDays] = useState(DEFAULT_WORK_DAYS)
 
   useEffect(() => {
+    setWorkDays(normSettingsOf(settings).workDays)
     setPerDay(settings?.planned_hours_per_day != null ? String(settings.planned_hours_per_day) : '')
     setPerMonth(settings?.planned_hours_per_month != null ? String(settings.planned_hours_per_month) : '')
   }, [settings])
@@ -144,7 +156,7 @@ function BudgetForm() {
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs leading-[1.5] text-text-secondary">
-          Норма дня для кольца на «Сегодня» и сравнение с фактом в сводке. Приоритет у дневной цели.
+          День — для кольца на «Сегодня». Месяц — норма периода в сводке и отчёте; без него норма — день × рабочие дни.
         </span>
       </div>
       <div className="flex gap-[9px]">
@@ -171,6 +183,16 @@ function BudgetForm() {
           />
         </div>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-text-secondary">Рабочих дней в неделе</span>
+        <Segmented
+          value={String(workDays)}
+          onChange={(v) => setWorkDays(Number(v))}
+          options={WORK_DAY_OPTIONS}
+          stretch
+        />
+        <span className="text-xs text-text-secondary">{WORK_DAY_HINT[workDays] ?? ''}</span>
+      </div>
       <button
         type="button"
         onClick={() =>
@@ -178,6 +200,7 @@ function BudgetForm() {
             {
               planned_hours_per_day: perDay.trim() ? Number(perDay) : null,
               planned_hours_per_month: perMonth.trim() ? Number(perMonth) : null,
+              work_days_per_week: workDays,
             },
             { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess('Сохранено') },
           )

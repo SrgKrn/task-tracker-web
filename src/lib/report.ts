@@ -1,6 +1,7 @@
 import { buildGroupModel } from './groups'
 import { entryNote } from './notes'
 import { formatDayMonth, overlapsPeriod, toDateString } from './period'
+import { dayNormFor, DEFAULT_WORK_DAYS, isWorkday, periodNorm } from './norm'
 import { entryMinutes } from './time'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
 
@@ -35,6 +36,8 @@ export interface ReportInput {
   firstEntryDate: string | null
   perDay: number | null
   perMonth: number | null
+  /** рабочих дней в неделе (1–7, с понедельника); по умолчанию пять */
+  workDays?: number
   /** момент сборки; его дата — «сегодня», по ней видно, что период ещё идёт */
   generatedAt: Date
   options: ReportOptions
@@ -227,10 +230,6 @@ function daysOf(from: string, to: string): string[] {
   return out
 }
 
-function isWeekend(iso: string): boolean {
-  const dow = parseDate(iso).getDay()
-  return dow === 0 || dow === 6
-}
 
 function lastDayOfMonth(iso: string): string {
   const d = parseDate(iso)
@@ -440,17 +439,16 @@ export function buildReport(input: ReportInput): ReportData {
 
   // ── норма и цель
   const days = daysOf(from, to)
+  // норма — по рабочим дням из настроек (src/lib/norm.ts), как в «Сводке»
+  const norm = { perDay: input.perDay, perMonth: input.perMonth, workDays: input.workDays ?? DEFAULT_WORK_DAYS }
+  const isWeekend = (iso: string) => !isWorkday(iso, norm.workDays)
   const weekdays = days.filter((d) => !isWeekend(d)).length
-  const weekdaysInMonth = daysOf(from.slice(0, 8) + '01', lastDayOfMonth(from)).filter((d) => !isWeekend(d)).length
-  const dayNorm = input.perDay ?? (input.perMonth ? input.perMonth / weekdaysInMonth : null)
+  const dayNorm = dayNormFor(from, norm)
+  const targetHours = periodNorm(from, to, norm)
   const target =
-    whole && input.perMonth
-      ? { hours: input.perMonth, label: 'месячной цели' }
-      : input.perDay
-        ? { hours: input.perDay * weekdays, label: 'нормы' }
-        : input.perMonth
-          ? { hours: (input.perMonth * weekdays) / weekdaysInMonth, label: 'цели' }
-          : null
+    targetHours === null
+      ? null
+      : { hours: targetHours, label: whole && input.perMonth ? 'месячной цели' : input.perMonth ? 'цели' : 'нормы' }
 
   // ── по дням
   const byDay = new Map<string, { net: number; timer: number; added: number; removed: number }>()

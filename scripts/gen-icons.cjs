@@ -1,5 +1,6 @@
-// PWA icon generator: terracotta Semternity mark (ring + dot) on graphite, full-bleed square
-// (design system 0.22+: mark = dark-theme --accent #E8865E, background = dark --bg #121311)
+// PWA icon generator: terracotta Semternity mark (ring + dot) on warm off-white, full-bleed square
+// (0.28+: mark = light-theme --accent #B4532A, background = light --bg #F7F6F2;
+//  до 0.28 знак был светлой терракотой на графите — тёмная версия осталась в brand/)
 // (iOS applies its own corner rounding/mask, so no rounding is baked in here).
 // Rendered by supersampled distance-field hit-testing + box-downsample antialiasing,
 // so no canvas/browser/native deps are needed — just zlib for PNG compression.
@@ -54,8 +55,8 @@ function encodePng(size, rgbBuffer) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idatData), chunk('IEND', Buffer.alloc(0))])
 }
 
-const BG = [18, 19, 17] // #121311 — --bg тёмной темы
-const BRASS = [232, 134, 94] // #E8865E — --accent тёмной темы (терракота)
+const LIGHT = { bg: [247, 246, 242], mark: [180, 83, 42] } // #F7F6F2 / #B4532A — светлая тема
+const DARK = { bg: [18, 19, 17], mark: [232, 134, 94] } // #121311 / #E8865E — тёмная тема
 
 /**
  * Знак Semternity: незамкнутое кольцо с одной точкой в разрыве.
@@ -86,6 +87,10 @@ function hitsMark(x, y, size, scale) {
     const GAP = 30 // половина разрыва в градусах
     if (Math.abs(deg) > GAP) return true
   }
+  // скруглённые концы у разрыва — как stroke-linecap="round" в favicon.svg и Logo
+  const capX = r * Math.sin((30 * Math.PI) / 180)
+  const capY = -r * Math.cos((30 * Math.PI) / 180)
+  if (Math.hypot(Math.abs(dx) - capX, dy - capY) <= sw / 2) return true
 
   // внутреннее кольцо — тонкий отголосок внешнего
   if (Math.abs(dist - innerR) <= innerSw / 2) return true
@@ -96,7 +101,8 @@ function hitsMark(x, y, size, scale) {
   return false
 }
 
-function renderIcon(size, { scale = 1 } = {}) {
+function renderIcon(size, { scale = 1, theme = LIGHT } = {}) {
+  const { bg: BG, mark: MARK } = theme
   const SS = 4 // supersample factor for antialiasing
   const rgb = Buffer.alloc(size * size * 3)
   for (let y = 0; y < size; y++) {
@@ -112,7 +118,7 @@ function renderIcon(size, { scale = 1 } = {}) {
       const alpha = hits / (SS * SS)
       const idx = (y * size + x) * 3
       for (let c = 0; c < 3; c++) {
-        rgb[idx + c] = Math.round(BG[c] + (BRASS[c] - BG[c]) * alpha)
+        rgb[idx + c] = Math.round(BG[c] + (MARK[c] - BG[c]) * alpha)
       }
     }
   }
@@ -131,4 +137,11 @@ fs.writeFileSync(path.join(outDir, 'apple-touch-icon.png'), renderIcon(180))
 // maskable: знак ужат до 72% кадра, чтобы пережить круглую/скруглённую маску Android
 fs.writeFileSync(path.join(outDir, 'icon-maskable-512.png'), renderIcon(512, { scale: 0.72 }))
 
-console.log('Semternity mark icons written to public/')
+// аватар для Telegram-бота: 640×640, Telegram обрезает его по кругу — знак ужат, как maskable
+const brandDir = path.join(__dirname, '..', 'brand')
+fs.mkdirSync(brandDir, { recursive: true })
+fs.writeFileSync(path.join(brandDir, 'semternity-light-640.png'), renderIcon(640, { scale: 0.8 }))
+fs.writeFileSync(path.join(brandDir, 'semternity-dark-640.png'), renderIcon(640, { scale: 0.8, theme: DARK }))
+fs.writeFileSync(path.join(brandDir, 'semternity-light-1024.png'), renderIcon(1024))
+
+console.log('Semternity mark icons written to public/ and brand/')

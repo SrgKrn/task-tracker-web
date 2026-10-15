@@ -25,6 +25,7 @@ import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { useUserSettings } from '../lib/queries/userSettings'
+import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
@@ -82,7 +83,7 @@ export function Today() {
 
   const liveHours = activeTimer ? elapsedHours(activeTimer.started_at) : 0
   const dayFact = (factByDay.get(today) ?? 0) + liveHours
-  const dayNorm = userSettings?.planned_hours_per_day ?? DEFAULT_DAY_NORM
+  const dayNorm = dayNormFor(today, normSettingsOf(userSettings)) ?? DEFAULT_DAY_NORM
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт

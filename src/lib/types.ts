@@ -132,6 +132,8 @@ export interface UserSettings {
   user_id: string
   planned_hours_per_day: number | null
   planned_hours_per_month: number | null
+  /** рабочих дней в неделе с понедельника (5 — пн–пт): по ним считается норма периода */
+  work_days_per_week: number
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null

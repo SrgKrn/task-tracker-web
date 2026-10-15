@@ -16,7 +16,11 @@ export function useUserSettings() {
 export function useSaveUserSettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { planned_hours_per_day: number | null; planned_hours_per_month: number | null }) => {
+    mutationFn: async (input: {
+      planned_hours_per_day: number | null
+      planned_hours_per_month: number | null
+      work_days_per_week: number
+    }) => {
       const {
         data: { user },
       } = await supabase.auth.getUser()

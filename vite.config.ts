@@ -29,8 +29,8 @@ export default defineConfig({
         short_name: 'Semternity',
         description: 'Трекер задач и времени',
         // фон тёмной темы дизайн-системы (--bg): заставка Android при запуске
-        theme_color: '#121311',
-        background_color: '#121311',
+        theme_color: '#F7F6F2',
+        background_color: '#F7F6F2',
         display: 'standalone',
         start_url: '/',
         lang: 'ru',
