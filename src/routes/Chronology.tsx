@@ -509,15 +509,17 @@ export function Chronology() {
     return () => io.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, visible.length, data?.pages.length])
 
+  // на компьютере клик по прозрачному полю календарь не открывает — просим явно
   function pickDate() {
-    const el = dateInput.current
-    if (!el) return
-    if (typeof el.showPicker === 'function') el.showPicker()
-    else el.click()
+    try {
+      dateInput.current?.showPicker?.()
+    } catch {
+      // браузер открыл календарь сам или не умеет showPicker — ничего страшного
+    }
   }
 
   return (
-    <div className="safe-top-page page mx-auto flex max-w-lg flex-col gap-4 px-5 pt-3.5 pb-8">
+    <div className="safe-top-page page mx-auto flex max-w-lg flex-col gap-4 overflow-x-clip px-5 pt-3.5 pb-8">
       <div className="flex flex-col gap-1">
         <button
           type="button"
@@ -529,24 +531,21 @@ export function Chronology() {
         </button>
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Хронология</h1>
-          <button
-            type="button"
-            onClick={pickDate}
-            aria-label="Перейти к дате"
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-text"
-          >
+          {/* поле даты лежит поверх значка и само ловит нажатие — так календарь открывается и на
+              iPhone; обрезано кругом: у iOS своя ширина поля, и раньше страница уезжала вбок */}
+          <label className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-strong bg-surface text-text">
             <Calendar size={18} />
+            <span className="sr-only">Перейти к дате</span>
             <input
               ref={dateInput}
               type="date"
               max={today}
               value={anchor}
               onChange={(e) => e.target.value && setAnchor(e.target.value > today ? today : e.target.value)}
-              className="pointer-events-none absolute inset-0 opacity-0"
-              tabIndex={-1}
-              aria-hidden
+              onClick={pickDate}
+              className="absolute inset-0 h-full w-full min-w-0 cursor-pointer appearance-none opacity-0"
             />
-          </button>
+          </label>
         </div>
         {anchor !== today && (
           <button type="button" onClick={() => setAnchor(today)} className="self-start text-sm font-medium text-accent-text">

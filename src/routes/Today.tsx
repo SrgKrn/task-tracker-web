@@ -224,7 +224,7 @@ export function Today() {
           не делала — дата уже над заголовком, аккаунт в «Ещё» */}
       {/* отступ под «чёлку» — на обёртке: класс safe-top перебивает собственный отступ блока */}
       <div className="safe-top">
-      <div className="flex items-center gap-[18px] px-5 pt-5 pb-[18px] lg:pt-6">
+      <div className="relative flex items-start gap-[18px] px-5 pt-5 pb-[18px] lg:pt-6">
         <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-xl font-medium text-text">{formatHoursRu(dayFact)}</span>
@@ -233,17 +233,8 @@ export function Today() {
         </Ring>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {/* дата и вход в хронологию: справа вверху было пусто */}
-          <div className="-my-2 flex items-center justify-between gap-2">
-            <Overline>{formatTodayLabel()}</Overline>
-            <Link
-              to="/history"
-              aria-label="Хронология: учёт, правки и изменения по дням"
-              className="-mr-1 flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-text lg:hover:bg-surface-hover"
-            >
-              <History size={18} />
-            </Link>
-          </div>
+          {/* справа от даты — место под кнопку хронологии */}
+          <Overline className="pr-10">{formatTodayLabel()}</Overline>
           <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
@@ -268,6 +259,15 @@ export function Today() {
           {/* цитата дня — нажатие открывает факт дня; блок «Время» */}
           <InsightQuote className="mt-0.5 lg:max-w-105" />
         </div>
+
+        {/* вход в хронологию — в углу, вне колонки: не раздвигает строку даты */}
+        <Link
+          to="/history"
+          aria-label="Хронология: учёт, правки и изменения по дням"
+          className="hit-44 absolute top-3.5 right-4 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:top-4.5 lg:hover:bg-surface-hover"
+        >
+          <History size={17} />
+        </Link>
       </div>
       </div>
 
