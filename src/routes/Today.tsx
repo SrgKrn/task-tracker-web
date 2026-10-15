@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DayPlanSheet } from '../components/DayPlanSheet'
-import { InsightCard } from '../components/InsightCard'
+import { InsightQuote } from '../components/InsightCard'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight } from '../components/Icon'
@@ -255,6 +255,8 @@ export function Today() {
               <span className="first-letter:uppercase">{todayCountLabel}</span>
             </span>
           </div>
+          {/* цитата дня — нажатие открывает факт дня; блок «Время» */}
+          <InsightQuote className="mt-0.5 lg:max-w-105" />
         </div>
       </div>
       </div>
@@ -321,8 +323,6 @@ export function Today() {
             )
           })}
         </div>
-        {/* факт дня и цитата: на телефоне — под неделей, на десктопе — в той же колонке */}
-        <InsightCard className="mt-5 lg:mt-4 lg:border-t lg:border-border lg:pt-4" />
       </div>
 
       <div className="min-w-0 lg:order-1">
