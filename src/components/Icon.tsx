@@ -112,3 +112,9 @@ export const PanelLeft = (p: IconProps) => svg(<><rect x="3" y="4" width="18" he
 export const LogOut = (p: IconProps) => svg(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>, p)
 export const Play = (p: IconProps) => svg(<path d="M7 5v14l11-7z" />, p)
 export const Keyboard = (p: IconProps) => svg(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>, p)
+/** хронология: часы со стрелкой назад */
+export const History = (p: IconProps) =>
+  svg(<><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v4h4" /><path d="M12 7v5l3 2" /></>, p)
+export const Pencil = (p: IconProps) =>
+  svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>, p)
+export const Flag = (p: IconProps) => svg(<path d="M5 21V4h11l-2 4 2 4H5" />, p)

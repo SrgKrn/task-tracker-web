@@ -29,6 +29,7 @@ const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.Expo
 const GroupsAdmin = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupsAdmin })))
 const GroupPage = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupPage })))
 const StatusesAdmin = lazy(() => import('./routes/StatusesAdmin').then((m) => ({ default: m.StatusesAdmin })))
+const Chronology = lazy(() => import('./routes/Chronology').then((m) => ({ default: m.Chronology })))
 const Changelog = lazy(() => import('./routes/Changelog').then((m) => ({ default: m.Changelog })))
 
 /** старые ссылки на проект и раздел: значения переехали в группы с теми же id */
@@ -56,6 +57,7 @@ export default function App() {
           <Route path=":id" element={<TaskDetail />} />
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/history" element={<Chronology />} />
         <Route path="/groups" element={<SettingsShell><GroupsAdmin /></SettingsShell>} />
         <Route path="/groups/:id" element={<SettingsShell><GroupPage /></SettingsShell>} />
         <Route path="/items/:id" element={<SettingsShell><ItemDetail /></SettingsShell>} />

@@ -5,7 +5,7 @@ import { DayPlanSheet } from '../components/DayPlanSheet'
 import { InsightQuote } from '../components/InsightCard'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
-import { ArrowRight } from '../components/Icon'
+import { ArrowRight, History } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
 import { Button, ClientDot, ListGroup, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -233,7 +233,17 @@ export function Today() {
         </Ring>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <Overline>{formatTodayLabel()}</Overline>
+          {/* дата и вход в хронологию: справа вверху было пусто */}
+          <div className="-my-2 flex items-center justify-between gap-2">
+            <Overline>{formatTodayLabel()}</Overline>
+            <Link
+              to="/history"
+              aria-label="Хронология: учёт, правки и изменения по дням"
+              className="-mr-1 flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-surface text-text lg:hover:bg-surface-hover"
+            >
+              <History size={18} />
+            </Link>
+          </div>
           <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма

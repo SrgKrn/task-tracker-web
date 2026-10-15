@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Download, Drive as DriveIcon, Send, Sparkle } from './Icon'
+import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Download, Drive as DriveIcon, History, Send, Sparkle } from './Icon'
 import { ListGroup, Overline } from './ui'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
@@ -142,8 +142,9 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
       ],
     },
     {
-      title: 'Планы и аналитика',
+      title: 'Учёт',
       items: [
+        { to: '/history', glyph: <History size={15} />, title: 'Хронология', value: 'по дням' },
         { to: '/settings/plan', glyph: PlanGlyph, title: 'План часов', value: plan },
         { to: '/settings/export', glyph: <Download size={15} />, title: 'Экспорт отчёта', value: 'PDF и Excel' },
       ],
