@@ -4,11 +4,12 @@
 //     (остановить и начать учёт, засчитать встречу);
 //   • расписание — заголовок x-cron-secret: action 'setup' (имя бота, вебхук, команды)
 //     и 'digest' (вечерняя сводка и итоги недели — каждые 15 минут проверяется, кому пора);
-//   • приложение — токен вошедшего пользователя: status, link, test, unlink.
+//   • приложение — токен вошедшего пользователя: status, link, test, unlink, insight (блок «Время»).
 //
 // Токен бота, имя бота и пароль вебхука лежат в app_secrets (RLS без политик),
 // в репозиторий не попадают.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { chooseQuote, collectFacts, pickClientGroup, pickFact, renderBlock, type EntryRow, type TaskInfo } from './insight.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -357,9 +358,136 @@ Deno.serve(async (req) => {
     await tg('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: rows } }).catch(() => {})
   }
 
+  /* ── блок «Время»: факт дня и цитата ──────────────────────────── */
+
+  interface DayInsight {
+    fact: string
+    kind: string
+    quote: { text: string; author: string; source: string | null } | null
+  }
+
+  /** все записи пользователя до дня включительно — постранично: больше 1000 строк база не отдаёт */
+  async function entriesUpTo(userId: string, date: string): Promise<EntryRow[]> {
+    const out: EntryRow[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data } = await db
+        .from('time_entries')
+        .select('task_id, duration_seconds, effective_date, entry_type, started_at')
+        .eq('user_id', userId)
+        .lte('effective_date', date)
+        .order('id')
+        .range(from, from + 999)
+      out.push(...((data ?? []) as EntryRow[]))
+      if (!data || data.length < 1000) return out
+    }
+  }
+
+  /**
+   * Блок дня. Фиксируется при первом показе: утром в приложении (source 'app') факт — о вчерашнем
+   * дне, в вечерних «Итогах» ('digest') — о сегодняшнем; второе место показывает то же самое.
+   * store: false — посчитать, ничего не записывая (проверка dry_run).
+   */
+  async function dayInsight(userId: string, source: 'app' | 'digest', store = true): Promise<DayInsight | null> {
+    const { data: settings } = await db
+      .from('user_settings')
+      .select('timezone, show_time_block, work_days_per_week')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (settings && settings.show_time_block === false) return null
+    const timeZone = settings?.timezone ?? 'Europe/Minsk'
+    const today = localDate(new Date(), timeZone)
+
+    const quoteOf = async (id: number | null) => {
+      if (id === null) return null
+      const { data } = await db.from('quotes').select('text, author, source').eq('id', id).maybeSingle()
+      return data ?? null
+    }
+    const stored = async (): Promise<DayInsight | null> => {
+      const { data } = await db
+        .from('quote_impressions')
+        .select('quote_id, fact_kind, fact_text')
+        .eq('user_id', userId)
+        .eq('shown_on', today)
+        .maybeSingle()
+      return data ? { fact: data.fact_text, kind: data.fact_kind, quote: await quoteOf(data.quote_id) } : null
+    }
+    if (store) {
+      const existing = await stored()
+      if (existing) return existing
+    }
+
+    const date = source === 'digest' ? today : shift(today, -1)
+    const [entries, { data: tasks }, { data: groups }, { data: items }, { data: statuses }, { data: yesterday }] = await Promise.all([
+      entriesUpTo(userId, date),
+      db
+        .from('tasks')
+        .select('id, name, parent_id, planned_hours, start_date, end_date, completed_at, item_ids, status_id')
+        .eq('user_id', userId),
+      db.from('groups').select('id, name, sort_order, show_in_list').eq('user_id', userId).order('sort_order'),
+      db.from('group_items').select('id, name, group_id, color').eq('user_id', userId),
+      db.from('statuses').select('id, is_final').eq('user_id', userId),
+      db.from('quote_impressions').select('fact_kind').eq('user_id', userId).eq('shown_on', shift(today, -1)).maybeSingle(),
+    ])
+    // клиент — значение группы «Проекты» (или той, чьи значения окрашены), а не просто первой
+    const main = pickClientGroup(groups ?? [], (gid) => (items ?? []).filter((i) => i.group_id === gid && i.color).length)
+    const itemById = new Map((items ?? []).map((i) => [i.id, i]))
+    const final = new Set((statuses ?? []).filter((s) => s.is_final).map((s) => s.id))
+    const infos: TaskInfo[] = (tasks ?? []).map((t) => {
+      const item = main ? (t.item_ids as string[]).map((id) => itemById.get(id)).find((i) => i?.group_id === main.id) : undefined
+      return {
+        id: t.id,
+        name: t.name,
+        parent_id: t.parent_id,
+        planned_hours: Number(t.planned_hours),
+        start_date: t.start_date,
+        end_date: t.end_date,
+        // закрытые до журнала статусов (без даты) — тоже не «идущие» спринты
+        completed_at: t.completed_at ?? (t.status_id && final.has(t.status_id) ? '1970-01-01T00:00:00Z' : null),
+        client: item ? { id: item.id, name: item.name } : null,
+      }
+    })
+    const fact = pickFact(
+      collectFacts({
+        date,
+        dayWord: source === 'digest' ? 'Сегодня' : 'Вчера',
+        timeZone,
+        workDaysPerWeek: settings?.work_days_per_week ?? 5,
+        entries,
+        tasks: infos,
+      }),
+      yesterday?.fact_kind ?? null,
+    )
+    if (!fact) return null
+
+    const [{ data: quotes }, { data: seenRows }] = await Promise.all([
+      db.from('quotes').select('id, tags, text, author, source').eq('is_active', true),
+      db.from('quote_impressions').select('quote_id').eq('user_id', userId).not('quote_id', 'is', null),
+    ])
+    const seen = new Set((seenRows ?? []).map((r) => Number(r.quote_id)))
+    const choice = chooseQuote((quotes ?? []).map((x) => ({ id: Number(x.id), tags: x.tags })), seen, fact.kind)
+    const quote = choice ? (quotes ?? []).find((x) => Number(x.id) === choice.id) ?? null : null
+    const result: DayInsight = {
+      fact: fact.text,
+      kind: fact.kind,
+      quote: quote ? { text: quote.text, author: quote.author, source: quote.source } : null,
+    }
+    if (!store) return result
+
+    // увидел все цитаты — новый цикл: прошлые показы забывают цитату, но помнят факт
+    if (choice?.reset) {
+      await db.from('quote_impressions').update({ quote_id: null }).eq('user_id', userId).lt('shown_on', today)
+    }
+    await db.from('quote_impressions').upsert(
+      { user_id: userId, shown_on: today, quote_id: choice?.id ?? null, fact_kind: fact.kind, fact_text: fact.text },
+      { onConflict: 'user_id,shown_on', ignoreDuplicates: true },
+    )
+    // два одновременных открытия: остаётся записанный первым
+    return (await stored()) ?? result
+  }
+
   /* ── сводки ────────────────────────────────────────────────────── */
 
-  async function dailyDigest(userId: string, timezone: string, date: string) {
+  async function dailyDigest(userId: string, timezone: string, date: string, store = true) {
     const world = await loadWorld(db, userId)
     const [{ data: entries }, { data: running }, { data: settings }] = await Promise.all([
       db.from('time_entries').select('task_id, duration_seconds').eq('user_id', userId).eq('effective_date', date),
@@ -442,6 +570,9 @@ Deno.serve(async (req) => {
         `⚑ Срок прошёл: ${overdue.slice(0, 3).map((t) => `«${cut(t.name.trim(), 28)}»`).join(', ')}${overdue.length > 3 ? ` и ещё ${overdue.length - 3}` : ''}`,
       )
     }
+    // блок «Время» — только о сегодняшнем дне: сводка за прошлую дату (dry_run) его не получает
+    const insight = date === localDate(new Date(), timezone) ? await dayInsight(userId, 'digest', store) : null
+    if (insight) lines.push('', renderBlock(insight.fact, insight.quote))
     keyboard.inline_keyboard.push(openApp('/'))
     const worthSending = total !== 0 || meetings.length > 0 || !!running
     return { text: lines.join('\n'), keyboard, worthSending }
@@ -867,7 +998,7 @@ Deno.serve(async (req) => {
         const { data: acc } = await db.from('telegram_accounts').select('timezone').eq('user_id', body.user_id).maybeSingle()
         const tz = acc?.timezone ?? 'Europe/Moscow'
         const date = String(body.date ?? localDate(new Date(), tz))
-        const daily = await dailyDigest(String(body.user_id), tz, date)
+        const daily = await dailyDigest(String(body.user_id), tz, date, false)
         const weekly = await weeklyDigest(String(body.user_id), date)
         const panel = await timerPanel(String(body.user_id))
         return json({ daily, weekly, panel })
@@ -991,6 +1122,9 @@ Deno.serve(async (req) => {
       }
       return json({ ok: true })
     }
+
+    case 'insight':
+      return json({ insight: await dayInsight(user.id, 'app') })
 
     case 'unlink': {
       if (account) {

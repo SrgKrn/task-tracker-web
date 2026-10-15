@@ -4,6 +4,8 @@ import { describeError, UserError, useToast } from '../lib/Toast'
 import { liveNotificationEnabled, setLiveNotificationEnabled, usePush } from '../lib/push'
 import { useTelegramActions, useTelegramLink, useTelegramStatus } from '../lib/telegram'
 import { setTheme, useTheme, type ThemeChoice } from '../lib/theme'
+import { timeZoneOptions } from '../lib/insight'
+import { useSaveTimeBlockSettings, useUserSettings } from '../lib/queries/userSettings'
 
 const card = { background: 'var(--surface)', border: '1px solid var(--border)' }
 
@@ -276,6 +278,52 @@ export function TelegramCard() {
             </button>
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Блок «Время» — факт дня и цитата на «Сегодня» и в «Итогах дня». Пояс общий для аккаунта:
+ * по нему считается, какой день «вчера», серии и лучшие часы.
+ */
+export function TimeBlockCard() {
+  const { data: settings } = useUserSettings()
+  const save = useSaveTimeBlockSettings()
+  const { showError } = useToast()
+  const onError = (e: unknown) => showError(describeError(e))
+  const timezone = settings?.timezone ?? 'Europe/Minsk'
+  const device = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return (
+    <div className="flex flex-col gap-1 rounded-md px-3.5 py-2" style={card}>
+      <Toggle
+        on={settings?.show_time_block !== false}
+        onChange={(v) => save.mutate({ show_time_block: v }, { onError })}
+        title="Показывать блок «Время» в сводке"
+        hint="факт дня о вашем ритме, рекордах и клиентах — и цитата к нему"
+      />
+      <label className="flex min-h-11 items-center justify-between gap-3 py-1">
+        <span className="text-base text-text-secondary">Часовой пояс</span>
+        <select
+          value={timezone}
+          onChange={(e) => save.mutate({ timezone: e.target.value }, { onError })}
+          className="h-9 max-w-[60%] rounded-sm px-2.5 text-base text-text"
+        >
+          {timeZoneOptions(timezone).map((z) => (
+            <option key={z} value={z}>
+              {z.replace(/_/g, ' ')}
+            </option>
+          ))}
+        </select>
+      </label>
+      {device && device !== timezone && (
+        <button
+          type="button"
+          onClick={() => save.mutate({ timezone: device }, { onError })}
+          className="min-h-11 self-start text-sm text-accent-text"
+        >
+          Как на этом устройстве: {device.replace(/_/g, ' ')}
+        </button>
       )}
     </div>
   )

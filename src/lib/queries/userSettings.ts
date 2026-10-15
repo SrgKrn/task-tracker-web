@@ -70,3 +70,24 @@ export function useSaveDriveReportsFolder() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
+
+/** Блок «Время»: показывать ли его и в каком поясе считать дни. Блок дня пересчитается. */
+export function useSaveTimeBlockSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Partial<Pick<UserSettings, 'show_time_block' | 'timezone'>>) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, ...input })
+      if (error) throw error
+    },
+    onMutate: (input) =>
+      qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, ...input } : s)),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['user_settings'] })
+      qc.invalidateQueries({ queryKey: ['day_insight'] })
+    },
+  })
+}

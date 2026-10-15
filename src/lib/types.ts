@@ -134,6 +134,10 @@ export interface UserSettings {
   planned_hours_per_month: number | null
   /** рабочих дней в неделе с понедельника (5 — пн–пт): по ним считается норма периода */
   work_days_per_week: number
+  /** часовой пояс: по нему считаются дни блока «Время» (вчера, серии, лучшие часы) */
+  timezone: string
+  /** показывать блок «Время» — факт дня и цитату — на «Сегодня» и в «Итогах дня» */
+  show_time_block: boolean
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null
