@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { NAV_TABS } from './navTabs'
+import { Avatar } from './Avatar'
+import { useProfile } from '../lib/profile'
 import { LogOut, PanelLeft, Plus, Search } from './Icon'
 import { Kbd, Logo, MOD_KEY } from './ui'
 import { useAuth } from '../lib/AuthContext'
@@ -39,6 +41,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
   }
 
   const email = session?.user.email ?? ''
+  const profile = useProfile()
   const item = (active: boolean) =>
     `flex h-8 items-center gap-2.5 rounded-sm text-sm font-medium transition-colors ${
       collapsed ? 'justify-center px-0' : 'px-2.5'
@@ -112,15 +115,15 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         <Link
           to="/settings"
           className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-sm p-1.5 hover:bg-surface-sunken ${collapsed ? 'justify-center' : ''}`}
-          title={email}
+          title={`Профиль · ${email}`}
         >
-          <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-text uppercase"
-            aria-hidden
-          >
-            {email[0] ?? '?'}
-          </span>
-          {!collapsed && <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">{email}</span>}
+          <Avatar size={28} />
+          {!collapsed && (
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-text">{profile.name}</span>
+              <span className="block truncate text-xs text-text-secondary">{email}</span>
+            </span>
+          )}
         </Link>
         <button
           type="button"

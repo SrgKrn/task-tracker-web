@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { TabFocus } from './Icon'
 import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Download, Drive as DriveIcon, History, Send, Sparkle } from './Icon'
 import { ListGroup, Overline } from './ui'
 import { LATEST_RELEASE } from '../lib/changelog'
@@ -121,6 +122,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           title: 'Методика',
           value: userSettings?.priority_method && userSettings.priority_method !== 'none' ? METHODS[userSettings.priority_method].name : 'Без методики',
         },
+        {
+          to: '/settings/focus',
+          glyph: <TabFocus size={15} />,
+          title: 'Фокус',
+          value: userSettings?.focus_mode === '9030' ? '90/30' : 'Pomodoro',
+        },
       ],
     },
     {
@@ -210,14 +217,14 @@ function SettingsNav() {
   const groups = useMenu()
   const { pathname } = useLocation()
   return (
-    <nav className="flex flex-col gap-4" aria-label="Разделы «Ещё»">
+    <nav className="flex flex-col gap-4" aria-label="Разделы профиля">
       <Link
         to="/settings"
         className={`flex h-8 items-center rounded-sm px-2 text-sm font-medium ${
           pathname === '/settings' ? 'bg-surface-selected text-accent-text' : 'text-text-secondary hover:bg-surface-sunken hover:text-text'
         }`}
       >
-        Аккаунт
+        Профиль
       </Link>
       {groups.map((g) => (
         <section key={g.title} className="flex flex-col gap-0.5">

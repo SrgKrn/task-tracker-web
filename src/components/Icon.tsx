@@ -105,6 +105,26 @@ export const TabMore = (p: IconProps) =>
     p,
   )
 
+/** «Фокус» — таймер: циферблат со стрелкой и кнопкой сверху */
+export const TabFocus = (p: IconProps) =>
+  svg(
+    <>
+      <circle cx="12" cy="13.5" r="7.5" strokeWidth={2.25} />
+      <path d="M12 13.5V9.5" strokeWidth={2.25} />
+      <path d="M9.5 3h5" strokeWidth={2.25} />
+    </>,
+    p,
+  )
+export const Pause = (p: IconProps) =>
+  svg(<><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" /></>, p)
+export const SkipForward = (p: IconProps) =>
+  svg(<><path d="M5 5v14l10-7z" fill="currentColor" stroke="none" /><path d="M18 5v14" strokeWidth={2.5} /></>, p)
+export const Square = (p: IconProps) => svg(<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />, p)
+export const Camera = (p: IconProps) =>
+  svg(<><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.2" /></>, p)
+export const Settings2 = (p: IconProps) =>
+  svg(<><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></>, p)
+
 /** «входит в» — строка спринта над подзадачей */
 export const CornerDownRight = (p: IconProps) =>
   svg(<><path d="m15 10 5 5-5 5" /><path d="M4 4v7a4 4 0 0 0 4 4h12" /></>, p)

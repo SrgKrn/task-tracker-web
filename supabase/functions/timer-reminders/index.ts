@@ -110,9 +110,13 @@ Deno.serve(async (req) => {
   const { data: timers } = await db.from('active_timers').select('user_id, task_id, started_at, reminded_hours')
   const now = Date.now()
   let reminded = 0
+  // учёт в рамках фокуса закончится сам в конце отрезка — «вы ещё работаете?» там лишнее
+  const { data: focusing } = await db.from('focus_runs').select('user_id, task_id').eq('state', 'running').eq('phase_kind', 'work')
+  const inFocus = new Set((focusing ?? []).map((f: { user_id: string; task_id: string | null }) => `${f.user_id}:${f.task_id}`))
   for (const t of timers ?? []) {
     const hours = Math.floor((now - new Date(t.started_at).getTime()) / 3_600_000)
     if (hours < 1 || hours <= t.reminded_hours) continue
+    if (inFocus.has(`${t.user_id}:${t.task_id}`)) continue
     // сначала «застолбить» напоминание: два наложившихся запуска не пришлют его дважды
     const { data: claimed } = await db
       .from('active_timers')
@@ -146,6 +150,27 @@ Deno.serve(async (req) => {
     }
     await telegramTo(t.user_id, `⏱ ${title}\n«${taskName}» — вы всё ещё работаете?`, keyboard)
     reminded++
+  }
+
+  // ── фокус: отрезок кончился, а приложение закрыто. База сама закрывает учёт ровно в
+  // конце рабочего отрезка и ставит перерыв (focus_advance); здесь — только сообщить.
+  // Открытое приложение успевает раньше — тогда переходов здесь нет и пуша не будет.
+  const { data: transitions, error: focusError } = await db.rpc('focus_advance')
+  if (focusError) console.error('focus_advance failed', focusError.message)
+  let focusReminders = 0
+  for (const f of (transitions ?? []) as { user_id: string; task_id: string | null; ended_kind: string; next_kind: string; next_seconds: number }[]) {
+    const minutes = Math.round(f.next_seconds / 60)
+    const { data: task } = f.task_id ? await db.from('tasks').select('name').eq('id', f.task_id).maybeSingle() : { data: null }
+    const taskName = task?.name?.trim()
+    const title = f.ended_kind === 'work' ? `Отрезок закончен — перерыв ${minutes} мин` : 'Перерыв окончен — пора за работу'
+    const body =
+      f.ended_kind === 'work'
+        ? `${taskName ? `«${taskName}» — время записано. ` : ''}Встаньте, отойдите от экрана.`
+        : `Следующий отрезок — ${minutes} мин${taskName ? ` по «${taskName}»` : ''}. Учёт начнётся, когда нажмёте «Начать».`
+    await sendTo(f.user_id, { title, body, url: '/focus', tag: 'semternity-focus' })
+    const keyboard = appUrl ? { inline_keyboard: [[{ text: 'Открыть фокус', url: `${appUrl}/focus` }]] } : undefined
+    await telegramTo(f.user_id, `${f.ended_kind === 'work' ? '☕' : '🎯'} ${title}\n${body}`, keyboard)
+    focusReminders++
   }
 
   // ── встреча из календаря началась, а учёт не идёт
@@ -191,5 +216,5 @@ Deno.serve(async (req) => {
     await telegramTo(ev.user_id, `📅 Началась встреча «${ev.title}»\n${question}`, keyboard, 'notify_meetings')
     meetingReminders++
   }
-  return json({ active: timers?.length ?? 0, reminded, meetingReminders })
+  return json({ active: timers?.length ?? 0, reminded, meetingReminders, focusReminders })
 })

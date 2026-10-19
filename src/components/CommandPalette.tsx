@@ -29,7 +29,10 @@ const PAGES: { to: string; title: string; keywords?: string }[] = [
   { to: '/settings/plan', title: 'План часов', keywords: 'норма' },
   { to: '/settings/export', title: 'Экспорт отчёта', keywords: 'pdf excel' },
   { to: '/settings/appearance', title: 'Оформление', keywords: 'тема' },
-  { to: '/settings', title: 'Ещё', keywords: 'настройки аккаунт' },
+  { to: '/focus', title: 'Фокус', keywords: 'помидор pomodoro 90/30 таймер' },
+  { to: '/settings/method', title: 'Методика', keywords: 'приоритет эйзенхауэр лягушка abcde 1-3-5' },
+  { to: '/settings/profile', title: 'Личные данные', keywords: 'имя фото почта пароль' },
+  { to: '/settings', title: 'Профиль', keywords: 'настройки аккаунт ещё' },
 ]
 
 /** «спр 6» находит «Спринт 6 624»: каждое слово запроса — начало какого-то слова или подстрока */
@@ -223,7 +226,7 @@ const SHORTCUTS: [string[], string][] = [
   [['C'], 'Новая задача'],
   [['J', 'K'], 'Следующая и предыдущая задача в списке'],
   [['S'], 'Начать или остановить учёт открытой задачи'],
-  [['1', '2', '3', '4'], 'Сегодня, Задачи, Сводка, Ещё'],
+  [['1', '2', '3', '4'], 'Сегодня, Задачи, Сводка, Фокус'],
   [['Esc'], 'Закрыть окно или карточку'],
   [['?'], 'Эта подсказка'],
 ]
@@ -290,7 +293,7 @@ export function AppCommands({ onCreate }: { onCreate: () => void }) {
       // по коду клавиши: на русской раскладке «c» — это «с», но клавиша та же
       const key = e.code.startsWith('Key') ? e.code.slice(3).toLowerCase() : e.key
       const digit = e.code.startsWith('Digit') ? e.code.slice(5) : e.key
-      const section = ({ 1: '/', 2: '/tasks', 3: '/dashboard', 4: '/settings' } as Record<string, string>)[digit]
+      const section = ({ 1: '/', 2: '/tasks', 3: '/dashboard', 4: '/focus' } as Record<string, string>)[digit]
 
       if (section) {
         e.preventDefault()

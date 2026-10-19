@@ -1,3 +1,4 @@
+import { ProfileButton } from '../components/Avatar'
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -243,7 +244,7 @@ export function Today() {
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {/* справа от даты — место под кнопку хронологии */}
-          <Overline className="pr-10">{formatTodayLabel()}</Overline>
+          <Overline className="pr-24 lg:pr-10">{formatTodayLabel()}</Overline>
           <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
@@ -273,10 +274,12 @@ export function Today() {
         <Link
           to="/history"
           aria-label="Хронология: учёт, правки и изменения по дням"
-          className="hit-44 absolute top-3.5 right-4 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:top-4.5 lg:hover:bg-surface-hover"
+          className="hit-44 absolute top-3.5 right-16 flex h-9 w-9 lg:right-4 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:top-4.5 lg:hover:bg-surface-hover"
         >
           <History size={17} />
         </Link>
+        {/* профиль — бывшее «Ещё»: аккаунт, структура, методика, интеграции */}
+        <ProfileButton className="absolute top-3.5 right-4" />
       </div>
       </div>
 

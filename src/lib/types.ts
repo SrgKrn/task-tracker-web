@@ -98,6 +98,39 @@ export interface Task {
   updated_at: string
 }
 
+export type FocusMode = 'pomodoro' | '9030'
+export interface FocusSettings {
+  pomodoro?: { work: number; short: number; long: number; cycles: number }
+  deep?: { work: number; rest: number }
+}
+export interface FocusPhase {
+  kind: 'work' | 'break' | 'long'
+  seconds: number
+}
+/** идущая фокус-сессия — одна на пользователя */
+export interface FocusRun {
+  user_id: string
+  task_id: string | null
+  mode: FocusMode
+  plan: FocusPhase[]
+  phase_index: number
+  phase_kind: FocusPhase['kind']
+  /** running — идёт; paused — пауза; ready — перерыв кончился, работа ждёт старта */
+  state: 'running' | 'paused' | 'ready'
+  phase_started_at: string | null
+  phase_ends_at: string | null
+  left_seconds: number | null
+  updated_at: string
+}
+export interface FocusSession {
+  id: number
+  task_id: string | null
+  mode: FocusMode
+  started_at: string
+  ended_at: string
+  completed: boolean
+}
+
 export type PriorityMethod = 'none' | 'eisenhower' | 'frog' | '135' | 'abcde'
 export type Effort = 'big' | 'medium' | 'small'
 export type AbcLetter = 'A' | 'B' | 'C' | 'D' | 'E'
@@ -158,6 +191,12 @@ export interface UserSettings {
   show_time_block: boolean
   /** методика приоритизации — одна на всё приложение */
   priority_method: PriorityMethod
+  /** имя — в приветствии, «Итогах дня» и отчётах */
+  display_name: string | null
+  /** путь фото профиля в бакете avatars */
+  avatar_path: string | null
+  focus_mode: FocusMode
+  focus_settings: FocusSettings
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null

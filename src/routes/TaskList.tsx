@@ -1,3 +1,4 @@
+import { ProfileButton } from '../components/Avatar'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -167,7 +168,7 @@ export function TaskList() {
       {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный pt-* блока */}
       <div className="safe-top">
       <div className="flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <Overline>
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
             <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
@@ -184,6 +185,7 @@ export function TaskList() {
           <SortArrows size={16} />
           {SORT_LABEL[sort]}
         </Button>
+        <ProfileButton />
       </div>
       </div>
 

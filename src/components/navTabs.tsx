@@ -1,4 +1,4 @@
-import { TabMore, TabSummary, TabTasks, TabToday } from './Icon'
+import { TabFocus, TabSummary, TabTasks, TabToday } from './Icon'
 
 /**
  * Разделы приложения — одна конфигурация для нижней панели и бокового меню. Раньше их
@@ -12,12 +12,13 @@ export interface NavTab {
   Icon: typeof TabToday
 }
 
-/** экраны, которые открываются из «Ещё» — вкладка «Ещё» на них подсвечена */
-const MORE_SECTIONS = ['/settings', '/groups', '/items', '/statuses', '/changelog', '/sections', '/projects']
+/** экраны профиля — бывшего «Ещё»: открываются кружком справа вверху, а не вкладкой */
+export const PROFILE_SECTIONS = ['/settings', '/groups', '/items', '/statuses', '/changelog', '/sections', '/projects']
 
 export const NAV_TABS: NavTab[] = [
   { to: '/', label: 'Сегодня', match: (p) => p === '/', Icon: TabToday },
   { to: '/tasks', label: 'Задачи', match: (p) => p.startsWith('/tasks'), Icon: TabTasks },
   { to: '/dashboard', label: 'Сводка', match: (p) => p === '/dashboard', Icon: TabSummary },
-  { to: '/settings', label: 'Ещё', match: (p) => MORE_SECTIONS.some((x) => p.startsWith(x)), Icon: TabMore },
+  // «Фокус» встал на место «Ещё»; настройки — в профиле (кружок справа вверху)
+  { to: '/focus', label: 'Фокус', match: (p) => p === '/focus', Icon: TabFocus },
 ]

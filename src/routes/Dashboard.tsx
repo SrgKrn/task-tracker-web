@@ -1,3 +1,4 @@
+import { ProfileButton } from '../components/Avatar'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
@@ -240,6 +241,7 @@ export function Dashboard() {
             <Download size={16} />
             Отчёт
           </Link>
+          <ProfileButton className="ml-1" />
         </div>
         {/* период — выбор одного из трёх, поэтому сегменты, а не чипы фильтра. Подписи
             короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}

@@ -7,6 +7,8 @@ import { useGroupModel } from '../lib/groups'
 import { useTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStopTimer } from '../lib/queries/timer'
 import { formatClock, sessionHourPct, useTicker } from '../lib/time'
+import { formatCountdown, secondsLeft } from '../lib/focus'
+import { useFocusRun } from '../lib/queries/focus'
 
 /**
  * TimerDock — активная сессия всегда на виду, прикноплена к верху страницы (не к низу,
@@ -21,7 +23,10 @@ export function ActiveTimerBar() {
   const location = useLocation()
   const stopTimer = useStopTimer()
   const { showError } = useToast()
+  const { data: run } = useFocusRun()
   useTicker(!!activeTimer)
+  // учёт идёт в рамках фокуса — показываем, сколько осталось до конца отрезка
+  const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === activeTimer?.task_id ? run : null
 
   if (!activeTimer || !task) return null
   if (location.pathname === `/tasks/${task.id}`) return null
@@ -51,7 +56,7 @@ export function ActiveTimerBar() {
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         {/* в одну строку: название спринта длиннее подписи и переносом раздувало док вдвое */}
         <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--timer-text)]">
-          <span className="shrink-0">Идёт учёт</span>
+          <span className="shrink-0">{focus ? 'Фокус' : 'Идёт учёт'}</span>
           {(parent || label) && <span aria-hidden>·</span>}
           {!parent && <ClientDot color={model.colorOf(task)} size={7} />}
           {(parent || label) && <span className="min-w-0 truncate">{parent ? parent.name : label}</span>}
@@ -59,8 +64,12 @@ export function ActiveTimerBar() {
         <span className="block truncate text-base font-medium text-text">{task.name}</span>
       </Link>
 
-      <Link to={`/tasks/${task.id}`} className="tabular shrink-0 font-mono text-lg font-medium text-[var(--timer-text)]">
-        {formatClock(activeTimer.started_at)}
+      <Link
+        to={focus ? '/focus' : `/tasks/${task.id}`}
+        className="tabular shrink-0 font-mono text-lg font-medium text-[var(--timer-text)]"
+        aria-label={focus ? 'До конца отрезка' : undefined}
+      >
+        {focus ? formatCountdown(secondsLeft(focus)) : formatClock(activeTimer.started_at)}
       </Link>
     </div>
   )

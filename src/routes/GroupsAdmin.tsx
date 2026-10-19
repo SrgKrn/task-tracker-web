@@ -68,7 +68,7 @@ export function GroupsAdmin() {
     <div className="safe-top-page page mx-auto max-w-lg px-5 pt-3.5 pb-8">
       <button onClick={() => navigate('/settings')} className="mb-4 flex items-center gap-2 text-base text-text-secondary lg:hidden">
         <ArrowLeft size={15} />
-        Ещё
+        Профиль
       </button>
       <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">Группы</h1>
       <p className="mb-4 text-sm leading-[1.5] text-text-secondary">

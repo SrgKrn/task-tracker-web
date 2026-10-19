@@ -114,3 +114,22 @@ export function useSavePriorityMethod() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
+
+/** Сохранить часть настроек: имя, фото, режим и длительности фокуса. Экран меняется сразу. */
+export function useSaveSettingsPatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      patch: Partial<Pick<UserSettings, 'display_name' | 'avatar_path' | 'focus_mode' | 'focus_settings'>>,
+    ) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, ...patch })
+      if (error) throw error
+    },
+    onMutate: (patch) => qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, ...patch } : s)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}

@@ -4,7 +4,7 @@ import { NAV_TABS, type NavTab } from './navTabs'
 
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
-  const [today, tasks, summary, more] = NAV_TABS
+  const [today, tasks, summary, focus] = NAV_TABS
 
   const item = (tab: NavTab) => {
     const active = tab.match(location.pathname)
@@ -43,7 +43,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
           </button>
         </span>
         {item(summary)}
-        {item(more)}
+        {item(focus)}
       </div>
     </nav>
   )

@@ -11,6 +11,7 @@ import { OAuthGoogle } from './routes/OAuthGoogle'
 import { TaskDetail } from './routes/TaskDetail'
 import { TaskWorkspace } from './routes/TaskWorkspace'
 import { Today } from './routes/Today'
+import { Focus } from './routes/Focus'
 
 /*
  * Редкие экраны — «Ещё» с настройками, группы, статусы и история изменений — грузятся
@@ -25,6 +26,8 @@ const TelegramSettings = lazy(() => settingsRoute().then((m) => ({ default: m.Te
 const CalendarSettings = lazy(() => settingsRoute().then((m) => ({ default: m.CalendarSettings })))
 const DriveSettings = lazy(() => settingsRoute().then((m) => ({ default: m.DriveSettings })))
 const PlanSettings = lazy(() => settingsRoute().then((m) => ({ default: m.PlanSettings })))
+const ProfileSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ProfileSettings })))
+const FocusSettingsPage = lazy(() => settingsRoute().then((m) => ({ default: m.FocusSettingsPage })))
 const MethodSettings = lazy(() => settingsRoute().then((m) => ({ default: m.MethodSettings })))
 const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ExportSettings })))
 const GroupsAdmin = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupsAdmin })))
@@ -76,6 +79,9 @@ export default function App() {
         <Route path="/settings/plan" element={<PlanSettings />} />
         <Route path="/settings/export" element={<ExportSettings />} />
         <Route path="/settings/method" element={<MethodSettings />} />
+        <Route path="/settings/profile" element={<ProfileSettings />} />
+        <Route path="/settings/focus" element={<FocusSettingsPage />} />
+        <Route path="/focus" element={<Focus />} />
         <Route path="/changelog" element={<SettingsShell><Changelog /></SettingsShell>} />
       </Route>
     </Routes>

@@ -58,7 +58,7 @@ export function PicklistAdmin<T extends Item>({
   onToggleArchived,
   onOpen,
   backTo = '/settings',
-  backLabel = 'Ещё',
+  backLabel = 'Профиль',
   header,
   footer,
   listTitle,

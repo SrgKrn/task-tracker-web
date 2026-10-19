@@ -13,6 +13,7 @@ import { NetworkBanner } from './NetworkBanner'
 import { NewTaskSheet } from './NewTaskSheet'
 import { ReleaseBanner } from './ReleaseBanner'
 import { StaleTimerBanner } from './StaleTimerBanner'
+import { FocusBreakBar, FocusWatcher } from './FocusWatcher'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
 function useAppEffects() {
@@ -53,6 +54,7 @@ function SignedIn() {
           <NetworkBanner />
           <StaleTimerBanner />
           {!onTaskCard && <ActiveTimerBar />}
+          <FocusBreakBar />
         </div>
         {onTaskCard && <ActiveTimerBar />}
         <div className={`app-content pb-24 lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
@@ -65,6 +67,7 @@ function SignedIn() {
 
       <BottomTabBar onCreate={() => setSheetOpen(true)} />
       <ReleaseBanner />
+      <FocusWatcher />
       <NewTaskSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
       {/* ⌘K и горячие клавиши — для клавиатуры; на телефоне просто не срабатывают */}
       <AppCommands onCreate={openCreate} />
