@@ -51,7 +51,7 @@ async function nextOrder(table: 'groups' | 'group_items', groupId?: string): Pro
 }
 
 export type GroupFields = Partial<
-  Pick<Group, 'name' | 'item_name' | 'required' | 'show_in_list' | 'parent_group_id'>
+  Pick<Group, 'name' | 'item_name' | 'required' | 'show_in_list' | 'parent_group_id' | 'canvas_x' | 'canvas_y'>
 >
 
 export function useCreateGroup() {

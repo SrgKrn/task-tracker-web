@@ -16,6 +16,9 @@ export interface Group {
   show_in_list: boolean
   /** связь: каждое значение этой группы входит в значение родительской */
   parent_group_id: string | null
+  /** место блока на холсте структуры; null — раскладывается сам */
+  canvas_x: number | null
+  canvas_y: number | null
   created_at: string
   updated_at: string
 }

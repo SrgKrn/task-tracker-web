@@ -70,7 +70,12 @@ export function GroupsAdmin() {
         <ArrowLeft size={15} />
         Профиль
       </button>
-      <h1 className="mb-2 text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">Группы</h1>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">Группы</h1>
+        <Link to="/groups" className="text-sm font-medium text-accent-text">
+          Холстом
+        </Link>
+      </div>
       <p className="mb-4 text-sm leading-[1.5] text-text-secondary">
         То, по чему раскладываются задачи: проекты, разделы, клиенты, типы работ — какие нужны именно вам.
         Порядок важен: первая группа — верхний уровень отчёта и сводки, вторая — то, что внутри.
@@ -149,7 +154,7 @@ export function GroupsAdmin() {
   )
 }
 
-function NewGroupSheet({
+export function NewGroupSheet({
   open,
   model,
   onClose,

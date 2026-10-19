@@ -31,6 +31,7 @@ const FocusSettingsPage = lazy(() => settingsRoute().then((m) => ({ default: m.F
 const MethodSettings = lazy(() => settingsRoute().then((m) => ({ default: m.MethodSettings })))
 const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ExportSettings })))
 const GroupsAdmin = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupsAdmin })))
+const GroupsCanvas = lazy(() => import('./routes/GroupsCanvas').then((m) => ({ default: m.GroupsCanvas })))
 const GroupPage = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupPage })))
 const StatusesAdmin = lazy(() => import('./routes/StatusesAdmin').then((m) => ({ default: m.StatusesAdmin })))
 const Chronology = lazy(() => import('./routes/Chronology').then((m) => ({ default: m.Chronology })))
@@ -62,7 +63,8 @@ export default function App() {
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/history" element={<Chronology />} />
-        <Route path="/groups" element={<SettingsShell><GroupsAdmin /></SettingsShell>} />
+        <Route path="/groups" element={<SettingsShell><GroupsCanvas /></SettingsShell>} />
+        <Route path="/groups/list" element={<SettingsShell><GroupsAdmin /></SettingsShell>} />
         <Route path="/groups/:id" element={<SettingsShell><GroupPage /></SettingsShell>} />
         <Route path="/items/:id" element={<SettingsShell><ItemDetail /></SettingsShell>} />
         <Route path="/sections" element={<Navigate to="/groups" replace />} />
