@@ -12,6 +12,7 @@ import { TaskDetail } from './routes/TaskDetail'
 import { TaskWorkspace } from './routes/TaskWorkspace'
 import { Today } from './routes/Today'
 import { Focus } from './routes/Focus'
+import { Welcome } from './routes/Welcome'
 
 /*
  * Редкие экраны — «Ещё» с настройками, группы, статусы и история изменений — грузятся
@@ -55,6 +56,8 @@ export default function App() {
       <Route path="/login" element={<LoginRoute />} />
       {/* возврат из Google: может открыться вне приложения, без входа — свой маршрут */}
       <Route path="/oauth/google" element={<OAuthGoogle />} />
+      {/* первый запуск — без вкладок и плашек: сначала выбрать, для чего трекер */}
+      <Route path="/welcome" element={<Welcome />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Today />} />
         <Route path="/tasks" element={<TaskWorkspace />}>

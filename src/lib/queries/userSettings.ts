@@ -133,3 +133,25 @@ export function useSaveSettingsPatch() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
+
+/**
+ * Применить пресет: группы, значения, этапы, норма, методика, фокус, примеры — одной
+ * функцией базы. После неё меняется почти всё, поэтому перечитываем всё.
+ */
+export function useApplyPreset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      preset,
+      options,
+    }: {
+      preset: unknown
+      options: { examples?: boolean; settings?: boolean; stages?: boolean; onboard?: boolean }
+    }) => {
+      const { data, error } = await supabase.rpc('apply_preset', { p_preset: preset, p_options: options })
+      if (error) throw error
+      return data as { groups: number; values: number; stages: number; tasks: number }
+    },
+    onSettled: () => qc.invalidateQueries(),
+  })
+}

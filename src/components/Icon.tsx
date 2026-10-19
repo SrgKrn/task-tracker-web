@@ -138,3 +138,15 @@ export const History = (p: IconProps) =>
 export const Pencil = (p: IconProps) =>
   svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>, p)
 export const Flag = (p: IconProps) => svg(<path d="M5 21V4h11l-2 4 2 4H5" />, p)
+
+/* ── пресеты первого запуска ── */
+export const Briefcase = (p: IconProps) =>
+  svg(<><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" /></>, p)
+export const Users = (p: IconProps) =>
+  svg(<><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14c2.3 0 4 1.9 4 4.5" /></>, p)
+export const Book = (p: IconProps) =>
+  svg(<><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" /><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20" /></>, p)
+export const Home = (p: IconProps) => svg(<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />, p)
+export const Rocket = (p: IconProps) =>
+  svg(<><path d="M12 3c3.5 2 5.5 5.5 5.5 9.5L15 16H9l-2.5-3.5C6.5 8.5 8.5 5 12 3z" /><circle cx="12" cy="10" r="1.8" /><path d="M9 16l-2 5 3-1.5M15 16l2 5-3-1.5" /></>, p)
+export const Dumbbell = (p: IconProps) => svg(<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11" />, p)

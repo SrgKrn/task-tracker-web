@@ -5,6 +5,7 @@ import { useLiveTimerNotification } from '../lib/push'
 import { useTask } from '../lib/queries/tasks'
 import { useActiveTimer } from '../lib/queries/timer'
 import { useTheme } from '../lib/theme'
+import { useUserSettings } from '../lib/queries/userSettings'
 import { ActiveTimerBar } from './ActiveTimerBar'
 import { BottomTabBar } from './BottomTabBar'
 import { AppCommands } from './CommandPalette'
@@ -82,5 +83,16 @@ export function ProtectedLayout() {
 
   if (loading) return null
   if (!session) return <Navigate to="/login" replace />
+  return <OnboardingGate />
+}
+
+/**
+ * Первый экран — выбор пресета — до основного приложения. Строгое сравнение с null: у
+ * старых версий базы колонки нет (undefined), и тогда никого никуда не уводим.
+ */
+function OnboardingGate() {
+  const { data: settings, isLoading, isError } = useUserSettings()
+  if (isLoading) return null
+  if (!isError && (settings === null || settings?.onboarded_at === null)) return <Navigate to="/welcome" replace />
   return <SignedIn />
 }

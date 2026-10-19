@@ -2,7 +2,10 @@ import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEve
 import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ArrowLeft, ChevronRight, Close, Plus } from '../components/Icon'
-import { Button, ClientDot, ListGroup, Overline, Segmented, Sheet, Switch } from '../components/ui'
+import { Button, Chip, ClientDot, ListGroup, Overline, Segmented, Sheet, Switch } from '../components/ui'
+import { PresetStructure } from '../components/PresetPreview'
+import { PRESETS, presetByCode, presetPayload } from '../lib/presets'
+import { useApplyPreset } from '../lib/queries/userSettings'
 import { NewGroupSheet } from './GroupsAdmin'
 import { NODE_H, NODE_W, TASK_H, TASK_W, edgePath, layoutCanvas, taskFields, wouldCycle, type Point } from '../lib/canvas'
 import { useGroupModel, type GroupModel } from '../lib/groups'
@@ -569,6 +572,7 @@ function AddGroupSheet({
   const createItem = useCreateGroupItem()
   const { showError, showSuccess } = useToast()
   const [busy, setBusy] = useState<string | null>(null)
+  const [presetCode, setPresetCode] = useState<string | null>(null)
 
   async function add(t: (typeof TEMPLATES)[number]) {
     setBusy(t.name)
@@ -585,6 +589,9 @@ function AddGroupSheet({
   }
 
   return (
+    presetCode ? (
+      <PresetMergeSheet code={presetCode} onCode={setPresetCode} existing={existing} onClose={() => { setPresetCode(null); onClose() }} />
+    ) : (
     <Sheet open={open} onClose={onClose} title="Новая группа">
       <p className="-mt-2 text-sm text-text-secondary">Шаблон потом можно переименовать и дополнить</p>
       <ListGroup>
@@ -605,6 +612,17 @@ function AddGroupSheet({
         ))}
         <button
           type="button"
+          onClick={() => setPresetCode(PRESETS[0].code)}
+          className="flex min-h-14 items-center gap-3 px-3.5 py-2.5 text-left active:bg-surface-sunken lg:hover:bg-surface-hover"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-base text-text">Из пресета</span>
+            <span className="block text-sm text-text-secondary">Готовые наборы: клиенты, учёба, спорт… — добавятся недостающие</span>
+          </span>
+          <ChevronRight size={15} className="text-text-secondary" />
+        </button>
+        <button
+          type="button"
           onClick={onOwn}
           className="flex min-h-14 items-center gap-3 px-3.5 py-2.5 text-left active:bg-surface-sunken lg:hover:bg-surface-hover"
         >
@@ -616,8 +634,96 @@ function AddGroupSheet({
         </button>
       </ListGroup>
     </Sheet>
+    )
   )
 }
+
+/**
+ * Пресет поверх своей структуры: добавятся только группы и значения, которых ещё нет; свои
+ * группы, связи и этапы не трогаются. Методика и примеры — по желанию.
+ */
+function PresetMergeSheet({
+  code,
+  onCode,
+  existing,
+  onClose,
+}: {
+  code: string
+  onCode: (code: string) => void
+  existing: string[]
+  onClose: () => void
+}) {
+  const apply = useApplyPreset()
+  const { showError, showSuccess } = useToast()
+  const [settings, setSettings] = useState(false)
+  const [examples, setExamples] = useState(false)
+  const preset = presetByCode(code)!
+  const fresh = preset.groups.filter((g) => !existing.includes(g.name.toLowerCase()))
+  return (
+    <Sheet open onClose={onClose} title="Добавить из пресета">
+      <span className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {PRESETS.map((p) => (
+          <Chip key={p.code} active={p.code === code} onClick={() => onCode(p.code)}>
+            {p.title}
+          </Chip>
+        ))}
+      </span>
+      {fresh.length ? (
+        <PresetStructure preset={preset} examples={examples} skip={existing} merge />
+      ) : (
+        <p className="text-base text-text-secondary">
+          Все группы этого пресета у вас уже есть — добавятся только недостающие значения.
+        </p>
+      )}
+      <ListGroup>
+        <div className="flex min-h-14 items-center gap-3 px-3.5 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block text-base text-text">Методика, фокус и норма пресета</span>
+            <span className="block text-sm text-text-secondary">
+              {METHODS_SHORT[preset.settings.priority_method]} · {preset.settings.focus_mode === '9030' ? '90/30' : 'Pomodoro'} · {preset.normLabel}
+            </span>
+          </span>
+          <Switch on={settings} onChange={setSettings} ariaLabel="Поставить методику, фокус и норму пресета" />
+        </div>
+        <div className="flex min-h-14 items-center gap-3 px-3.5 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block text-base text-text">Примеры задач</span>
+            <span className="block text-sm text-text-secondary">Вместе с примерными значениями</span>
+          </span>
+          <Switch on={examples} onChange={setExamples} ariaLabel="Добавить примеры задач" />
+        </div>
+      </ListGroup>
+      <p className="text-sm text-text-secondary">Ваши группы, связи и этапы останутся как есть.</p>
+      <Button
+        variant="primary"
+        size="lg"
+        loading={apply.isPending}
+        onClick={() =>
+          apply.mutate(
+            { preset: presetPayload(preset, {}, { merge: true }), options: { settings, examples } },
+            {
+              onError: (e) => showError(describeError(e)),
+              onSuccess: (r) => {
+                showSuccess(
+                  r.groups || r.values || r.tasks
+                    ? `Добавлено: ${[r.groups ? plural(r.groups, GROUPS) : null, r.values ? plural(r.values, VALUES) : null, r.tasks ? plural(r.tasks, TASK_WORDS) : null].filter(Boolean).join(', ')}`
+                    : 'Нового нет — всё уже на месте',
+                )
+                onClose()
+              },
+            },
+          )
+        }
+      >
+        Добавить
+      </Button>
+    </Sheet>
+  )
+}
+
+const GROUPS: [string, string, string] = ['группа', 'группы', 'групп']
+const TASK_WORDS: [string, string, string] = ['задача', 'задачи', 'задач']
+const METHODS_SHORT: Record<string, string> = { none: 'Без методики', eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' }
 
 /** Те же связи на уровень глубже: клиенты и их проекты деревом. Нажатие — карточка значения. */
 function ValuesTree({ model }: { model: GroupModel }) {

@@ -200,6 +200,8 @@ export interface UserSettings {
   avatar_path: string | null
   focus_mode: FocusMode
   focus_settings: FocusSettings
+  /** прошёл первый экран — выбор пресета; null — ещё нет */
+  onboarded_at: string | null
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null
