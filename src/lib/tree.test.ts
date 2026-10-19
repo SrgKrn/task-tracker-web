@@ -32,6 +32,7 @@ function task(fields: Partial<Task> & { id: string }): Task {
     abc_rank: null,
     delegated_to: null,
     parent_id: null,
+    workspace_id: 'w',
     created_at: '2026-10-01T10:00:00Z',
     updated_at: '2026-10-01T10:00:00Z',
     ...fields,
@@ -39,7 +40,7 @@ function task(fields: Partial<Task> & { id: string }): Task {
 }
 
 function status(id: string, label: string, isFinal = false): Status {
-  return { id, user_id: 'u', label, sort_order: 0, is_final: isFinal, created_at: '', updated_at: '' }
+  return { id, user_id: 'u', label, sort_order: 0, is_final: isFinal, workspace_id: 'w', created_at: '', updated_at: '' }
 }
 
 describe('childrenByParent', () => {

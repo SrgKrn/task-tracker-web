@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/DatePicker'
@@ -21,7 +22,7 @@ import {
 import { useClosedTaskCount, useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useGroupModel } from '../lib/groups'
 import { useTasks } from '../lib/queries/tasks'
-import { useUserSettings } from '../lib/queries/userSettings'
+import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf, periodNorm, workdaysBetween } from '../lib/norm'
 import { TASKS, entryMinutes, formatHoursRu, plural } from '../lib/time'
 import { headIdOf } from '../lib/tree'
@@ -69,7 +70,7 @@ export function Dashboard() {
       // не запомнили — в следующий раз откроется разрез по умолчанию
     }
   }
-  const { data: userSettings } = useUserSettings()
+  const workspace = useActiveWorkspace()
   const { data: entries = [], isLoading: entriesLoading } = useTimeEntriesInRange(from, to)
   // пока данные грузятся, нули — неправда: «0 % плана, нет трекинга» висело 2–3 с
   const loading = tasksLoading || entriesLoading
@@ -114,7 +115,7 @@ export function Dashboard() {
   }, [heads, factByTask])
 
   // норма — по рабочим дням из «Ещё → План часов», а не по всем дням периода
-  const norm = normSettingsOf(userSettings)
+  const norm = normSettingsOf(workspace)
   const workDays = norm.workDays
   const workdaysInPeriod = workdaysBetween(from, to, workDays)
   const budgetForPeriod = periodNorm(from, to, norm)
@@ -228,6 +229,7 @@ export function Dashboard() {
       <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:pb-5">
         <div className="flex items-end justify-between gap-3 lg:order-1">
           <div className="flex flex-col gap-0.5">
+            <WorkspaceTag className="mb-1 self-start" />
             <Overline>
               {shortDate(from)} — {shortDate(to)}
             </Overline>

@@ -1,4 +1,6 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { switchWorkspace, useOtherWorkspace } from '../lib/workspace'
 import { Ring, StopGlyph } from './Ring'
 import { ClientDot } from './ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -26,6 +28,11 @@ export function ActiveTimerBar() {
   const { data: run } = useFocusRun()
   useTicker(!!activeTimer)
   // учёт идёт в рамках фокуса — показываем, сколько осталось до конца отрезка
+  // учёт один на профиль: задача может быть из другого пространства — тогда подпись и
+  // переход туда по нажатию
+  const other = useOtherWorkspace(task?.workspace_id)
+  const navigate = useNavigate()
+  const qc = useQueryClient()
   const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === activeTimer?.task_id ? run : null
 
   if (!activeTimer || !task) return null
@@ -53,13 +60,32 @@ export function ActiveTimerBar() {
         <StopGlyph size={9} />
       </Ring>
 
-      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
+      <Link
+        to={`/tasks/${task.id}`}
+        className="min-w-0 flex-1"
+        onClick={(e) => {
+          if (!other) return
+          e.preventDefault()
+          switchWorkspace(other.id, qc)
+          navigate(`/tasks/${task.id}`)
+        }}
+      >
         {/* в одну строку: название спринта длиннее подписи и переносом раздувало док вдвое */}
         <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--timer-text)]">
           <span className="shrink-0">{focus ? 'Фокус' : 'Идёт учёт'}</span>
-          {(parent || label) && <span aria-hidden>·</span>}
-          {!parent && <ClientDot color={model.colorOf(task)} size={7} />}
-          {(parent || label) && <span className="min-w-0 truncate">{parent ? parent.name : label}</span>}
+          {other ? (
+            <>
+              <span aria-hidden>·</span>
+              <ClientDot color={other.color} size={7} />
+              <span className="min-w-0 truncate">в «{other.name}»</span>
+            </>
+          ) : (
+            <>
+              {(parent || label) && <span aria-hidden>·</span>}
+              {!parent && <ClientDot color={model.colorOf(task)} size={7} />}
+              {(parent || label) && <span className="min-w-0 truncate">{parent ? parent.name : label}</span>}
+            </>
+          )}
         </span>
         <span className="block truncate text-base font-medium text-text">{task.name}</span>
       </Link>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { NAV_TABS } from './navTabs'
 import { Avatar } from './Avatar'
+import { SidebarWorkspace } from './Workspaces'
 import { useProfile } from '../lib/profile'
 import { LogOut, PanelLeft, Plus, Search } from './Icon'
 import { Kbd, Logo, MOD_KEY } from './ui'
@@ -97,6 +98,10 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
             </>
           )}
         </button>
+      </div>
+
+      <div className="flex flex-col px-2 pb-2">
+        <SidebarWorkspace collapsed={collapsed} />
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-2">

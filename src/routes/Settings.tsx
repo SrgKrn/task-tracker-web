@@ -4,10 +4,12 @@ import { NotificationsCard, TelegramCard, ThemeCard, TimeBlockCard } from '../co
 import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
 import { SettingsMenu, SettingsShell } from '../components/SettingsMenu'
-import { ArrowLeft, Camera, ChevronRight, Drive } from '../components/Icon'
+import { ArrowLeft, Camera, Check, ChevronRight, Drive, Plus } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
+import { WorkspaceList } from '../components/Workspaces'
 import { useAvatarUpload, useProfile } from '../lib/profile'
-import { Button, FieldLabel, ListGroup, Overline, Segmented, Sheet, fieldClass } from '../components/ui'
+import { useActiveWorkspace, useDeleteWorkspace, useUpdateActiveWorkspace, useUpdateWorkspace, useWorkspaces } from '../lib/workspace'
+import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
@@ -22,7 +24,6 @@ import {
   useSaveDriveReportsFolder,
   useSaveSettingsPatch,
   useSavePriorityMethod,
-  useSaveUserSettings,
   useUserSettings,
 } from '../lib/queries/userSettings'
 import { MethodExplainer } from '../components/Priority'
@@ -30,7 +31,7 @@ import { FocusExplainer, FocusSettingsForm } from '../components/FocusSettings'
 import { useFocusPrefs } from '../lib/queries/focus'
 import { FOCUS_INFO } from '../lib/focus'
 import { METHODS, METHOD_ORDER } from '../lib/priority'
-import type { PriorityMethod } from '../lib/types'
+import type { LabelColor, PriorityMethod, Workspace } from '../lib/types'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
@@ -71,9 +72,10 @@ const WORK_DAY_HINT: Record<number, string> = {
   7: 'Без выходных',
 }
 
+/** Норма — пространства: у «Работы» 140 ч в месяц, у «Спорта» 45 минут в день. */
 function BudgetForm() {
-  const { data: settings } = useUserSettings()
-  const saveSettings = useSaveUserSettings()
+  const settings = useActiveWorkspace()
+  const saveSettings = useUpdateActiveWorkspace()
   const { showError, showSuccess } = useToast()
 
   const [perDay, setPerDay] = useState('')
@@ -434,6 +436,16 @@ export function Settings() {
           <ChevronRight size={15} className="shrink-0 text-text-secondary" />
         </Link>
 
+        <section className="mt-5 flex flex-col gap-2">
+          <span className="flex items-baseline justify-between px-0.5">
+            <Overline>Пространство</Overline>
+            <Link to="/settings/workspaces" className="text-sm font-medium text-accent-text">
+              Все пространства
+            </Link>
+          </span>
+          <WorkspaceList />
+        </section>
+
         {/* на десктопе пункты — в колонке слева */}
         <div className="flex flex-col lg:hidden">
           <SettingsMenu />
@@ -692,6 +704,136 @@ export function FocusSettingsPage() {
         <h2 className="text-lg font-semibold tracking-[-0.01em] text-text">{FOCUS_INFO[mode].name}</h2>
         <FocusExplainer mode={mode} />
       </section>
+    </SettingsPage>
+  )
+}
+
+/* ── пространства ───────────────────────────────────────────────── */
+
+const WS_LABELS: LabelColor[] = ['label-1', 'label-2', 'label-3', 'label-4', 'label-5', 'label-6', 'label-7', 'label-8']
+
+/**
+ * Пространства профиля: переход, название, цвет, удаление. Основное — то, куда пишут
+ * старые версии приложения и чьи настройки видит Telegram; его удалить нельзя.
+ */
+function WorkspacesManager() {
+  const navigate = useNavigate()
+  const { data: list = [] } = useWorkspaces()
+  const [editing, setEditing] = useState<Workspace | null>(null)
+  return (
+    <>
+      <p className="text-sm text-text-secondary">
+        У каждого пространства свои группы, этапы, задачи, учёт, норма, методика и фокус. Учёт времени — один на всё:
+        идёт по одной задаче, из любого пространства.
+      </p>
+      <WorkspaceList />
+      <div className="flex gap-2">
+        <Button variant="primary" className="flex-1" onClick={() => navigate('/workspaces/new')}>
+          <Plus size={15} />
+          Новое пространство
+        </Button>
+      </div>
+      <Overline className="mt-3 px-0.5">Настроить</Overline>
+      <ListGroup>
+        {list.map((w) => (
+          <button
+            key={w.id}
+            type="button"
+            onClick={() => setEditing(w)}
+            className="flex min-h-12 items-center gap-3 px-3.5 py-2.5 text-left active:bg-surface-sunken lg:hover:bg-surface-hover"
+          >
+            <ClientDot color={w.color} size={10} />
+            <span className="min-w-0 flex-1 truncate text-base text-text">{w.name}</span>
+            <span className="text-sm text-text-secondary">Название, цвет</span>
+            <ChevronRight size={15} className="text-text-secondary" />
+          </button>
+        ))}
+      </ListGroup>
+      {editing && <WorkspaceEditSheet ws={editing} onClose={() => setEditing(null)} />}
+    </>
+  )
+}
+
+function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => void }) {
+  const update = useUpdateWorkspace()
+  const remove = useDeleteWorkspace()
+  const { showError, showSuccess } = useToast()
+  const onError = (e: unknown) => showError(describeError(e))
+  const [name, setName] = useState(ws.name)
+  const [color, setColor] = useState<LabelColor>(ws.color)
+  const [deleting, setDeleting] = useState(false)
+  const [confirm, setConfirm] = useState('')
+  return (
+    <Sheet open onClose={onClose} title={ws.name}>
+      <label className="flex flex-col gap-1.5">
+        <FieldLabel>Название</FieldLabel>
+        <input id="ws-name" className={fieldClass} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel>Цвет</FieldLabel>
+        <div className="flex flex-wrap gap-2">
+          {WS_LABELS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              aria-pressed={c === color}
+              aria-label={c}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-text-inverse"
+              style={{ background: `var(--${c})` }}
+            >
+              {c === color && <Check size={16} />}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Button
+        variant="primary"
+        disabled={!name.trim()}
+        onClick={() =>
+          update.mutate(
+            { id: ws.id, fields: { name: name.trim(), color } },
+            { onError, onSuccess: () => { showSuccess('Сохранено'); onClose() } },
+          )
+        }
+      >
+        Сохранить
+      </Button>
+      {ws.is_default ? (
+        <p className="text-sm text-text-tertiary">Основное пространство удалить нельзя — его настройки видят Telegram и итоги дня.</p>
+      ) : !deleting ? (
+        <button type="button" onClick={() => setDeleting(true)} className="min-h-11 text-sm font-medium text-danger-text">
+          Удалить пространство
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2 rounded-md border border-[var(--danger-line)] p-3">
+          <p className="text-sm text-text">
+            Удалятся все задачи, учёт, группы, этапы и файлы пространства «{ws.name}». Вернуть их будет нельзя.
+          </p>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-text-secondary">Чтобы подтвердить, напишите его название</span>
+            <input id="ws-delete-confirm" className={fieldClass} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+          </label>
+          <Button
+            variant="danger"
+            disabled={confirm.trim().toLowerCase() !== ws.name.trim().toLowerCase()}
+            loading={remove.isPending}
+            onClick={() =>
+              remove.mutate(ws, { onError, onSuccess: () => { showSuccess(`Пространство «${ws.name}» удалено`); onClose() } })
+            }
+          >
+            Удалить навсегда
+          </Button>
+        </div>
+      )}
+    </Sheet>
+  )
+}
+
+export function WorkspacesSettings() {
+  return (
+    <SettingsPage title="Пространства">
+      <WorkspacesManager />
     </SettingsPage>
   )
 }

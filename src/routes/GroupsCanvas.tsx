@@ -6,6 +6,7 @@ import { Button, Chip, ClientDot, ListGroup, Overline, Segmented, Sheet, Switch 
 import { PresetStructure } from '../components/PresetPreview'
 import { PRESETS, presetByCode, presetPayload } from '../lib/presets'
 import { useApplyPreset } from '../lib/queries/userSettings'
+import { activeWorkspaceId } from '../lib/workspace'
 import { NewGroupSheet } from './GroupsAdmin'
 import { NODE_H, NODE_W, TASK_H, TASK_W, edgePath, layoutCanvas, taskFields, wouldCycle, type Point } from '../lib/canvas'
 import { useGroupModel, type GroupModel } from '../lib/groups'
@@ -700,7 +701,7 @@ function PresetMergeSheet({
         loading={apply.isPending}
         onClick={() =>
           apply.mutate(
-            { preset: presetPayload(preset, {}, { merge: true }), options: { settings, examples } },
+            { preset: presetPayload(preset, {}, { merge: true }), options: { settings, examples }, workspace: activeWorkspaceId() },
             {
               onError: (e) => showError(describeError(e)),
               onSuccess: (r) => {

@@ -2,7 +2,7 @@ import { Chip, Segmented } from './ui'
 import { FOCUS_CHANGES, FOCUS_INFO } from '../lib/focus'
 import { useFocusPrefs } from '../lib/queries/focus'
 import { describeError, useToast } from '../lib/Toast'
-import { useSaveSettingsPatch } from '../lib/queries/userSettings'
+import { useUpdateActiveWorkspace } from '../lib/workspace'
 import type { FocusMode, FocusSettings } from '../lib/types'
 
 function Choice({ label, value, options, unit = 'мин', onChange }: {
@@ -30,7 +30,7 @@ function Choice({ label, value, options, unit = 'мин', onChange }: {
 /** Режим и длительности — сохраняются сразу; на идущую сессию не влияют, только на следующую. */
 export function FocusSettingsForm() {
   const { mode, settings } = useFocusPrefs()
-  const save = useSaveSettingsPatch()
+  const save = useUpdateActiveWorkspace()
   const { showError } = useToast()
   const onError = (e: unknown) => showError(describeError(e))
   const setSettings = (next: FocusSettings) => save.mutate({ focus_settings: next }, { onError })

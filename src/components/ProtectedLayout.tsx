@@ -6,6 +6,7 @@ import { useTask } from '../lib/queries/tasks'
 import { useActiveTimer } from '../lib/queries/timer'
 import { useTheme } from '../lib/theme'
 import { useUserSettings } from '../lib/queries/userSettings'
+import { pickInitialWorkspace, useWorkspaces } from '../lib/workspace'
 import { ActiveTimerBar } from './ActiveTimerBar'
 import { BottomTabBar } from './BottomTabBar'
 import { AppCommands } from './CommandPalette'
@@ -94,5 +95,17 @@ function OnboardingGate() {
   const { data: settings, isLoading, isError } = useUserSettings()
   if (isLoading) return null
   if (!isError && (settings === null || settings?.onboarded_at === null)) return <Navigate to="/welcome" replace />
+  return <WorkspaceGate />
+}
+
+/**
+ * Пространство выбирается до первого запроса задач: запросы берут его в момент выборки.
+ * Запомненное на устройстве — если ещё есть, иначе основное. Пространств нет совсем (до
+ * миграции) — работаем как раньше, без фильтра не останемся: запросы просто вернут пусто.
+ */
+function WorkspaceGate() {
+  const { data: workspaces, isLoading, isError } = useWorkspaces()
+  if (isLoading) return null
+  if (!isError && workspaces) pickInitialWorkspace(workspaces)
   return <SignedIn />
 }

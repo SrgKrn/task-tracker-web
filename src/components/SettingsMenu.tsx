@@ -2,15 +2,15 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { TabFocus } from './Icon'
 import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Download, Drive as DriveIcon, History, Send, Sparkle } from './Icon'
-import { ListGroup, Overline } from './ui'
+import { ClientDot, ListGroup, Overline } from './ui'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
 import { useGoogleStatus } from '../lib/google'
 import { usePush, type PushState } from '../lib/push'
 import { useCalendarSources } from '../lib/queries/calendar'
 import { useStatuses } from '../lib/queries/statuses'
-import { useUserSettings } from '../lib/queries/userSettings'
 import { METHODS } from '../lib/priority'
+import { useActiveWorkspace } from '../lib/workspace'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
@@ -88,12 +88,13 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
   const { data: telegram } = useTelegramStatus()
   const { data: calendars = [] } = useCalendarSources()
   const { data: google } = useGoogleStatus()
-  const { data: userSettings } = useUserSettings()
 
-  const plan = userSettings?.planned_hours_per_day
-    ? `${formatHoursRu(Number(userSettings.planned_hours_per_day))} ч в день`
-    : userSettings?.planned_hours_per_month
-      ? `${formatHoursRu(Number(userSettings.planned_hours_per_month))} ч в месяц`
+  // норма, методика и фокус — активного пространства
+  const ws = useActiveWorkspace()
+  const plan = ws?.planned_hours_per_day
+    ? `${formatHoursRu(Number(ws.planned_hours_per_day))} ч в день`
+    : ws?.planned_hours_per_month
+      ? `${formatHoursRu(Number(ws.planned_hours_per_month))} ч в месяц`
       : 'Не задан'
   const tg = telegram?.linked
     ? telegram.linked.username
@@ -109,6 +110,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
       title: 'Структура',
       items: [
         {
+          to: '/settings/workspaces',
+          glyph: <ClientDot color={ws?.color ?? 'label-1'} size={10} />,
+          title: 'Пространства',
+          value: ws?.name,
+        },
+        {
           to: '/groups',
           glyph: GroupsGlyph,
           title: 'Группы',
@@ -120,13 +127,13 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           to: '/settings/method',
           glyph: MethodGlyph,
           title: 'Методика',
-          value: userSettings?.priority_method && userSettings.priority_method !== 'none' ? METHODS[userSettings.priority_method].name : 'Без методики',
+          value: ws?.priority_method && ws.priority_method !== 'none' ? METHODS[ws.priority_method].name : 'Без методики',
         },
         {
           to: '/settings/focus',
           glyph: <TabFocus size={15} />,
           title: 'Фокус',
-          value: userSettings?.focus_mode === '9030' ? '90/30' : 'Pomodoro',
+          value: ws?.focus_mode === '9030' ? '90/30' : 'Pomodoro',
         },
       ],
     },

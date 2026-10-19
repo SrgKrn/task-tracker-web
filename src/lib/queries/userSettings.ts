@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import type { PriorityMethod, UserSettings } from '../types'
+import { useActiveWorkspace, useUpdateActiveWorkspace } from '../workspace'
 
 export function useUserSettings() {
   return useQuery({
@@ -92,27 +93,18 @@ export function useSaveTimeBlockSettings() {
   })
 }
 
-/** Методика приоритизации — одна на всё приложение. До миграции 0021 поля нет — тогда «без методики». */
+/** Методика приоритизации — своя в каждом пространстве. До миграции — «без методики». */
 export function usePriorityMethod(): PriorityMethod {
-  const { data } = useUserSettings()
-  return data?.priority_method ?? 'none'
+  return useActiveWorkspace()?.priority_method ?? 'none'
 }
 
 export function useSavePriorityMethod() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (method: PriorityMethod) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not signed in')
-      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, priority_method: method })
-      if (error) throw error
-    },
-    onMutate: (method) =>
-      qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, priority_method: method } : s)),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
-  })
+  const update = useUpdateActiveWorkspace()
+  return {
+    isPending: update.isPending,
+    mutate: (method: PriorityMethod, options?: { onError?: (e: unknown) => void; onSuccess?: () => void }) =>
+      update.mutate({ priority_method: method }, options),
+  }
 }
 
 /** Сохранить часть настроек: имя, фото, режим и длительности фокуса. Экран меняется сразу. */
@@ -144,13 +136,16 @@ export function useApplyPreset() {
     mutationFn: async ({
       preset,
       options,
+      workspace,
     }: {
       preset: unknown
-      options: { examples?: boolean; settings?: boolean; stages?: boolean; onboard?: boolean }
+      options: { examples?: boolean; settings?: boolean; stages?: boolean; onboard?: boolean; name?: string; code?: string; color?: string }
+      /** куда применить; null — создать новое пространство (название — options.name) */
+      workspace: string | null
     }) => {
-      const { data, error } = await supabase.rpc('apply_preset', { p_preset: preset, p_options: options })
+      const { data, error } = await supabase.rpc('apply_preset', { p_preset: preset, p_options: options, p_workspace: workspace })
       if (error) throw error
-      return data as { groups: number; values: number; stages: number; tasks: number }
+      return data as { workspace: string; groups: number; values: number; stages: number; tasks: number }
     },
     onSettled: () => qc.invalidateQueries(),
   })

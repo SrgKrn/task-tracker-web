@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 import type { Task } from '../types'
 import { removeTaskFiles } from './attachments'
 
@@ -7,7 +8,12 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false })
+      // только активное пространство; карточка по id (useTask) открывает задачу из любого
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('workspace_id', activeWorkspaceId())
+        .order('created_at', { ascending: false })
       if (error) throw error
       return data as Task[]
     },
@@ -44,13 +50,17 @@ export interface NewTaskInput {
   duplicated_from?: string | null
   /** спринт, в который кладётся подзадача; значения групп база возьмёт у него */
   parent_id?: string | null
+  /** пространство; не указано — активное (у подзадачи — пространство спринта) */
+  workspace_id?: string
 }
 
 export function useCreateTask() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: NewTaskInput) => {
-      const { data, error } = await supabase.from('tasks').insert(input).select().single()
+      // головная задача — в активное пространство; подзадача — в пространство спринта (база)
+      const row = input.parent_id ? input : { ...input, workspace_id: activeWorkspaceId() }
+      const { data, error } = await supabase.from('tasks').insert(row).select().single()
       if (error) throw error
       return data as Task
     },
@@ -143,7 +153,8 @@ export function useSetFrog() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ taskId, date }: { taskId: string | null; date: string }) => {
-      const { error } = await supabase.rpc('set_frog', { p_task_id: taskId, p_date: date })
+      // лягушка своя в каждом пространстве: снятие — только в текущем
+      const { error } = await supabase.rpc('set_frog', { p_task_id: taskId, p_date: date, p_workspace: activeWorkspaceId() })
       if (error) throw error
     },
     onMutate: async ({ taskId, date }) => {
@@ -208,6 +219,7 @@ export function useDuplicateTask() {
         duplicated_from: task.id,
         // копия подзадачи остаётся в том же спринте, а не выпадает в список отдельной задачей
         parent_id: task.parent_id,
+        workspace_id: task.workspace_id,
       }
       const { data, error } = await supabase.from('tasks').insert(input).select().single()
       if (error) throw error
@@ -245,6 +257,7 @@ export function useCreateNextSprint() {
         end_date: input.end_date,
         is_daily: input.from.is_daily,
         duplicated_from: input.from.id,
+        workspace_id: input.from.workspace_id,
       }
       const { data, error } = await supabase.from('tasks').insert(head).select().single()
       if (error) throw error

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 import type { TaskStatusEvent, TimeEntry } from '../types'
 
 /**
@@ -16,6 +17,7 @@ export function useTimeEntriesInRange(from: string, to: string) {
       const { data, error } = await supabase
         .from('time_entries')
         .select('*')
+        .eq('workspace_id', activeWorkspaceId())
         .gte('effective_date', from)
         .lte('effective_date', to)
       if (error) throw error
@@ -35,6 +37,7 @@ export function useClosedTaskCount(fromISO: string, toISO: string) {
       const { data, error } = await supabase
         .from('task_status_events')
         .select('task_id')
+        .eq('workspace_id', activeWorkspaceId())
         .eq('is_final', true)
         .gte('created_at', fromISO)
         .lt('created_at', toISO)

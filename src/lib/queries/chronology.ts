@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 import { addDays, todayStr } from '../period'
 import {
   buildChronology,
@@ -43,6 +44,7 @@ export interface ChronoPage {
 
 async function loadPage(to: string, firstDayKnown: string | null | undefined): Promise<ChronoPage> {
   const from = addDays(to, -(PAGE_DAYS - 1))
+  const ws = activeWorkspaceId()
   const start = localMidnightIso(from)
   const end = localMidnightIso(to, 1)
 
@@ -51,6 +53,7 @@ async function loadPage(to: string, firstDayKnown: string | null | undefined): P
       supabase
         .from('time_entries')
         .select('id, task_id, entry_type, started_at, ended_at, duration_seconds, duration_minutes, note, effective_date, created_at')
+        .eq('workspace_id', ws)
         .gte('effective_date', from)
         .lte('effective_date', to)
         .order('id')
@@ -60,6 +63,7 @@ async function loadPage(to: string, firstDayKnown: string | null | undefined): P
       supabase
         .from('task_status_events')
         .select('id, task_id, status_id, is_final, created_at')
+        .eq('workspace_id', ws)
         .gte('created_at', start)
         .lt('created_at', end)
         .order('id')
@@ -69,18 +73,20 @@ async function loadPage(to: string, firstDayKnown: string | null | undefined): P
       supabase
         .from('task_changes')
         .select('id, task_id, task_name, field, old_value, new_value, created_at')
+        .eq('workspace_id', ws)
         .gte('created_at', start)
         .lt('created_at', end)
         .order('id')
         .range(a, b),
     ),
     fetchAll<CommentRow>((a, b) =>
-      supabase.from('comments').select('id, task_id, body, created_at').gte('created_at', start).lt('created_at', end).order('id').range(a, b),
+      supabase.from('comments').select('id, task_id, body, created_at').eq('workspace_id', ws).gte('created_at', start).lt('created_at', end).order('id').range(a, b),
     ),
     fetchAll<FileRow>((a, b) =>
       supabase
         .from('attachments')
         .select('id, task_id, name, created_at')
+        .eq('workspace_id', ws)
         .not('task_id', 'is', null)
         .gte('created_at', start)
         .lt('created_at', end)
@@ -102,6 +108,7 @@ async function loadPage(to: string, firstDayKnown: string | null | undefined): P
       : supabase
           .from('time_entries')
           .select('effective_date')
+          .eq('workspace_id', ws)
           .order('effective_date')
           .limit(1)
           .maybeSingle()

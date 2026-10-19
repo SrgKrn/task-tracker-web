@@ -5,7 +5,7 @@ import { Overline } from '../components/ui'
 import { currentWeekRange, todayStr } from '../lib/period'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useTasks } from '../lib/queries/tasks'
-import { useUserSettings } from '../lib/queries/userSettings'
+import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
@@ -21,7 +21,7 @@ function TaskWorkspaceEmpty() {
   const today = todayStr()
   const week = useMemo(() => currentWeekRange(), [])
   const { data: tasks = [] } = useTasks()
-  const { data: userSettings } = useUserSettings()
+  const workspace = useActiveWorkspace()
   const { data: entries = [] } = useTimeEntriesInRange(week.from, week.to)
 
   const dayFact = useMemo(
@@ -36,7 +36,7 @@ function TaskWorkspaceEmpty() {
     [entries],
   )
 
-  const dayNorm = dayNormFor(today, normSettingsOf(userSettings)) ?? DEFAULT_DAY_NORM
+  const dayNorm = dayNormFor(today, normSettingsOf(workspace)) ?? DEFAULT_DAY_NORM
   const openCount = tasks.filter((t) => !t.parent_id).length
 
   return (

@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { PRESET_ICON, PresetStructure, StageChips } from '../components/PresetPreview'
 import { ArrowLeft } from '../components/Icon'
-import { Button, ListGroup, Overline, Segmented, Switch } from '../components/ui'
+import { Button, ListGroup, Overline, Segmented, Switch, fieldClass } from '../components/ui'
+import { switchWorkspace, useWorkspaces } from '../lib/workspace'
 import { useAuth } from '../lib/AuthContext'
 import { FOCUS_INFO } from '../lib/focus'
 import { METHODS, METHOD_ORDER } from '../lib/priority'
@@ -12,12 +13,24 @@ import { useApplyPreset } from '../lib/queries/userSettings'
 import { describeError, useToast } from '../lib/Toast'
 import type { FocusMode, PriorityMethod } from '../lib/types'
 
+/** короткое название пространства по пресету — его можно сменить на втором шаге */
+const SPACE_NAME: Record<string, string> = {
+  clients: 'Работа',
+  team: 'Работа',
+  study: 'Учёба',
+  personal: 'Личное',
+  project: 'Свой проект',
+  sport: 'Спорт',
+  blank: 'Основное',
+}
+
 /**
  * Первый запуск: для чего трекер. Пресет ставит группы со связями, этапы, норму, методику,
  * фокус и, по желанию, примеры задач — второй шаг показывает всё это до того, как что-то
  * создано. Потом всё правится как обычно.
  */
-export function Welcome() {
+export function Welcome({ mode = 'first' }: { mode?: 'first' | 'new' }) {
+  const isNew = mode === 'new'
   const { session, loading } = useAuth()
   const navigate = useNavigate()
   const apply = useApplyPreset()
@@ -28,6 +41,8 @@ export function Welcome() {
   const [method, setMethod] = useState<PriorityMethod | null>(null)
   const [focus, setFocus] = useState<FocusMode | null>(null)
   const [examples, setExamples] = useState(true)
+  const [name, setName] = useState<string | null>(null)
+  const { data: workspaces = [] } = useWorkspaces()
 
   if (loading) return null
   if (!session) return <Navigate to="/login" replace />
@@ -36,25 +51,38 @@ export function Welcome() {
   const blank = code === 'blank'
   const chosenMethod = method ?? preset.settings.priority_method
   const chosenFocus = focus ?? preset.settings.focus_mode
+  const spaceName = name ?? SPACE_NAME[code] ?? preset.title
 
   function choose(p: Preset) {
     setCode(p.code)
     setMethod(null)
     setFocus(null)
+    setName(null)
   }
 
   function start() {
     apply.mutate(
       {
         preset: presetPayload(preset, { method: chosenMethod, focus: chosenFocus }),
-        options: { examples: examples && !blank, settings: true, stages: true, onboard: true },
+        options: {
+          examples: examples && !blank,
+          settings: true,
+          stages: true,
+          onboard: !isNew,
+          name: spaceName.trim() || SPACE_NAME[code],
+          code,
+          color: `label-${(workspaces.length % 8) + 1}`,
+        },
+        // null — новое пространство; у нового пользователя оно станет основным
+        workspace: null,
       },
       {
         onError: (e) => showError(describeError(e)),
-        // настройки — перечитать до перехода: иначе проверка первого запуска увидит старое
-        // «не пройдено» и вернёт сюда же
-        onSuccess: async () => {
-          await qc.refetchQueries({ queryKey: ['user_settings'] })
+        // настройки и список пространств — перечитать до перехода: иначе проверка первого
+        // запуска увидит старое «не пройдено» и вернёт сюда же
+        onSuccess: async (r) => {
+          await Promise.all([qc.refetchQueries({ queryKey: ['user_settings'] }), qc.refetchQueries({ queryKey: ['workspaces'] })])
+          switchWorkspace(r.workspace, qc)
           navigate('/', { replace: true })
         },
       },
@@ -73,9 +101,21 @@ export function Welcome() {
     return (
       <div className="safe-top-page mx-auto flex min-h-full max-w-lg flex-col gap-4 px-5 pt-6 pb-10">
         {progress}
+        {isNew && (
+          <Button variant="ghost" className="-ml-3 self-start" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+            Отмена
+          </Button>
+        )}
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Для чего вам Semternity?</h1>
-          <p className="text-base text-text-secondary">Подготовим группы, этапы и норму часов. Потом всё можно поменять.</p>
+          <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">
+            {isNew ? 'Новое пространство' : 'Для чего вам Semternity?'}
+          </h1>
+          <p className="text-base text-text-secondary">
+            {isNew
+              ? 'Для чего оно? У пространства свои группы, этапы, задачи, учёт, норма и методика.'
+              : 'Подготовим группы, этапы и норму часов. Потом всё можно поменять.'}
+          </p>
         </div>
         <div role="radiogroup" aria-label="Для чего трекер" className="flex flex-col gap-2">
           {[...PRESETS, BLANK_PRESET].map((p) => {
@@ -125,6 +165,18 @@ export function Welcome() {
         <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">{preset.title}</h1>
         <p className="text-base text-text-secondary">Вот что будет внутри — ничего ещё не создано</p>
       </div>
+
+      <label className="flex flex-col gap-1.5">
+        <Overline>Название пространства</Overline>
+        <input
+          id="welcome-space-name"
+          className={fieldClass}
+          value={spaceName}
+          maxLength={40}
+          onChange={(e) => setName(e.target.value)}
+        />
+        {!isNew && <span className="text-sm text-text-secondary">Потом можно завести и другие — например, «Спорт» рядом с «Работой»</span>}
+      </label>
 
       <PresetStructure preset={preset} examples={examples && !blank} />
 
@@ -197,7 +249,7 @@ export function Welcome() {
       )}
 
       <Button variant="primary" size="lg" loading={apply.isPending} onClick={start}>
-        Начать работу
+        {isNew ? 'Создать пространство' : 'Начать работу'}
       </Button>
     </div>
   )

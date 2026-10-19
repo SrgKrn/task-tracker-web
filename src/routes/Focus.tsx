@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ProfileButton } from '../components/Avatar'
+import { WorkspaceTag } from '../components/Workspaces'
 import { FocusExplainer, FocusSettingsForm } from '../components/FocusSettings'
 import { Pause, Play, Settings2, SkipForward, Square } from '../components/Icon'
 import { Ring } from '../components/Ring'
@@ -11,7 +12,7 @@ import { useGroupModel } from '../lib/groups'
 import { todayStr } from '../lib/period'
 import { useFocusAction, useFocusPrefs, useFocusRun, useFocusSessions } from '../lib/queries/focus'
 import { useStatuses } from '../lib/queries/statuses'
-import { useTasks } from '../lib/queries/tasks'
+import { useTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer } from '../lib/queries/timer'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { describeError, useToast } from '../lib/Toast'
@@ -59,8 +60,10 @@ export function Focus() {
   const left = run ? secondsLeft(run) : phase.seconds
   const progress = 1 - left / phase.seconds
   const { n, of } = workNumber(plan, index)
+  // задача идущего фокуса может быть из другого пространства — берём её по id
+  const { data: runTask } = useTask(run?.task_id && !taskById.has(run.task_id) ? run.task_id : undefined)
   const task: Task | undefined = run?.task_id
-    ? taskById.get(run.task_id)
+    ? (taskById.get(run.task_id) ?? runTask ?? undefined)
     : chosenId
       ? taskById.get(chosenId)
       : suggestion?.task
@@ -91,6 +94,7 @@ export function Focus() {
       <div className="safe-top">
         <div className="flex items-center justify-between gap-3 px-5 pt-3.5 pb-2">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <WorkspaceTag className="mb-1 self-start" />
             <Overline>{FOCUS_INFO[mode].short}</Overline>
             <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Фокус</h1>
           </div>

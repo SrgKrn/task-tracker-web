@@ -1,5 +1,6 @@
 import { buildReport, previousPeriod, type ReportData, type ReportOptions } from '../report'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from '../types'
 import { normSettingsOf } from '../norm'
 
@@ -38,6 +39,7 @@ export async function loadReport(args: {
 }): Promise<ReportData> {
   const { from, to, options } = args
   const prev = previousPeriod(from, to)
+  const ws = activeWorkspaceId()
   const start = localMidnightIso(from)
   const end = localMidnightIso(to, 1)
 
@@ -46,6 +48,7 @@ export async function loadReport(args: {
       supabase
         .from('time_entries')
         .select('*')
+        .eq('workspace_id', ws)
         .gte('effective_date', prev.from)
         .lte('effective_date', to)
         .order('id')
@@ -53,21 +56,23 @@ export async function loadReport(args: {
     ),
     options.includeComments
       ? fetchAll<Comment>((a, b) =>
-          supabase.from('comments').select('*').gte('created_at', start).lt('created_at', end).order('id').range(a, b),
+          supabase.from('comments').select('*').eq('workspace_id', ws).gte('created_at', start).lt('created_at', end).order('id').range(a, b),
         )
       : Promise.resolve([] as Comment[]),
     fetchAll<{ task_id: string }>((a, b) =>
       supabase
         .from('task_status_events')
         .select('task_id')
+        .eq('workspace_id', ws)
         .eq('is_final', true)
         .gte('created_at', start)
         .lt('created_at', end)
         .order('id')
         .range(a, b),
     ),
-    supabase.from('time_entries').select('effective_date').order('effective_date').limit(1).maybeSingle(),
-    supabase.from('user_settings').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week').maybeSingle(),
+    supabase.from('time_entries').select('effective_date').eq('workspace_id', ws).order('effective_date').limit(1).maybeSingle(),
+    // норма — пространства, а не профиля
+    supabase.from('workspaces').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week').eq('id', ws).maybeSingle(),
   ])
   if (first.error) throw first.error
   if (settings.error) throw settings.error

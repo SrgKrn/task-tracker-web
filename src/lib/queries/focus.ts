@@ -4,7 +4,7 @@ import { timeZone } from '../timerQueue'
 import { addDays, todayStr } from '../period'
 import type { FocusMode, FocusPhase, FocusRun, FocusSession } from '../types'
 import { focusSettingsOf } from '../focus'
-import { useUserSettings } from './userSettings'
+import { useActiveWorkspace } from '../workspace'
 
 /** Идущая фокус-сессия; null — фокус не запущен. До миграции 0022 таблицы нет — тоже null. */
 export function useFocusRun() {
@@ -97,8 +97,8 @@ export async function advanceFocus(qc: QueryClient): Promise<FocusTransition | n
   return rows[0] ?? null
 }
 
-/** Режим фокуса из настроек; до миграции 0022 — Pomodoro. */
+/** Режим фокуса активного пространства; до миграции — Pomodoro. */
 export function useFocusPrefs() {
-  const { data } = useUserSettings()
-  return { mode: (data?.focus_mode ?? 'pomodoro') as FocusMode, settings: focusSettingsOf(data?.focus_settings) }
+  const ws = useActiveWorkspace()
+  return { mode: (ws?.focus_mode ?? 'pomodoro') as FocusMode, settings: focusSettingsOf(ws?.focus_settings) }
 }

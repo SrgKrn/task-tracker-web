@@ -16,6 +16,8 @@ export interface Group {
   show_in_list: boolean
   /** связь: каждое значение этой группы входит в значение родительской */
   parent_group_id: string | null
+  /** пространство, в котором живёт группа */
+  workspace_id: string
   /** место блока на холсте структуры; null — раскладывается сам */
   canvas_x: number | null
   canvas_y: number | null
@@ -44,6 +46,7 @@ export interface GroupItem {
   drive_folder_name: string | null
   /** метка дизайн-системы 'label-1' … 'label-8' (цвет — из токенов темы); null — без цвета */
   color: LabelColor | null
+  workspace_id: string
   created_at: string
   updated_at: string
 }
@@ -54,6 +57,7 @@ export interface Status {
   label: string
   sort_order: number
   is_final: boolean
+  workspace_id: string
   created_at: string
   updated_at: string
 }
@@ -83,6 +87,8 @@ export interface Task {
    * своих подзадач не бывает, а значения групп она всегда берёт у спринта — это держит база.
    */
   parent_id: string | null
+  /** пространство задачи; у подзадачи — то же, что у спринта */
+  workspace_id: string
   /* ── отметки методик приоритизации (см. lib/priority.ts) ── */
   /** Эйзенхауэр: null — срочность по сроку, true/false — решил пользователь */
   urgent: boolean | null
@@ -97,6 +103,29 @@ export interface Task {
   abc_rank: number | null
   /** кому поручено */
   delegated_to: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Рабочее пространство: свои группы, этапы, задачи, учёт, норма, методика и фокус.
+ * Общее на профиль — имя, фото, тема, уведомления, Telegram, Google.
+ */
+export interface Workspace {
+  id: string
+  user_id: string
+  name: string
+  color: LabelColor
+  preset_code: string | null
+  /** основное: сюда пишут старые версии приложения, его настройки видят серверные функции */
+  is_default: boolean
+  sort_order: number
+  planned_hours_per_day: number | null
+  planned_hours_per_month: number | null
+  work_days_per_week: number
+  priority_method: PriorityMethod
+  focus_mode: FocusMode
+  focus_settings: FocusSettings
   created_at: string
   updated_at: string
 }

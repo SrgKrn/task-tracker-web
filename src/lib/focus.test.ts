@@ -18,6 +18,7 @@ function task(fields: Partial<Task> & { id: string }): Task {
     plan_date: null,
     duplicated_from: null,
     parent_id: null,
+    workspace_id: 'w',
     urgent: null,
     important: null,
     frog_date: null,

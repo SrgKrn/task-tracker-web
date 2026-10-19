@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 import { UserError } from '../Toast'
 import type { Group, GroupItem } from '../types'
 
@@ -10,7 +11,12 @@ export function useGroups() {
   return useQuery({
     queryKey: ['groups'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('groups').select('*').order('sort_order').order('created_at')
+      const { data, error } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('workspace_id', activeWorkspaceId())
+        .order('sort_order')
+        .order('created_at')
       if (error) throw error
       return data as Group[]
     },
@@ -25,6 +31,7 @@ export function useGroupItems() {
       const { data, error } = await supabase
         .from('group_items')
         .select('*')
+        .eq('workspace_id', activeWorkspaceId())
         .order('sort_order')
         .order('created_at')
       if (error) throw error
@@ -46,6 +53,7 @@ function useInvalidateGroups() {
 async function nextOrder(table: 'groups' | 'group_items', groupId?: string): Promise<number> {
   let q = supabase.from(table).select('sort_order').order('sort_order', { ascending: false }).limit(1)
   if (groupId) q = q.eq('group_id', groupId)
+  else q = q.eq('workspace_id', activeWorkspaceId())
   const { data } = await q
   return data && data.length > 0 ? (data[0] as { sort_order: number }).sort_order + 1 : 0
 }
@@ -62,7 +70,7 @@ export function useCreateGroup() {
       const sort_order = await nextOrder('groups')
       const { data, error } = await supabase
         .from('groups')
-        .insert({ ...fields, sort_order })
+        .insert({ ...fields, sort_order, workspace_id: activeWorkspaceId() })
         .select()
         .single()
       if (error) throw error

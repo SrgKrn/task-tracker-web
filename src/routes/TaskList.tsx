@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -169,6 +170,7 @@ export function TaskList() {
       <div className="safe-top">
       <div className="flex items-end justify-between gap-3 px-5 pt-3.5 pb-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <WorkspaceTag className="mb-1 self-start" />
           <Overline>
             {plural(activeCount, ACTIVE_TASKS)} ·{' '}
             <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />

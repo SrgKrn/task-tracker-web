@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { activeWorkspaceId } from '../workspace'
 
 interface Orderable {
   id: string
@@ -17,7 +18,8 @@ export function createPicklistQueries<T extends Orderable>(table: string, nameCo
     return useQuery({
       queryKey,
       queryFn: async () => {
-        const { data, error } = await supabase.from(table).select('*').order('sort_order')
+        // справочник живёт в пространстве: этапы «Работы» и «Спорта» разные
+        const { data, error } = await supabase.from(table).select('*').eq('workspace_id', activeWorkspaceId()).order('sort_order')
         if (error) throw error
         return data as T[]
       },
@@ -31,12 +33,13 @@ export function createPicklistQueries<T extends Orderable>(table: string, nameCo
         const { data: existing } = await supabase
           .from(table)
           .select('sort_order')
+          .eq('workspace_id', activeWorkspaceId())
           .order('sort_order', { ascending: false })
           .limit(1)
         const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0
         const { data, error } = await supabase
           .from(table)
-          .insert({ [nameColumn]: name, sort_order: nextOrder })
+          .insert({ [nameColumn]: name, sort_order: nextOrder, workspace_id: activeWorkspaceId() })
           .select()
           .single()
         if (error) throw error

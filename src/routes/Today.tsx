@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { WorkspaceTag } from '../components/Workspaces'
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -28,7 +29,8 @@ import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { usePriorityMethod, useUserSettings } from '../lib/queries/userSettings'
+import { usePriorityMethod } from '../lib/queries/userSettings'
+import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
@@ -47,7 +49,7 @@ export function Today() {
   const { data: statuses = [] } = useStatuses()
   const model = useGroupModel()
   const { data: activeTimer } = useActiveTimer()
-  const { data: userSettings } = useUserSettings()
+  const workspace = useActiveWorkspace()
   const method = usePriorityMethod()
   const [methodInfo, setMethodInfo] = useState(false)
   const { data: weekEntries = [] } = useTimeEntriesInRange(week.from, week.to)
@@ -88,9 +90,10 @@ export function Today() {
     [weekEntries, today],
   )
 
-  const liveHours = activeTimer ? elapsedHours(activeTimer.started_at) : 0
+  // учёт по задаче другого пространства в кольцо этого дня не идёт: у пространств своя норма
+  const liveHours = activeTimer && taskById.has(activeTimer.task_id) ? elapsedHours(activeTimer.started_at) : 0
   const dayFact = (factByDay.get(today) ?? 0) + liveHours
-  const dayNorm = dayNormFor(today, normSettingsOf(userSettings)) ?? DEFAULT_DAY_NORM
+  const dayNorm = dayNormFor(today, normSettingsOf(workspace)) ?? DEFAULT_DAY_NORM
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
@@ -244,6 +247,7 @@ export function Today() {
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {/* справа от даты — место под кнопку хронологии */}
+          <WorkspaceTag className="self-start" />
           <Overline className="pr-24 lg:pr-10">{formatTodayLabel()}</Overline>
           <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
           {/*
@@ -406,11 +410,12 @@ export function Today() {
       )}
 
       {/* встречи из календаря: прошедшие — засчитать, идущая — начать учёт */}
-      <MeetingsBlock
+      {/* встречи из календаря — в основном пространстве (в настройках календаря его можно будет сменить) */}
+      {workspace?.is_default !== false && <MeetingsBlock
         date={today}
         entries={weekEntries.filter((e) => e.effective_date === today)}
         activeTimer={activeTimer}
-      />
+      />}
 
       {/* задачи дня */}
       <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
