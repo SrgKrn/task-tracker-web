@@ -110,6 +110,7 @@ const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` 
 interface TaskRow {
   id: string
   name: string
+  workspace_id: string
   item_ids: string[]
   status_id: string | null
   parent_id: string | null
@@ -118,16 +119,29 @@ interface TaskRow {
   end_date: string | null
 }
 
-/** Всё, что нужно сводкам и кнопкам: задачи, статусы, подписи групп. */
-async function loadWorld(db: SupabaseClient, userId: string) {
+/**
+ * Всё, что нужно сводкам и кнопкам: задачи, статусы, подписи групп. С wsId — только одно
+ * пространство: у него свои группы (главная группа «Работы» — клиенты, у «Спорта» — цели).
+ */
+async function loadWorld(db: SupabaseClient, userId: string, wsId?: string) {
+  let tasksQ = db
+    .from('tasks')
+    .select('id, name, workspace_id, item_ids, status_id, parent_id, planned_hours, fact_hours, end_date')
+    .eq('user_id', userId)
+  let statusesQ = db.from('statuses').select('id, is_final').eq('user_id', userId)
+  let groupsQ = db.from('groups').select('id, name, sort_order, show_in_list').eq('user_id', userId)
+  let itemsQ = db.from('group_items').select('id, name, group_id').eq('user_id', userId)
+  if (wsId) {
+    tasksQ = tasksQ.eq('workspace_id', wsId)
+    statusesQ = statusesQ.eq('workspace_id', wsId)
+    groupsQ = groupsQ.eq('workspace_id', wsId)
+    itemsQ = itemsQ.eq('workspace_id', wsId)
+  }
   const [{ data: tasks }, { data: statuses }, { data: groups }, { data: items }] = await Promise.all([
-    db
-      .from('tasks')
-      .select('id, name, item_ids, status_id, parent_id, planned_hours, fact_hours, end_date')
-      .eq('user_id', userId),
-    db.from('statuses').select('id, is_final').eq('user_id', userId),
-    db.from('groups').select('id, name, sort_order, show_in_list').eq('user_id', userId).order('sort_order'),
-    db.from('group_items').select('id, name, group_id').eq('user_id', userId),
+    tasksQ,
+    statusesQ,
+    groupsQ.order('sort_order'),
+    itemsQ,
   ])
   const all = ((tasks ?? []) as TaskRow[]).map((t) => ({ ...t, planned_hours: Number(t.planned_hours), fact_hours: Number(t.fact_hours) }))
   const byId = new Map(all.map((t) => [t.id, t]))
@@ -166,6 +180,24 @@ async function loadWorld(db: SupabaseClient, userId: string) {
   const rollup = (taskId: string) =>
     all.filter((x) => x.id === taskId || x.parent_id === taskId).reduce((s, x) => s + x.fact_hours, 0)
   return { all, byId, isOpen, title, label, mainValue, mainGroup, headOf, rollup }
+}
+
+interface WsRow {
+  id: string
+  name: string
+  is_default: boolean
+  planned_hours_per_day: number | null
+}
+
+/** пространства пользователя: основное первым, дальше — как в приложении */
+async function workspacesOf(db: SupabaseClient, userId: string): Promise<WsRow[]> {
+  const { data } = await db
+    .from('workspaces')
+    .select('id, name, is_default, planned_hours_per_day, sort_order')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+    .order('sort_order')
+  return (data ?? []) as WsRow[]
 }
 
 Deno.serve(async (req) => {
@@ -487,34 +519,25 @@ Deno.serve(async (req) => {
 
   /* ── сводки ────────────────────────────────────────────────────── */
 
-  async function dailyDigest(userId: string, timezone: string, date: string, store = true) {
-    const world = await loadWorld(db, userId)
-    const [{ data: entries }, { data: running }, { data: settings }] = await Promise.all([
-      db.from('time_entries').select('task_id, duration_seconds').eq('user_id', userId).eq('effective_date', date),
-      db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle(),
-      db.from('user_settings').select('planned_hours_per_day').eq('user_id', userId).maybeSingle(),
-    ])
-    const total = (entries ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
+  type EntryWs = { task_id: string; duration_seconds: number; workspace_id: string }
+
+  /**
+   * Блок пространства в итогах дня: сколько записано, главные задачи, близко к плану и
+   * просрочено. withTitle — заголовок пространства (когда их в сводке несколько).
+   */
+  async function daySection(userId: string, ws: WsRow, date: string, entries: EntryWs[], withTitle: boolean, fallbackPlan: number) {
+    const world = await loadWorld(db, userId, ws.id)
+    const mine = entries.filter((e) => e.workspace_id === ws.id)
+    const total = mine.reduce((s, e) => s + e.duration_seconds / 60, 0)
     const byHead = new Map<string, number>()
-    for (const e of entries ?? []) {
+    for (const e of mine) {
       const head = world.headOf(e.task_id)
       byHead.set(head, (byHead.get(head) ?? 0) + e.duration_seconds / 60)
     }
-    const { from, to } = dayBounds(date, timezone)
-    const { data: events } = await db
-      .from('calendar_events')
-      .select('id, title, starts_at, ends_at, suggested_task_id')
-      .eq('user_id', userId)
-      .eq('status', 'new')
-      .gte('starts_at', from.toISOString())
-      .lt('starts_at', to.toISOString())
-      .lte('ends_at', new Date().toISOString())
-      .order('starts_at')
-    const sessions = await sessionsBetween(userId, from, to)
-    const meetings = (events ?? []).filter((ev) => !covered(ev, sessions)).slice(0, 6)
-
-    const lines: string[] = [`📊 Итоги дня · ${dayTitle(date)}`]
-    const plan = settings?.planned_hours_per_day ? Number(settings.planned_hours_per_day) * 60 : 0
+    const lines: string[] = []
+    if (withTitle) lines.push('', `▍${ws.name}`)
+    // норма — пространства; у основного без своей — из профиля (старые настройки)
+    const plan = ws.planned_hours_per_day != null ? Number(ws.planned_hours_per_day) * 60 : ws.is_default ? fallbackPlan : 0
     lines.push(
       total > 0
         ? `Записано ${hm(total)}${plan ? ` · план ${hm(plan)} (${Math.round((total / plan) * 100)}%)` : ''}`
@@ -527,6 +550,67 @@ Deno.serve(async (req) => {
         const label = world.label(taskId)
         lines.push(`• ${cut(world.title(taskId), 40)}${label ? ` · ${cut(label, 24)}` : ''} — ${hm(m)}`)
       }
+    }
+    // близко к плану и просрочено — по открытым спринтам этого пространства
+    const heads = world.all.filter((t) => !t.parent_id && world.isOpen(t))
+    const near = heads
+      .filter((t) => t.planned_hours > 0)
+      .map((t) => ({ t, pct: Math.round((world.rollup(t.id) / t.planned_hours) * 100) }))
+      .filter((x) => x.pct >= 90)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 3)
+    const overdue = heads.filter((t) => t.end_date && t.end_date < date)
+    if (near.length || overdue.length) lines.push('')
+    if (near.length) {
+      lines.push(`⚠️ Близко к плану: ${near.map((x) => `«${cut(x.t.name.trim(), 28)}» — ${x.pct}%`).join(', ')}`)
+    }
+    if (overdue.length) {
+      lines.push(
+        `⚑ Срок прошёл: ${overdue.slice(0, 3).map((t) => `«${cut(t.name.trim(), 28)}»`).join(', ')}${overdue.length > 3 ? ` и ещё ${overdue.length - 3}` : ''}`,
+      )
+    }
+    return { lines, total }
+  }
+
+  /**
+   * Итоги дня. Пространств несколько — блоком по каждому; only — одно пространство
+   * (кнопка после /today). Учёт, встречи и блок «Время» — общие, один раз.
+   */
+  async function dailyDigest(userId: string, timezone: string, date: string, store = true, only?: string) {
+    const world = await loadWorld(db, userId)
+    const spaces = await workspacesOf(db, userId)
+    const targets = only ? spaces.filter((w) => w.id === only) : spaces
+    const multi = targets.length > 1
+    const [{ data: entries }, { data: running }, { data: settings }] = await Promise.all([
+      db.from('time_entries').select('task_id, duration_seconds, workspace_id').eq('user_id', userId).eq('effective_date', date),
+      db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle(),
+      db.from('user_settings').select('planned_hours_per_day').eq('user_id', userId).maybeSingle(),
+    ])
+    const fallbackPlan = settings?.planned_hours_per_day ? Number(settings.planned_hours_per_day) * 60 : 0
+    const { from, to } = dayBounds(date, timezone)
+    let eventsQuery = db
+      .from('calendar_events')
+      .select('id, title, starts_at, ends_at, suggested_task_id')
+      .eq('user_id', userId)
+      .eq('status', 'new')
+      .gte('starts_at', from.toISOString())
+      .lt('starts_at', to.toISOString())
+      .lte('ends_at', new Date().toISOString())
+      .order('starts_at')
+    if (only) eventsQuery = eventsQuery.eq('workspace_id', only)
+    const { data: events } = await eventsQuery
+    const sessions = await sessionsBetween(userId, from, to)
+    const meetings = (events ?? []).filter((ev) => !covered(ev, sessions)).slice(0, 6)
+
+    const lines: string[] = [`📊 Итоги дня · ${dayTitle(date)}${only && spaces.length > 1 && targets[0] ? ` · ${targets[0].name}` : ''}`]
+    let total = 0
+    for (const ws of targets) {
+      const section = await daySection(userId, ws, date, (entries ?? []) as EntryWs[], multi, fallbackPlan)
+      lines.push(...section.lines)
+      total += section.total
+    }
+    if (multi) {
+      lines.push('', `Всего за день — ${hm(total)}`)
     }
     const keyboard: Keyboard = { inline_keyboard: [] }
     if (running) {
@@ -552,24 +636,6 @@ Deno.serve(async (req) => {
         ])
       })
     }
-    // близко к плану и просрочено — по открытым спринтам
-    const heads = world.all.filter((t) => !t.parent_id && world.isOpen(t))
-    const near = heads
-      .filter((t) => t.planned_hours > 0)
-      .map((t) => ({ t, pct: Math.round((world.rollup(t.id) / t.planned_hours) * 100) }))
-      .filter((x) => x.pct >= 90)
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 3)
-    const overdue = heads.filter((t) => t.end_date && t.end_date < date)
-    if (near.length || overdue.length) lines.push('')
-    if (near.length) {
-      lines.push(`⚠️ Близко к плану: ${near.map((x) => `«${cut(x.t.name.trim(), 28)}» — ${x.pct}%`).join(', ')}`)
-    }
-    if (overdue.length) {
-      lines.push(
-        `⚑ Срок прошёл: ${overdue.slice(0, 3).map((t) => `«${cut(t.name.trim(), 28)}»`).join(', ')}${overdue.length > 3 ? ` и ещё ${overdue.length - 3}` : ''}`,
-      )
-    }
     // блок «Время» — только о сегодняшнем дне: сводка за прошлую дату (dry_run) его не получает
     const insight = date === localDate(new Date(), timezone) ? await dayInsight(userId, 'digest', store) : null
     if (insight) lines.push('', renderBlock(insight.fact, insight.quote))
@@ -578,55 +644,93 @@ Deno.serve(async (req) => {
     return { text: lines.join('\n'), keyboard, worthSending }
   }
 
-  async function weeklyDigest(userId: string, date: string) {
-    const world = await loadWorld(db, userId)
+  /** Итоги недели: блоком по каждому пространству (или одно — only). */
+  async function weeklyDigest(userId: string, date: string, only?: string) {
+    const spaces = await workspacesOf(db, userId)
+    const targets = only ? spaces.filter((w) => w.id === only) : spaces
+    const multi = targets.length > 1
     // неделя с понедельника по сегодняшний день
     const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7
     const monday = shift(date, 1 - weekday)
     const prevMonday = shift(monday, -7)
     const prevSame = shift(date, -7)
     const [{ data: cur }, { data: prev }] = await Promise.all([
-      db.from('time_entries').select('task_id, duration_seconds').eq('user_id', userId).gte('effective_date', monday).lte('effective_date', date),
-      db.from('time_entries').select('duration_seconds').eq('user_id', userId).gte('effective_date', prevMonday).lte('effective_date', prevSame),
+      db
+        .from('time_entries')
+        .select('task_id, duration_seconds, workspace_id')
+        .eq('user_id', userId)
+        .gte('effective_date', monday)
+        .lte('effective_date', date),
+      db
+        .from('time_entries')
+        .select('duration_seconds, workspace_id')
+        .eq('user_id', userId)
+        .gte('effective_date', prevMonday)
+        .lte('effective_date', prevSame),
     ])
-    const total = (cur ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
-    const prevTotal = (prev ?? []).reduce((s, e) => s + e.duration_seconds / 60, 0)
-    const byGroup = new Map<string, number>()
-    for (const e of cur ?? []) {
-      const key = world.mainValue(e.task_id)
-      byGroup.set(key, (byGroup.get(key) ?? 0) + e.duration_seconds / 60)
-    }
     const m = new Date(`${monday}T12:00:00Z`)
     const d = new Date(`${date}T12:00:00Z`)
     const range =
-      m.getUTCMonth() === d.getUTCMonth()
+      monday === date
+        ? `${d.getUTCDate()} ${MONTHS_GEN[d.getUTCMonth()]}`
+        : m.getUTCMonth() === d.getUTCMonth()
         ? `${m.getUTCDate()}–${d.getUTCDate()} ${MONTHS_GEN[d.getUTCMonth()]}`
         : `${m.getUTCDate()} ${MONTHS_GEN[m.getUTCMonth()]} – ${d.getUTCDate()} ${MONTHS_GEN[d.getUTCMonth()]}`
-    const lines = [`🗓 Итоги недели · ${range}`]
-    const delta = total - prevTotal
-    lines.push(
-      `Записано ${hm(total)}${prevTotal > 0 ? ` · прошлая неделя ${hm(prevTotal)} (${delta >= 0 ? '+' : '−'}${hours1(Math.abs(delta))} ч)` : ''}`,
-    )
-    const top = [...byGroup.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7)
-    if (top.length) {
-      lines.push('', world.mainGroup ? `${world.mainGroup.name}:` : 'По задачам:')
-      for (const [name, v] of top) lines.push(`• ${cut(name, 36)} — ${hm(v)} (${Math.round((v / total) * 100)}%)`)
+    const lines = [`🗓 Итоги недели · ${range}${only && spaces.length > 1 && targets[0] ? ` · ${targets[0].name}` : ''}`]
+    let all = 0
+    for (const ws of targets) {
+      const world = await loadWorld(db, userId, ws.id)
+      const mine = (cur ?? []).filter((e) => e.workspace_id === ws.id)
+      const total = mine.reduce((s, e) => s + e.duration_seconds / 60, 0)
+      const prevTotal = (prev ?? []).filter((e) => e.workspace_id === ws.id).reduce((s, e) => s + e.duration_seconds / 60, 0)
+      all += total
+      const byGroup = new Map<string, number>()
+      for (const e of mine) {
+        // групп в пространстве нет (бывает у «Спорта») — раскладываем по задачам, а не в «Без группы»
+        const key = world.mainGroup ? world.mainValue(e.task_id) : world.title(world.headOf(e.task_id))
+        byGroup.set(key, (byGroup.get(key) ?? 0) + e.duration_seconds / 60)
+      }
+      if (multi) lines.push('', `▍${ws.name}`)
+      const delta = total - prevTotal
+      lines.push(
+        total > 0 || prevTotal > 0
+          ? `Записано ${hm(total)}${prevTotal > 0 ? ` · прошлая неделя ${hm(prevTotal)} (${delta >= 0 ? '+' : '−'}${hours1(Math.abs(delta))} ч)` : ''}`
+          : 'Учёта за неделю нет',
+      )
+      const top = [...byGroup.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 7)
+      if (top.length) {
+        lines.push('', world.mainGroup ? `${world.mainGroup.name}:` : 'По задачам:')
+        for (const [name, v] of top) lines.push(`• ${cut(name, 36)} — ${hm(v)} (${Math.round((v / total) * 100)}%)`)
+      }
+      const overs = world.all
+        .filter((t) => !t.parent_id && world.isOpen(t) && t.planned_hours > 0)
+        .map((t) => ({ t, pct: Math.round((world.rollup(t.id) / t.planned_hours) * 100) }))
+        .filter((x) => x.pct > 100)
+        .sort((a, b) => b.pct - a.pct)
+        .slice(0, 3)
+      if (overs.length) {
+        lines.push('', `За план вышли: ${overs.map((x) => `«${cut(x.t.name.trim(), 28)}» (${x.pct}%)`).join(', ')}`)
+      }
     }
-    const overs = world.all
-      .filter((t) => !t.parent_id && world.isOpen(t) && t.planned_hours > 0)
-      .map((t) => ({ t, pct: Math.round((world.rollup(t.id) / t.planned_hours) * 100) }))
-      .filter((x) => x.pct > 100)
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 3)
-    if (overs.length) {
-      lines.push('', `За план вышли: ${overs.map((x) => `«${cut(x.t.name.trim(), 28)}» (${x.pct}%)`).join(', ')}`)
-    }
+    if (multi) lines.push('', `Всего за неделю — ${hm(all)}`)
     return { text: lines.join('\n'), keyboard: { inline_keyboard: [openApp('/dashboard')].filter((r) => r.length) } as Keyboard }
+  }
+
+  /** «За какое пространство?» — кнопки после /today и /week, если пространств несколько */
+  function spaceChooser(kind: 'dd' | 'dw', spaces: WsRow[]): Keyboard {
+    return {
+      inline_keyboard: [
+        [{ text: 'Все пространства', callback_data: `${kind}:all` }],
+        ...spaces.map((w) => [{ text: w.name.slice(0, 40), callback_data: `${kind}:${w.id}` }]),
+      ],
+    }
   }
 
   /** панель учёта: что идёт сейчас и кнопки «начать» по последним задачам */
   async function timerPanel(userId: string) {
     const world = await loadWorld(db, userId)
+    const spaces = await workspacesOf(db, userId)
+    const spaceName = new Map(spaces.map((w) => [w.id, w.name]))
     const { data: running } = await db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle()
     const keyboard: Keyboard = { inline_keyboard: [] }
     const lines: string[] = []
@@ -642,7 +746,8 @@ Deno.serve(async (req) => {
     if (ids.length) {
       lines.push('', 'Начать учёт:')
       for (const id of ids) {
-        const label = world.label(id)
+        // пространств несколько — подписываем пространство, а не группу: задачи из разных мест
+        const label = spaces.length > 1 ? (spaceName.get(world.byId.get(id)?.workspace_id ?? '') ?? '') : world.label(id)
         keyboard.inline_keyboard.push([{ text: `▶ ${cut(world.title(id), 34)}${label ? ` · ${cut(label, 16)}` : ''}`, callback_data: `go:${id}` }])
       }
     }
@@ -699,7 +804,7 @@ Deno.serve(async (req) => {
             chatId,
             acc
               ? HELP
-              : 'Ссылка устарела или неверная. Откройте Semternity → Ещё → Telegram и нажмите «Подключить» ещё раз.',
+              : 'Ссылка устарела или неверная. Откройте Semternity → Профиль → Telegram и нажмите «Подключить» ещё раз.',
           )
           return
         }
@@ -721,20 +826,22 @@ Deno.serve(async (req) => {
 
       const acc = await accountOf(chatId)
       if (!acc) {
-        await say(chatId, 'Я присылаю уведомления Semternity. Подключение — в приложении: Ещё → Telegram.')
+        await say(chatId, 'Я присылаю уведомления Semternity. Подключение — в приложении: Профиль → Telegram.')
         return
       }
       if (!text) return
       const command = text.split(/[\s@]/)[0].toLowerCase()
-      if (command === '/today') {
+      if (command === '/today' || command === '/week') {
+        const spaces = await workspacesOf(db, acc.user_id)
+        if (spaces.length > 1) {
+          await say(chatId, command === '/today' ? 'Итоги дня — за какое пространство?' : 'Итоги недели — за какое пространство?', {
+            reply_markup: spaceChooser(command === '/today' ? 'dd' : 'dw', spaces),
+          })
+          return
+        }
         const date = localDate(new Date(), acc.timezone)
-        const d = await dailyDigest(acc.user_id, acc.timezone, date)
-        await say(chatId, d.text, { reply_markup: d.keyboard })
-        return
-      }
-      if (command === '/week') {
-        const w = await weeklyDigest(acc.user_id, localDate(new Date(), acc.timezone))
-        await say(chatId, w.text, { reply_markup: w.keyboard })
+        const r = command === '/today' ? await dailyDigest(acc.user_id, acc.timezone, date) : await weeklyDigest(acc.user_id, date)
+        await say(chatId, r.text, { reply_markup: r.keyboard })
         return
       }
       if (command === '/timer') {
@@ -785,6 +892,17 @@ Deno.serve(async (req) => {
     }
     const userId = acc.user_id
     const timezone = acc.timezone
+
+    // выбор пространства для /today и /week
+    if (action === 'dd' || action === 'dw') {
+      const only = a1 === 'all' ? undefined : a1
+      const date = localDate(new Date(), timezone)
+      const r = action === 'dd' ? await dailyDigest(userId, timezone, date, true, only) : await weeklyDigest(userId, date, only)
+      await answer('')
+      await tg('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }).catch(() => {})
+      await say(chatId, r.text, { reply_markup: r.keyboard })
+      return
+    }
 
     if (action === 'stop' || action === 'keep') {
       const epoch = Number(a1)
@@ -980,7 +1098,7 @@ Deno.serve(async (req) => {
       })
       await tg('setMyDescription', {
         description:
-          'Уведомления Semternity: итоги дня и недели, напоминание о долгом учёте и о встречах, учёт и комментарии прямо из чата. Подключение — в приложении: Ещё → Telegram.',
+          'Уведомления Semternity: итоги дня и недели, напоминание о долгом учёте и о встречах, учёт и комментарии прямо из чата. Подключение — в приложении: Профиль → Telegram.',
       }).catch(() => {})
       await tg('setMyCommands', {
         commands: [
@@ -1129,7 +1247,7 @@ Deno.serve(async (req) => {
     case 'unlink': {
       if (account) {
         await db.from('telegram_accounts').delete().eq('user_id', user.id)
-        await say(account.chat_id, 'Уведомления Semternity отключены. Подключить снова — в приложении: Ещё → Telegram.')
+        await say(account.chat_id, 'Уведомления Semternity отключены. Подключить снова — в приложении: Профиль → Telegram.')
       }
       return json({ ok: true })
     }

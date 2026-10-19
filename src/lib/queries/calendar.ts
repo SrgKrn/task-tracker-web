@@ -3,6 +3,7 @@ import { toDateString } from '../period'
 import { supabase } from '../supabaseClient'
 import { UserError } from '../Toast'
 import type { CalendarEvent, CalendarSource } from '../types'
+import { activeWorkspaceId } from '../workspace'
 
 async function call<T>(action: string, extra: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.functions.invoke('calendar', { body: { action, ...extra } })
@@ -36,6 +37,8 @@ export function useCalendarEvents(date: string) {
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
+        // встречи — в пространстве своего календаря
+        .eq('workspace_id', activeWorkspaceId())
         .gte('starts_at', from.toISOString())
         .lt('starts_at', to.toISOString())
         .order('starts_at')
@@ -167,5 +170,20 @@ export function useSetMeetingReminders() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}
+
+/** Пространство календаря: туда попадают его встречи, там предлагаются задачи. */
+export function useSetCalendarWorkspace() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, workspaceId }: { id: string; workspaceId: string }) => {
+      const { error } = await supabase.from('calendar_sources').update({ workspace_id: workspaceId }).eq('id', id)
+      if (error) throw error
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['calendar_sources'] })
+      qc.invalidateQueries({ queryKey: ['calendar_events'] })
+    },
   })
 }

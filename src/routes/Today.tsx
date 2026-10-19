@@ -410,12 +410,12 @@ export function Today() {
       )}
 
       {/* встречи из календаря: прошедшие — засчитать, идущая — начать учёт */}
-      {/* встречи из календаря — в основном пространстве (в настройках календаря его можно будет сменить) */}
-      {workspace?.is_default !== false && <MeetingsBlock
+      {/* встречи — того календаря, что привязан к этому пространству (Профиль → Google Календарь) */}
+      <MeetingsBlock
         date={today}
         entries={weekEntries.filter((e) => e.effective_date === today)}
         activeTimer={activeTimer}
-      />}
+      />
 
       {/* задачи дня */}
       <div className="flex flex-col gap-2 px-5 pt-5 pb-2">

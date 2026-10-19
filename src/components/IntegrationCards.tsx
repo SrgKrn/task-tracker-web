@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Toggle } from './AppPreferences'
 import { describeError, useToast } from '../lib/Toast'
 import { pickFromDrive, useGoogleActions, useGoogleStatus, type GoogleService } from '../lib/google'
-import { useCalendarActions, useCalendarSources, useSetMeetingReminders } from '../lib/queries/calendar'
+import { useSetCalendarWorkspace, useCalendarActions, useCalendarSources, useSetMeetingReminders } from '../lib/queries/calendar'
 import { useSaveDriveReportsFolder, useUserSettings } from '../lib/queries/userSettings'
 import type { CalendarSource } from '../lib/types'
+import { Chip, ClientDot } from './ui'
+import { useWorkspaces } from '../lib/workspace'
 
 const card = { background: 'var(--surface)', border: '1px solid var(--border)' }
 const outline = { border: '1px solid var(--border-strong)' }
@@ -37,6 +39,40 @@ function useGoogleSignIn() {
 /* ── Google Календарь ──────────────────────────────────────────── */
 
 /** Подключённый календарь: когда обновлялся, ошибка, «Обновить» и «Отключить». */
+/** В какое пространство попадают встречи: выбор виден, только если пространств несколько. */
+function SourceWorkspace({ src }: { src: CalendarSource }) {
+  const { data: spaces = [] } = useWorkspaces()
+  const setWs = useSetCalendarWorkspace()
+  const { showError, showSuccess } = useToast()
+  if (spaces.length < 2) return null
+  const current = src.workspace_id ?? spaces.find((w) => w.is_default)?.id
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-text-secondary">Встречи — в пространство</span>
+      <div className="flex flex-wrap gap-1.5">
+        {spaces.map((w) => (
+          <Chip
+            key={w.id}
+            active={w.id === current}
+            onClick={() =>
+              w.id !== current &&
+              setWs.mutate(
+                { id: src.id, workspaceId: w.id },
+                { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess(`Встречи — в «${w.name}»`) },
+              )
+            }
+          >
+            <span className="flex items-center gap-1.5">
+              <ClientDot color={w.color} size={7} />
+              {w.name}
+            </span>
+          </Chip>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SourceRow({ src, title, onReconnect }: { src: CalendarSource; title: string; onReconnect?: () => void }) {
   const actions = useCalendarActions()
   const { showError, showSuccess } = useToast()
@@ -51,6 +87,7 @@ function SourceRow({ src, title, onReconnect }: { src: CalendarSource; title: st
         <span className="shrink-0 font-mono text-xs text-text-secondary">{when(src.last_synced_at)}</span>
       </div>
       {src.last_error && <span className="text-xs leading-[1.45] text-danger-text">{src.last_error}</span>}
+      <SourceWorkspace src={src} />
       {src.last_error && onReconnect && (
         <button type="button" onClick={onReconnect} className="self-start text-sm text-accent-text">
           Войти через Google заново

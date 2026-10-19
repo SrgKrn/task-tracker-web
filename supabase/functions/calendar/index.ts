@@ -47,7 +47,10 @@ async function fetchIcs(url: string): Promise<string> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 20_000)
   try {
-    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'text/calendar, */*' } })
+    // сеть, DNS, таймаут — вместо технического текста на английском
+    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'text/calendar, */*' } }).catch(() => {
+      throw new Error('Календарь по ссылке недоступен — проверьте адрес, попробуем ещё раз позже')
+    })
     if (r.status === 404 || r.status === 403 || r.status === 401) {
       throw new Error('Календарь по ссылке не открылся — проверьте, что это секретный адрес в формате iCal')
     }
@@ -228,6 +231,7 @@ async function googleOccurrences(
 interface TaskRow {
   id: string
   name: string
+  workspace_id: string
   item_ids: string[]
   status_id: string | null
   parent_id: string | null
@@ -237,11 +241,11 @@ interface TaskRow {
 
 async function suggestFor(db: SupabaseClient, userId: string) {
   const [{ data: tasks }, { data: statuses }, { data: rules }, { data: items }, { data: events }] = await Promise.all([
-    db.from('tasks').select('id, name, item_ids, status_id, parent_id, duplicated_from, created_at').eq('user_id', userId),
+    db.from('tasks').select('id, name, workspace_id, item_ids, status_id, parent_id, duplicated_from, created_at').eq('user_id', userId),
     db.from('statuses').select('id, is_final').eq('user_id', userId),
     db.from('calendar_rules').select('title_key, task_id').eq('user_id', userId),
-    db.from('group_items').select('id, name, archived').eq('user_id', userId),
-    db.from('calendar_events').select('id, title, suggested_task_id').eq('user_id', userId).eq('status', 'new'),
+    db.from('group_items').select('id, name, archived, workspace_id').eq('user_id', userId),
+    db.from('calendar_events').select('id, title, suggested_task_id, workspace_id').eq('user_id', userId).eq('status', 'new'),
   ])
   const final = new Set((statuses ?? []).filter((s) => s.is_final).map((s) => s.id))
   const all = (tasks ?? []) as TaskRow[]
@@ -263,18 +267,26 @@ async function suggestFor(db: SupabaseClient, userId: string) {
   const ruleMap = new Map((rules ?? []).map((r) => [r.title_key, r.task_id]))
   const names = (items ?? [])
     .filter((i) => !i.archived && titleKey(i.name).length >= 3)
-    .map((i) => ({ id: i.id, key: titleKey(i.name) }))
+    .map((i) => ({ id: i.id, key: titleKey(i.name), workspace_id: i.workspace_id as string }))
     .sort((a, b) => b.key.length - a.key.length)
 
   for (const ev of events ?? []) {
     const key = titleKey(ev.title)
+    // встреча живёт в пространстве своего календаря — и задачу ищем только там
+    const ws = ev.workspace_id as string | null
+    const inWs = (taskId: string | null) => !!taskId && (!ws || byId.get(taskId)?.workspace_id === ws)
     let suggestion: string | null = null
     const ruled = ruleMap.get(key)
-    if (ruled) suggestion = latest(ruled)
+    if (ruled) {
+      const latestId = latest(ruled)
+      suggestion = inWs(latestId) ? latestId : null
+    }
     if (!suggestion) {
       // в названии встречи есть имя проекта или клиента — свежая открытая задача с ним
       const padded = ` ${key} `
-      const hit = names.find((n) => padded.includes(` ${n.key} `) || (n.key.length >= 5 && key.includes(n.key)))
+      const hit = names.find(
+        (n) => (!ws || n.workspace_id === ws) && (padded.includes(` ${n.key} `) || (n.key.length >= 5 && key.includes(n.key))),
+      )
       if (hit) {
         suggestion =
           all

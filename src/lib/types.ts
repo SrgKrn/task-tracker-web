@@ -270,6 +270,8 @@ export interface CalendarSource {
   name: string
   last_synced_at: string | null
   last_error: string | null
+  /** в какое пространство попадают встречи календаря; null — основное */
+  workspace_id: string | null
   created_at: string
 }
 
