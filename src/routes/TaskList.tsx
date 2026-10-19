@@ -6,7 +6,10 @@ import { TaskListItem } from '../components/TaskListItem'
 import { Search, SortArrows } from '../components/Icon'
 import { Button, Chip, EmptyState, ListGroup, Overline, Segmented, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
-import { overlapsPeriod } from '../lib/period'
+import { overlapsPeriod, todayStr } from '../lib/period'
+import { PriorityBadge } from '../components/Priority'
+import { comparePriority } from '../lib/priority'
+import { usePriorityMethod } from '../lib/queries/userSettings'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
@@ -51,7 +54,12 @@ export function TaskList() {
   const [showFilters, setShowFilters] = useState(false)
   // готовое по умолчанию скрыто: в работе нужны открытые задачи, закрытые — по запросу
   const [hideCompleted, setHideCompleted] = useState(true)
-  const [sortByDue, setSortByDue] = useState(true)
+  /** порядок: по сроку, по созданию или по выбранной методике приоритизации */
+  const [sortMode, setSortMode] = useState<'due' | 'created' | 'method'>('due')
+  const method = usePriorityMethod()
+  const today = todayStr()
+  // методику выключили — порядок «по методике» больше ничего не значит
+  const sort = sortMode === 'method' && method === 'none' ? 'due' : sortMode
   /** выбранные значения по группам; нет ключа — в группе выбрано всё */
   const [selected, setSelected] = useState<Record<string, Set<string>>>({})
 
@@ -95,14 +103,19 @@ export function TaskList() {
   }, [heads, query, matchedInside, periodFrom, periodTo, hideCompleted, statusById, model, selected])
 
   const sorted = useMemo(() => {
-    if (!sortByDue) return filtered
-    return [...filtered].sort((a, b) => {
+    if (sort === 'created') return filtered
+    const byDue = (a: Task, b: Task) => {
       if (!a.end_date && !b.end_date) return 0
       if (!a.end_date) return 1
       if (!b.end_date) return -1
       return a.end_date.localeCompare(b.end_date)
-    })
-  }, [filtered, sortByDue])
+    }
+    // по методике — внутри равных по приоритету задач порядок по сроку
+    const byMethod = comparePriority(method, today)
+    return [...filtered].sort(sort === 'method' ? (a, b) => byMethod(a, b) || byDue(a, b) : byDue)
+  }, [filtered, sort, method, today])
+  const SORT_LABEL = { due: 'По сроку', created: 'По созданию', method: 'По методике' } as const
+  const nextSort = sort === 'due' ? 'created' : sort === 'created' && method !== 'none' ? 'method' : 'due'
 
   const groups = useMemo(() => {
     const withSum = (id: string, title: string, items: Task[]) => ({
@@ -165,11 +178,11 @@ export function TaskList() {
         <Button
           variant="ghost"
           className="-mr-2 shrink-0"
-          onClick={() => setSortByDue((v) => !v)}
-          aria-label={sortByDue ? 'Сейчас по сроку, переключить на порядок создания' : 'Сейчас по порядку создания, переключить на срок'}
+          onClick={() => setSortMode(nextSort)}
+          aria-label={`Сейчас ${SORT_LABEL[sort].toLowerCase()}, переключить: ${SORT_LABEL[nextSort].toLowerCase()}`}
         >
           <SortArrows size={16} />
-          {sortByDue ? 'По сроку' : 'По созданию'}
+          {SORT_LABEL[sort]}
         </Button>
       </div>
       </div>
@@ -306,6 +319,7 @@ export function TaskList() {
                   <TaskListItem
                     key={task.id}
                     task={task}
+                    badge={<PriorityBadge task={task} method={method} today={today} />}
                     status={task.status_id ? statusById.get(task.status_id) : undefined}
                     label={model.listLabel(task)}
                     color={model.colorOf(task)}

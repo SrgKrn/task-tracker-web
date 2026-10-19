@@ -37,7 +37,7 @@ export function Logo({ size = 22, color = 'var(--accent)' }: { size?: number; co
  */
 export function Overline({ children, className = '' }: { children: ReactNode; className?: string }) {
   // свой цвет (например «Просрочено» малиновым) заменяет вторичный, а не спорит с ним в CSS
-  const color = /\btext-(text|danger|accent|success|warning)/.test(className) ? '' : 'text-text-secondary'
+  const color = /\btext-(text|danger|accent|success|warning|info)/.test(className) ? '' : 'text-text-secondary'
   return <span className={`text-sm font-medium ${color} ${className}`}>{children}</span>
 }
 

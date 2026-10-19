@@ -25,6 +25,7 @@ const TelegramSettings = lazy(() => settingsRoute().then((m) => ({ default: m.Te
 const CalendarSettings = lazy(() => settingsRoute().then((m) => ({ default: m.CalendarSettings })))
 const DriveSettings = lazy(() => settingsRoute().then((m) => ({ default: m.DriveSettings })))
 const PlanSettings = lazy(() => settingsRoute().then((m) => ({ default: m.PlanSettings })))
+const MethodSettings = lazy(() => settingsRoute().then((m) => ({ default: m.MethodSettings })))
 const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ExportSettings })))
 const GroupsAdmin = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupsAdmin })))
 const GroupPage = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupPage })))
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/settings/drive" element={<DriveSettings />} />
         <Route path="/settings/plan" element={<PlanSettings />} />
         <Route path="/settings/export" element={<ExportSettings />} />
+        <Route path="/settings/method" element={<MethodSettings />} />
         <Route path="/changelog" element={<SettingsShell><Changelog /></SettingsShell>} />
       </Route>
     </Routes>

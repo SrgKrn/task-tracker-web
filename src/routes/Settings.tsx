@@ -19,7 +19,16 @@ import { describeError, useToast } from '../lib/Toast'
 import { useAuth } from '../lib/AuthContext'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
-import { useSaveDriveReportsFolder, useSaveUserSettings, useUserSettings } from '../lib/queries/userSettings'
+import {
+  usePriorityMethod,
+  useSaveDriveReportsFolder,
+  useSavePriorityMethod,
+  useSaveUserSettings,
+  useUserSettings,
+} from '../lib/queries/userSettings'
+import { MethodExplainer } from '../components/Priority'
+import { METHODS, METHOD_ORDER } from '../lib/priority'
+import type { PriorityMethod } from '../lib/types'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
@@ -478,6 +487,73 @@ export function PlanSettings() {
   return (
     <SettingsPage title="План часов">
       <BudgetForm />
+    </SettingsPage>
+  )
+}
+
+/**
+ * Методика приоритизации: одна на всё приложение. Под выбранной — объяснение, чтобы было
+ * понятно, что поменяется, ещё до первого захода на «Сегодня».
+ */
+function MethodPicker() {
+  const method = usePriorityMethod()
+  const save = useSavePriorityMethod()
+  const { showError, showSuccess } = useToast()
+  const options: { value: PriorityMethod; name: string; short: string }[] = [
+    { value: 'none', name: 'Без методики', short: 'Обычный список дня, как раньше' },
+    ...METHOD_ORDER.map((m) => ({ value: m, name: METHODS[m].name, short: METHODS[m].short })),
+  ]
+  return (
+    <>
+      <ListGroup>
+        {options.map((o) => {
+          const on = o.value === method
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() =>
+                !on &&
+                save.mutate(o.value, {
+                  onError: (e) => showError(describeError(e)),
+                  onSuccess: () => showSuccess(o.value === 'none' ? 'Методика выключена' : `Методика: ${o.name}`),
+                })
+              }
+              className="flex min-h-14 items-center gap-3 px-3.5 py-2.5 text-left active:bg-surface-sunken lg:hover:bg-surface-hover"
+            >
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-accent' : 'border-border-strong'}`}
+                aria-hidden
+              >
+                {on && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-base text-text">{o.name}</span>
+                <span className="text-sm text-text-secondary">{o.short}</span>
+              </span>
+            </button>
+          )
+        })}
+      </ListGroup>
+      <p className="px-0.5 text-sm text-text-secondary">
+        Отметки всех методик хранятся у задач: можно переключаться — ничего не потеряется.
+      </p>
+      {method !== 'none' && (
+        <section className="mt-3 flex flex-col gap-3 rounded-md border border-border bg-surface p-4">
+          <h2 className="text-lg font-semibold tracking-[-0.01em] text-text">{METHODS[method].name}</h2>
+          <MethodExplainer info={METHODS[method]} />
+        </section>
+      )}
+    </>
+  )
+}
+
+export function MethodSettings() {
+  return (
+    <SettingsPage title="Методика">
+      <MethodPicker />
     </SettingsPage>
   )
 }

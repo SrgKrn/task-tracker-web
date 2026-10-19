@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
-import type { UserSettings } from '../types'
+import type { PriorityMethod, UserSettings } from '../types'
 
 export function useUserSettings() {
   return useQuery({
@@ -89,5 +89,28 @@ export function useSaveTimeBlockSettings() {
       qc.invalidateQueries({ queryKey: ['user_settings'] })
       qc.invalidateQueries({ queryKey: ['day_insight'] })
     },
+  })
+}
+
+/** Методика приоритизации — одна на всё приложение. До миграции 0021 поля нет — тогда «без методики». */
+export function usePriorityMethod(): PriorityMethod {
+  const { data } = useUserSettings()
+  return data?.priority_method ?? 'none'
+}
+
+export function useSavePriorityMethod() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (method: PriorityMethod) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, priority_method: method })
+      if (error) throw error
+    },
+    onMutate: (method) =>
+      qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, priority_method: method } : s)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }

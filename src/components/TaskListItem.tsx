@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
@@ -44,6 +44,8 @@ interface TaskListItemProps {
    * подзадачи, по которой он идёт, а не дважды.
    */
   subtasksBelow?: boolean
+  /** отметка методики приоритизации (квадрант, «A-1»…) — первой в строке под названием */
+  badge?: ReactNode
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -69,6 +71,7 @@ export function TaskListItem({
   hideDoneSubtasks = false,
   parentName,
   subtasksBelow = false,
+  badge,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -303,6 +306,7 @@ export function TaskListItem({
                 title={meta}
                 className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm leading-[1.35] whitespace-nowrap text-text-secondary"
               >
+                {badge}
                 {overdueLabel && <span className="shrink-0 font-medium text-danger-text">{overdueLabel}</span>}
                 {overdueLabel && <span aria-hidden>·</span>}
                 <span className="tabular shrink-0 font-mono text-xs">{hours}</span>

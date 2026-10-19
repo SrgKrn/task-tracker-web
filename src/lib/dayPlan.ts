@@ -2,8 +2,9 @@ import { addDays } from './period'
 import type { Task } from './types'
 
 /**
- * План дня. Задача в «Сегодня», если она выбрана на этот день (plan_date), ежедневная или
- * по ней идёт либо шёл учёт сегодня — последние подтягиваются сами, выбирать их не нужно.
+ * План дня. Задача в «Сегодня», если она выбрана на этот день (plan_date), ежедневная,
+ * лягушка этого дня (frog_date) или по ней идёт либо шёл учёт сегодня — последние
+ * подтягиваются сами, выбирать их не нужно.
  */
 export function isInDay(
   task: Task,
@@ -11,7 +12,13 @@ export function isInDay(
   activeTaskId: string | null | undefined,
   trackedTodayIds: ReadonlySet<string>,
 ): boolean {
-  return task.is_daily || task.plan_date === today || activeTaskId === task.id || trackedTodayIds.has(task.id)
+  return (
+    task.is_daily ||
+    task.plan_date === today ||
+    task.frog_date === today ||
+    activeTaskId === task.id ||
+    trackedTodayIds.has(task.id)
+  )
 }
 
 export type PlanSectionKey = 'planned' | 'carry' | 'due' | 'recent' | 'rest'

@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DayPlanSheet } from '../components/DayPlanSheet'
+import { DayByMethod } from '../components/DayByMethod'
+import { MethodInfoSheet, PriorityBadge } from '../components/Priority'
 import { InsightQuote } from '../components/InsightCard'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
@@ -25,13 +27,14 @@ import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { useUserSettings } from '../lib/queries/userSettings'
+import { usePriorityMethod, useUserSettings } from '../lib/queries/userSettings'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
+const METHOD_SHORT = { eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' } as const
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 const DEFAULT_DAY_NORM = 8
 
@@ -44,6 +47,8 @@ export function Today() {
   const model = useGroupModel()
   const { data: activeTimer } = useActiveTimer()
   const { data: userSettings } = useUserSettings()
+  const method = usePriorityMethod()
+  const [methodInfo, setMethodInfo] = useState(false)
   const { data: weekEntries = [] } = useTimeEntriesInRange(week.from, week.to)
 
   const startTimer = useStartTimer()
@@ -121,10 +126,14 @@ export function Today() {
   const topRows = todayRows.filter((t) => !(t.parent_id && inToday.has(t.parent_id)))
   const nestedOf = (id: string) => todayRows.filter((t) => t.parent_id === id)
 
-  function renderRow(task: Task, subtasksBelow: boolean) {
+  /** flat — раскладка по методике: подзадачи не под спринтом, у каждой подписан спринт */
+  function renderRow(task: Task, subtasksBelow: boolean, flat = false) {
     return (
       <TaskListItem
         task={task}
+        // в матрице квадрант уже назван заголовком раздела, лягушка — своей карточкой:
+        // значок в строке их повторял бы
+        badge={flat && (method === 'eisenhower' || method === 'frog') ? undefined : <PriorityBadge task={task} method={method} today={today} />}
         status={task.status_id ? statusById.get(task.status_id) : undefined}
         label={model.listLabel(task)}
         color={model.colorOf(task)}
@@ -143,7 +152,7 @@ export function Today() {
         expandable={false}
         subtasksBelow={subtasksBelow}
         // под своим спринтом строка «↳ спринт» лишняя — вложенность видна и так
-        parentName={task.parent_id && !inToday.has(task.parent_id) ? taskById.get(task.parent_id)?.name : undefined}
+        parentName={task.parent_id && (flat || !inToday.has(task.parent_id)) ? taskById.get(task.parent_id)?.name : undefined}
       />
     )
   }
@@ -177,7 +186,7 @@ export function Today() {
   // расчёт дешёвый, а ручная мемоизация с Set'ами мешала компилятору React оптимизировать экран
   const lockedIds = new Set(trackedTodayTaskIds)
   if (activeTimer) lockedIds.add(activeTimer.task_id)
-  for (const t of tasks) if (t.is_daily) lockedIds.add(t.id)
+  for (const t of tasks) if (t.is_daily || t.frog_date === today) lockedIds.add(t.id)
   const sections = planSections({ tasks, childrenOf, isDone, today, recentTaskIds, lockedIds })
   const plannedIds = new Set(sections.find((s) => s.key === 'planned')?.tasks.map((t) => t.id) ?? [])
   const suggestedCount = sections
@@ -403,7 +412,20 @@ export function Today() {
       {/* задачи дня */}
       <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
         <div className="flex min-h-11 items-center justify-between">
-          <Overline>На сегодня</Overline>
+          <span className="flex items-center gap-2">
+            <Overline>На сегодня</Overline>
+            {/* напоминание, как работает выбранная методика, — в одно касание */}
+            {method !== 'none' && (
+              <button
+                type="button"
+                onClick={() => setMethodInfo(true)}
+                className="hit-44 flex h-6 items-center rounded-full bg-surface-sunken px-2 text-xs font-medium text-text-secondary"
+                aria-label="Как работает методика"
+              >
+                {METHOD_SHORT[method]} · ?
+              </button>
+            )}
+          </span>
           {/* одна ссылка вместо двух: «Все задачи» и так во вкладке внизу */}
           {todayTasks.length > 0 && (
             <Button variant="ghost" className="-mr-2 text-accent-text" onClick={() => setPlanning(true)}>
@@ -420,7 +442,23 @@ export function Today() {
           </div>
         )}
 
-        {!isLoading && topRows.length > 0 && (
+        {!isLoading && method !== 'none' && (todayTasks.length > 0 || method === 'frog') && (
+          <DayByMethod
+            method={method}
+            today={today}
+            tasks={todayRows}
+            allTasks={tasks}
+            isDone={isDone}
+            started={(t) => trackedTodayTaskIds.has(t.id) || activeTimer?.task_id === t.id}
+            lockedIds={lockedIds}
+            candidates={sections.filter((sec) => sec.key !== 'planned').flatMap((sec) => sec.tasks)}
+            metaOf={planMeta}
+            renderRow={(t) => renderRow(t, false, true)}
+            onPlan={() => setPlanning(true)}
+          />
+        )}
+
+        {!isLoading && method === 'none' && topRows.length > 0 && (
           <ListGroup>
             {topRows.map((task) => {
               const below = nestedOf(task.id)
@@ -542,6 +580,8 @@ export function Today() {
           </div>
         )}
       </Sheet>
+
+      {method !== 'none' && <MethodInfoSheet method={method} open={methodInfo} onClose={() => setMethodInfo(false)} />}
 
       <ConfirmDialog
         open={deletingTask !== null}

@@ -80,9 +80,27 @@ export interface Task {
    * своих подзадач не бывает, а значения групп она всегда берёт у спринта — это держит база.
    */
   parent_id: string | null
+  /* ── отметки методик приоритизации (см. lib/priority.ts) ── */
+  /** Эйзенхауэр: null — срочность по сроку, true/false — решил пользователь */
+  urgent: boolean | null
+  /** Эйзенхауэр: null — задачу ещё не разобрали */
+  important: boolean | null
+  /** «Съешь лягушку»: день, на который задача — лягушка */
+  frog_date: string | null
+  /** 1-3-5: размер; null — по плану часов */
+  effort: Effort | null
+  /** ABCDE: буква и номер внутри неё */
+  abc_letter: AbcLetter | null
+  abc_rank: number | null
+  /** кому поручено */
+  delegated_to: string | null
   created_at: string
   updated_at: string
 }
+
+export type PriorityMethod = 'none' | 'eisenhower' | 'frog' | '135' | 'abcde'
+export type Effort = 'big' | 'medium' | 'small'
+export type AbcLetter = 'A' | 'B' | 'C' | 'D' | 'E'
 
 /** Запись о переходе задачи в статус — пишется триггером при смене status_id. */
 export interface TaskStatusEvent {
@@ -138,6 +156,8 @@ export interface UserSettings {
   timezone: string
   /** показывать блок «Время» — факт дня и цитату — на «Сегодня» и в «Итогах дня» */
   show_time_block: boolean
+  /** методика приоритизации — одна на всё приложение */
+  priority_method: PriorityMethod
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null

@@ -9,6 +9,7 @@ import { usePush, type PushState } from '../lib/push'
 import { useCalendarSources } from '../lib/queries/calendar'
 import { useStatuses } from '../lib/queries/statuses'
 import { useUserSettings } from '../lib/queries/userSettings'
+import { METHODS } from '../lib/priority'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
@@ -47,6 +48,15 @@ const ThemeGlyph = (
 const PlanGlyph = (
   <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full" style={{ border: '1.5px solid currentColor' }}>
     <span className="h-1 w-1 rounded-full bg-current" />
+  </span>
+)
+
+const MethodGlyph = (
+  <span className="grid h-3.5 w-3.5 grid-cols-2 gap-px" aria-hidden>
+    <span className="rounded-[1px] bg-current" />
+    <span className="rounded-[1px] border border-current" />
+    <span className="rounded-[1px] border border-current" />
+    <span className="rounded-[1px] border border-current opacity-50" />
   </span>
 )
 
@@ -105,6 +115,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           match: ['/groups', '/items', '/sections', '/projects'],
         },
         { to: '/statuses', glyph: StatusGlyph, title: 'Этапы', value: String(statuses.length) },
+        {
+          to: '/settings/method',
+          glyph: MethodGlyph,
+          title: 'Методика',
+          value: userSettings?.priority_method && userSettings.priority_method !== 'none' ? METHODS[userSettings.priority_method].name : 'Без методики',
+        },
       ],
     },
     {

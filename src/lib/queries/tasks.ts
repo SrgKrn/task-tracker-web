@@ -70,6 +70,12 @@ export type TaskFieldsInput = Partial<
     | 'is_daily'
     | 'plan_date'
     | 'parent_id'
+    | 'urgent'
+    | 'important'
+    | 'effort'
+    | 'abc_letter'
+    | 'abc_rank'
+    | 'delegated_to'
   >
 >
 
@@ -120,6 +126,36 @@ export function useSetPlanDate() {
       const list = qc.getQueryData<Task[]>(['tasks'])
       const set = new Set(ids)
       if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (set.has(t.id) ? { ...t, plan_date: date } : t)))
+      return { list }
+    },
+    onError: (_e, _v, snapshot) => {
+      if (snapshot?.list) qc.setQueryData(['tasks'], snapshot.list)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+}
+
+/**
+ * Лягушка дня: прежняя лягушка этого дня снимается в той же функции базы (лягушка одна
+ * в день). taskId null — снять. Список меняется сразу, отказ возвращает прежнее.
+ */
+export function useSetFrog() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ taskId, date }: { taskId: string | null; date: string }) => {
+      const { error } = await supabase.rpc('set_frog', { p_task_id: taskId, p_date: date })
+      if (error) throw error
+    },
+    onMutate: async ({ taskId, date }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const list = qc.getQueryData<Task[]>(['tasks'])
+      if (list)
+        qc.setQueryData<Task[]>(
+          ['tasks'],
+          list.map((t) =>
+            t.id === taskId ? { ...t, frog_date: date } : t.frog_date === date ? { ...t, frog_date: null } : t,
+          ),
+        )
       return { list }
     },
     onError: (_e, _v, snapshot) => {

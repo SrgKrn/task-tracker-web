@@ -11,6 +11,8 @@ import { SprintComposition } from '../components/SprintComposition'
 import { ArrowLeft, Minus, MoreDots, Plus } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
+import { PriorityField } from '../components/Priority'
+import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
 import { Button, ClientDot, Segmented, Sheet } from '../components/ui'
@@ -50,6 +52,7 @@ export function TaskDetail() {
   const { data: original } = useTask(task?.duplicated_from ?? undefined)
   const { data: allTasks = [] } = useTasks()
   const model = useGroupModel()
+  const method = usePriorityMethod()
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
 
@@ -454,6 +457,13 @@ export function TaskDetail() {
           )}
         </div>
       </div>
+
+      {/* отметка по выбранной методике приоритизации — над свойствами: её меняют чаще сроков */}
+      {method !== 'none' && (
+        <div className="px-5 pb-4">
+          <PriorityField task={task} method={method} tasks={allTasks} />
+        </div>
+      )}
 
       {/* свойства — списком над вкладками: этап, план, сроки, группы, «ежедневная» */}
       <div className="px-5">
