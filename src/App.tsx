@@ -30,6 +30,7 @@ const PlanSettings = lazy(() => settingsRoute().then((m) => ({ default: m.PlanSe
 const ProfileSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ProfileSettings })))
 const FocusSettingsPage = lazy(() => settingsRoute().then((m) => ({ default: m.FocusSettingsPage })))
 const WorkspacesSettings = lazy(() => settingsRoute().then((m) => ({ default: m.WorkspacesSettings })))
+const TariffSettings = lazy(() => settingsRoute().then((m) => ({ default: m.TariffSettings })))
 const MethodSettings = lazy(() => settingsRoute().then((m) => ({ default: m.MethodSettings })))
 const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ExportSettings })))
 const GroupsAdmin = lazy(() => import('./routes/GroupsAdmin').then((m) => ({ default: m.GroupsAdmin })))
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="/settings/plan" element={<PlanSettings />} />
         <Route path="/settings/export" element={<ExportSettings />} />
         <Route path="/settings/method" element={<MethodSettings />} />
+        <Route path="/settings/tariff" element={<TariffSettings />} />
         <Route path="/settings/workspaces" element={<WorkspacesSettings />} />
         <Route path="/settings/profile" element={<ProfileSettings />} />
         <Route path="/settings/focus" element={<FocusSettingsPage />} />

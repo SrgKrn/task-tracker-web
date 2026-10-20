@@ -27,6 +27,7 @@ const PAGES: { to: string; title: string; keywords?: string }[] = [
   { to: '/groups', title: 'Группы', keywords: 'проекты разделы клиенты' },
   { to: '/statuses', title: 'Этапы', keywords: 'статусы' },
   { to: '/settings/plan', title: 'План часов', keywords: 'норма' },
+  { to: '/settings/tariff', title: 'Тариф', keywords: 'подписка оплата про студия цена' },
   { to: '/settings/export', title: 'Экспорт отчёта', keywords: 'pdf excel' },
   { to: '/settings/appearance', title: 'Оформление', keywords: 'тема' },
   { to: '/focus', title: 'Фокус', keywords: 'помидор pomodoro 90/30 таймер' },

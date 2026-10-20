@@ -54,6 +54,7 @@ const GLOBAL_KEYS = new Set([
   'focus_run',
   'focus_sessions',
   'avatar_url',
+  'user_plan',
   'telegram',
   'telegram_status',
   'google_status',

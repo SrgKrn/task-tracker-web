@@ -14,6 +14,8 @@ import { useActiveWorkspace } from '../lib/workspace'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
+import { PLAN_NAME } from '../lib/plans'
+import { useUserPlan } from '../lib/queries/plan'
 
 /* ── меню «Ещё» ─────────────────────────────────────────────────── */
 
@@ -52,6 +54,11 @@ const PlanGlyph = (
   </span>
 )
 
+/** Тариф — ромб: ступень, а не деньги */
+const TariffGlyph = (
+  <span className="h-2.5 w-2.5 rotate-45 rounded-[2px]" style={{ border: '1.5px solid currentColor' }} aria-hidden />
+)
+
 const MethodGlyph = (
   <span className="grid h-3.5 w-3.5 grid-cols-2 gap-px" aria-hidden>
     <span className="rounded-[1px] bg-current" />
@@ -88,6 +95,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
   const { data: telegram } = useTelegramStatus()
   const { data: calendars = [] } = useCalendarSources()
   const { data: google } = useGoogleStatus()
+  const { data: userPlan } = useUserPlan()
 
   // норма, методика и фокус — активного пространства
   const ws = useActiveWorkspace()
@@ -183,6 +191,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
     {
       title: 'О приложении',
       items: [
+        {
+          to: '/settings/tariff',
+          glyph: TariffGlyph,
+          title: 'Тариф',
+          value: userPlan ? (userPlan.plan === 'lifetime' ? 'Пожизненный' : PLAN_NAME[userPlan.plan]) : undefined,
+        },
         { to: '/changelog', glyph: <Sparkle size={15} />, title: 'История изменений', value: `Версия ${LATEST_RELEASE.version}` },
       ],
     },

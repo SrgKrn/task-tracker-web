@@ -9,7 +9,7 @@ import { Avatar } from '../components/Avatar'
 import { WorkspaceList } from '../components/Workspaces'
 import { useAvatarUpload, useProfile } from '../lib/profile'
 import { useActiveWorkspace, useDeleteWorkspace, useUpdateActiveWorkspace, useUpdateWorkspace, useWorkspaces } from '../lib/workspace'
-import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, fieldClass } from '../components/ui'
+import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, Tag, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
@@ -27,6 +27,9 @@ import {
   useUserSettings,
 } from '../lib/queries/userSettings'
 import { MethodExplainer } from '../components/Priority'
+import { PlanScreen } from '../components/PlanScreen'
+import { PLAN_NAME } from '../lib/plans'
+import { useUserPlan } from '../lib/queries/plan'
 import { FocusExplainer, FocusSettingsForm } from '../components/FocusSettings'
 import { useFocusPrefs } from '../lib/queries/focus'
 import { FOCUS_INFO } from '../lib/focus'
@@ -411,6 +414,7 @@ function ExportSection() {
  */
 export function Settings() {
   const profile = useProfile()
+  const { data: plan } = useUserPlan()
   const [deleting, setDeleting] = useState(false)
 
   return (
@@ -433,6 +437,19 @@ export function Settings() {
             <span className="block truncate text-sm text-text-secondary">{profile.email}</span>
             {!profile.hasName && <span className="block text-sm text-accent-text">Добавьте имя и фото</span>}
           </span>
+          <ChevronRight size={15} className="shrink-0 text-text-secondary" />
+        </Link>
+
+        <Link
+          to="/settings/tariff"
+          className="mt-2 flex min-h-13 items-center gap-3 rounded-md border border-border bg-surface px-3.5 py-2.5 active:bg-surface-sunken lg:hover:bg-surface-hover"
+        >
+          <span className="min-w-0 flex-1 text-base text-text">Тариф</span>
+          {plan && (
+            <Tag tone={plan.plan === 'free' ? 'neutral' : 'accent'}>
+              {plan.plan === 'lifetime' ? 'Пожизненный безлимит' : PLAN_NAME[plan.plan]}
+            </Tag>
+          )}
           <ChevronRight size={15} className="shrink-0 text-text-secondary" />
         </Link>
 
@@ -935,6 +952,14 @@ function MethodPicker() {
         </section>
       )}
     </>
+  )
+}
+
+export function TariffSettings() {
+  return (
+    <SettingsPage title="Тариф">
+      <PlanScreen />
+    </SettingsPage>
   )
 }
 
