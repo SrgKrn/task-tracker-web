@@ -257,7 +257,11 @@ export function Today() {
           {/* справа от даты — место под кнопку хронологии */}
           <WorkspaceTag className="self-start" />
           <Overline className="pr-24 lg:pr-10">{formatTodayLabel()}</Overline>
-          <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
+          {/* плитка дня — квадратиком справа от заголовка: своей строки не занимает */}
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
+            {showTile && todayTile && <TodayTile tile={todayTile} day={today} className="-my-2.5" />}
+          </div>
           {/*
             Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
             полных планов всех задач дня. Показываем то, что относится к сегодняшнему дню.
@@ -278,8 +282,6 @@ export function Today() {
               <span className="first-letter:uppercase">{todayCountLabel}</span>
             </span>
           </div>
-          {/* плитка дня — заменила цитату: днём собирается, по нажатию — разбор и мозаика */}
-          {showTile && todayTile && <TodayTile tile={todayTile} day={today} className="mt-0.5 lg:max-w-105" />}
         </div>
 
         {/* вход в хронологию — в углу, вне колонки: не раздвигает строку даты */}

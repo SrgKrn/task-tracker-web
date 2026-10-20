@@ -493,7 +493,8 @@ Deno.serve(async (req) => {
 
   /**
    * Итоги дня. Пространств несколько — блоком по каждому; only — одно пространство
-   * (кнопка после /today). Учёт, встречи и блок «Время» — общие, один раз.
+   * (кнопка после /today). Учёт, встречи и плитка дня — общие, один раз. store остался от
+   * цитат дня (dry_run передаёт false) — сводка ничего не записывает.
    */
   async function dailyDigest(userId: string, timezone: string, date: string, store = true, only?: string) {
     const world = await loadWorld(db, userId)

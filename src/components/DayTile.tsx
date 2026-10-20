@@ -4,7 +4,6 @@ import { tileClients, tileNumber, tileRhythm, useDayTiles, type DayTile } from '
 import { drawDayTile, prepCanvas, tileDayTitle, tilePalette, useThemeVersion } from '../lib/tileCanvas'
 import { formatHoursMinutes } from '../lib/time'
 import { Button, ClientDot, Overline, Sheet } from './ui'
-import { ChevronRight } from './Icon'
 import type { LabelColor } from '../lib/types'
 
 /** Одна плитка фиксированного размера. */
@@ -75,14 +74,10 @@ export function TodayTile({ tile, day, className = '' }: { tile: DayTile; day: s
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-label={`Плитка дня: ${status}. Открыть`}
-        className={`flex w-full items-center gap-3 rounded-md border border-border bg-surface py-1.5 pr-2 pl-1.5 text-left hover:border-border-strong ${className}`}
+        title="Плитка дня"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm ${className}`}
       >
         <TileCanvas tile={tile} size={40} />
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-sm font-medium text-text">Плитка дня</span>
-          <span className="truncate text-sm text-text-secondary">{status}</span>
-        </span>
-        <ChevronRight size={16} className="shrink-0 text-text-tertiary" />
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Плитка дня" headerAction={open ? <TileNumber day={day} /> : undefined}>
