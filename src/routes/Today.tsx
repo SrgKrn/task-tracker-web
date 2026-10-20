@@ -257,30 +257,32 @@ export function Today() {
           {/* справа от даты — место под кнопку хронологии */}
           <WorkspaceTag className="self-start" />
           <Overline className="pr-24 lg:pr-10">{formatTodayLabel()}</Overline>
-          {/* плитка дня — квадратиком справа от заголовка: своей строки не занимает */}
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
-            {showTile && todayTile && <TodayTile tile={todayTile} day={today} className="-my-2.5" />}
-          </div>
-          {/*
-            Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
-            полных планов всех задач дня. Показываем то, что относится к сегодняшнему дню.
-            Фразы — обычным шрифтом: моноширинный остаётся только у чисел.
-          */}
-          <div className="flex flex-col gap-1.5 text-sm">
-            <span className="flex items-center gap-2 text-text">
-              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
-              <span>
-                {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
-                {dayOver >= 0.05 && (
-                  <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
-                )}
-              </span>
-            </span>
-            <span className="flex items-center gap-2 text-text-secondary">
-              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
-              <span className="first-letter:uppercase">{todayCountLabel}</span>
-            </span>
+          {/* плитка дня — крупным квадратом справа от заголовка и строк дня: своей строки не занимает */}
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
+              {/*
+                Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
+                полных планов всех задач дня. Показываем то, что относится к сегодняшнему дню.
+                Фразы — обычным шрифтом: моноширинный остаётся только у чисел.
+              */}
+              <div className="flex flex-col gap-1.5 text-sm">
+                <span className="flex items-center gap-2 text-text">
+                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
+                  <span>
+                    {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+                    {dayOver >= 0.05 && (
+                      <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
+                    )}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 text-text-secondary">
+                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
+                  <span className="first-letter:uppercase">{todayCountLabel}</span>
+                </span>
+              </div>
+            </div>
+            {showTile && todayTile && <TodayTile tile={todayTile} day={today} size={80} />}
           </div>
         </div>
 

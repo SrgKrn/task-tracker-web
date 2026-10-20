@@ -63,7 +63,7 @@ function TileNumber({ day }: { day: string }) {
  * Плитка дня в шапке «Сегодня»: днём собирается, по нажатию — шторка с разбором и входом
  * в мозаику. Заменила цитату дня.
  */
-export function TodayTile({ tile, day, className = '' }: { tile: DayTile; day: string; className?: string }) {
+export function TodayTile({ tile, day, size = 80, className = '' }: { tile: DayTile; day: string; size?: number; className?: string }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const status = tile.total <= 0 ? 'начнётся с первой записи' : tile.norm > 0 && tile.total < tile.norm ? 'собирается' : 'норма набрана'
@@ -75,9 +75,9 @@ export function TodayTile({ tile, day, className = '' }: { tile: DayTile; day: s
         aria-haspopup="dialog"
         aria-label={`Плитка дня: ${status}. Открыть`}
         title="Плитка дня"
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm ${className}`}
+        className={`shrink-0 rounded-sm ${className}`}
       >
-        <TileCanvas tile={tile} size={40} />
+        <TileCanvas tile={tile} size={size} />
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Плитка дня" headerAction={open ? <TileNumber day={day} /> : undefined}>
