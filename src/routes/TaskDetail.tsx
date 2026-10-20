@@ -11,6 +11,7 @@ import { SprintComposition } from '../components/SprintComposition'
 import { ArrowLeft, Minus, MoreDots, Plus } from '../components/Icon'
 import { Ring, type RingState } from '../components/Ring'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
+import { formatRate, type RateCurrency } from '../lib/rate'
 import { PriorityField } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
@@ -133,6 +134,8 @@ export function TaskDetail() {
     end_date: task.end_date,
     is_daily: task.is_daily,
     parent_id: task.parent_id,
+    hourly_rate: task.hourly_rate,
+    rate_currency: task.rate_currency,
   }
 
   // подзадачу можно перенести в другой спринт; спринтом может быть только головная задача
@@ -178,6 +181,11 @@ export function TaskDetail() {
       return `Этап: ${statuses.find((s) => s.id === patch.status_id)?.label ?? 'без этапа'}`
     }
     if (patch.is_daily !== undefined) return patch.is_daily ? 'Теперь ежедневная' : 'Больше не ежедневная'
+    if (patch.hourly_rate !== undefined) {
+      return patch.hourly_rate
+        ? `Ставка: ${formatRate(patch.hourly_rate, (patch.rate_currency ?? 'BYN') as RateCurrency)}`
+        : 'Ставка — как у клиента'
+    }
     if (patch.parent_id !== undefined) {
       return `Перенесена в «${allTasks.find((t) => t.id === patch.parent_id)?.name ?? 'спринт'}»`
     }

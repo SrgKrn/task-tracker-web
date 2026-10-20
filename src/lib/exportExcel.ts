@@ -14,6 +14,7 @@ const MUTED = 'FF6B6860' // --text-secondary
 const TERRA = 'FF8A1F38' // --danger-text: переработка и просрочка
 const GREEN = 'FF1F6B3F' // --success-text
 const HOURS = '0.00'
+const MONEY = '#,##0.00'
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -125,6 +126,23 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     for (const c of [2, 3, 4]) row.getCell(c).numFmt = fmt
   })
   let line = 5 + kpis.length + 1
+  // к оплате — по валютам: разные клиенты платят в разных валютах
+  for (const t of r.billing) {
+    const row = ov.getRow(line++)
+    row.values = [`К оплате, ${t.currency}`, t.due]
+    row.getCell(2).numFmt = MONEY
+    row.font = { bold: true }
+    if (t.overAmount > 0) {
+      const o = ov.getRow(line++)
+      o.values = [
+        r.options.includeOvertime ? `  в т. ч. сверх плана, ${t.currency}` : `  сверх плана, не в итоге, ${t.currency}`,
+        t.overAmount,
+      ]
+      o.getCell(2).numFmt = MONEY
+      o.font = { color: { argb: TERRA } }
+    }
+  }
+  if (r.billing.length) line++
   if (r.prevIncompleteSince) {
     ov.getCell(`A${line}`).value = `Учёт ведётся с ${r.prevIncompleteSince.split('-').reverse().join('.')} — ${r.prevName} учтён не целиком, рост к нему завышен.`
     ov.getCell(`A${line}`).font = { italic: true, color: { argb: MUTED } }
@@ -279,6 +297,16 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     { header: 'Срок с', key: 'start', width: 11, fmt: 'dd.mm.yyyy' },
     { header: 'Срок до', key: 'end', width: 11, fmt: 'dd.mm.yyyy' },
     { header: 'Срок прошёл', key: 'overdue', width: 11 },
+    // ставки заданы — колонки суммы; нет — лист как раньше
+    ...(r.billing.length
+      ? [
+          { header: 'Ставка в час', key: 'rate', width: 11, fmt: MONEY },
+          { header: 'Валюта', key: 'currency', width: 8 },
+          { header: 'К оплате, ч', key: 'billHours', width: 11, fmt: HOURS },
+          { header: 'Сумма', key: 'amount', width: 12, fmt: MONEY },
+          { header: 'Сверх плана, сумма', key: 'overAmount', width: 14, fmt: MONEY },
+        ]
+      : []),
   ]
   const sprints = sheet(wb, 'Спринты', sprintCols)
   for (const s of r.sprints) {
@@ -296,6 +324,15 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
       start: excelDate(s.startDate),
       end: excelDate(s.endDate),
       overdue: s.overdue ? 'да' : '',
+      ...(s.bill
+        ? {
+            rate: s.bill.rate,
+            currency: s.bill.currency,
+            billHours: round2(s.bill.hours),
+            amount: s.bill.amount,
+            overAmount: s.bill.overAmount > 0 ? s.bill.overAmount : null,
+          }
+        : {}),
     })
     if (s.group === 'over') {
       row.getCell('pct').font = { color: { argb: TERRA } }

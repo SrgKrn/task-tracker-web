@@ -52,6 +52,9 @@ export interface NewTaskInput {
   parent_id?: string | null
   /** пространство; не указано — активное (у подзадачи — пространство спринта) */
   workspace_id?: string
+  /** своя ставка спринта — копия и следующий спринт берут её с собой */
+  hourly_rate?: number | null
+  rate_currency?: string | null
 }
 
 export function useCreateTask() {
@@ -86,6 +89,8 @@ export type TaskFieldsInput = Partial<
     | 'abc_letter'
     | 'abc_rank'
     | 'delegated_to'
+    | 'hourly_rate'
+    | 'rate_currency'
   >
 >
 
@@ -220,6 +225,8 @@ export function useDuplicateTask() {
         // копия подзадачи остаётся в том же спринте, а не выпадает в список отдельной задачей
         parent_id: task.parent_id,
         workspace_id: task.workspace_id,
+        hourly_rate: task.hourly_rate,
+        rate_currency: task.rate_currency,
       }
       const { data, error } = await supabase.from('tasks').insert(input).select().single()
       if (error) throw error
@@ -258,6 +265,8 @@ export function useCreateNextSprint() {
         is_daily: input.from.is_daily,
         duplicated_from: input.from.id,
         workspace_id: input.from.workspace_id,
+        hourly_rate: input.from.hourly_rate,
+        rate_currency: input.from.rate_currency,
       }
       const { data, error } = await supabase.from('tasks').insert(head).select().single()
       if (error) throw error

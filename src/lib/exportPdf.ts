@@ -721,6 +721,74 @@ function sprintsPage(p: Pdf, r: ReportData) {
   }
 }
 
+/* ── к оплате: ставка × часы, переработка отдельно ───────────────── */
+
+/** 1 250,50 BYN — код валюты и обычные пробелы: знаков €/₽ и неразрывного пробела в шрифте отчёта может не быть */
+function money(value: number, currency: string): string {
+  const fixed = Math.abs(value - Math.round(value)) < 0.005 ? String(Math.round(value)) : value.toFixed(2)
+  const [int, frac] = fixed.split('.')
+  return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}${frac ? `,${frac}` : ''} ${currency}`
+}
+
+function billingPage(p: Pdf, r: ReportData) {
+  if (!r.billing.length) return
+  const withOver = r.options.includeOvertime === true
+  p.page('К оплате', withOver ? 'переработка включена в итог' : 'переработка — отдельно, не в итоге')
+
+  p.tiles(
+    r.billing.map((t) => ({
+      label: `Итого, ${t.currency}`,
+      value: money(t.due, t.currency),
+      sub: t.overHours > 0.004 ? `сверх плана ${f1(t.overHours)} ч · ${money(t.overAmount, t.currency)}` : `${f1(t.hours)} ч к оплате`,
+    })),
+  )
+
+  const cols = { name: MX, hours: MX + 300, rate: MX + 380, sum: PW - MX }
+  p.y += 16
+  for (const [t, x, a] of [['спринт', cols.name, 'left'], ['часы', cols.hours, 'right'], ['ставка', cols.rate, 'right'], ['сумма', cols.sum, 'right']] as const) {
+    p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.2, c: C.muted, a })
+  }
+  p.y += 4
+  p.rule(p.y)
+
+  const rows = r.sprints.filter((s) => s.bill)
+  for (const s of rows) {
+    const b = s.bill!
+    const extra = b.overHours > 0.004
+    p.ensure(extra ? 30 : 17)
+    const cy = p.y + 9
+    const tag = s.inner || s.outer
+    p.text(tag ? `${s.name} · ${tag}` : s.name, cols.name, cy + 3, { s: 8.2, w: 280 })
+    p.text(f1(b.hours), cols.hours, cy + 3, { f: 'mono', s: 7.6, a: 'right' })
+    p.text(money(b.rate, b.currency), cols.rate, cy + 3, { f: 'mono', s: 7.6, c: C.muted, a: 'right' })
+    p.text(money(b.amount, b.currency), cols.sum, cy + 3, { f: 'mono', s: 7.6, b: true, a: 'right' })
+    p.y += 17
+    if (extra) {
+      const oy = p.y + 3
+      p.text(withOver ? 'сверх плана' : 'сверх плана — не в итоге', cols.name + 10, oy, { s: 7.4, c: C.terraInk })
+      p.text(f1(b.overHours), cols.hours, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
+      p.text(money(b.overAmount, b.currency), cols.sum, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
+      p.y += 13
+    }
+    p.rule(p.y, MX, PW - MX, C.track)
+  }
+
+  for (const t of r.billing) {
+    p.ensure(18)
+    p.y += 14
+    p.text(`Итого к оплате, ${t.currency}`, cols.name, p.y, { b: true, s: 9 })
+    p.text(f1(t.hours + (withOver ? t.overHours : 0)), cols.hours, p.y, { f: 'mono', s: 8, a: 'right' })
+    p.text(money(t.due, t.currency), cols.sum, p.y, { f: 'mono', s: 9, b: true, a: 'right' })
+  }
+  p.y += 16
+  p.text(
+    'С планом — часы спринта в пределах плана × ставка; без плана — часы за период отчёта. Ставка — спринта или клиента.',
+    MX,
+    p.y,
+    { s: 7.4, c: C.muted, w: CW },
+  )
+}
+
 /* ── страница 4: как набраны часы, проверка и журнал ─────────────── */
 
 function journalPage(p: Pdf, r: ReportData) {
@@ -869,6 +937,7 @@ export async function exportPdf(r: ReportData) {
   overview(p, r)
   directionsPage(p, r)
   sprintsPage(p, r)
+  billingPage(p, r)
   journalPage(p, r)
   p.footers()
   p.doc.save(`Отчёт_${r.from}_${r.to}.pdf`)
@@ -880,6 +949,7 @@ export function renderPdf(r: ReportData): jsPDF {
   overview(p, r)
   directionsPage(p, r)
   sprintsPage(p, r)
+  billingPage(p, r)
   journalPage(p, r)
   p.footers()
   return p.doc

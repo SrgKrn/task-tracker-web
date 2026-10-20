@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildReport, comparisonPeriod } from './report'
-import type { TimeEntry } from './types'
+import type { Group, GroupItem, Task, TimeEntry } from './types'
 
 describe('comparisonPeriod — с чем сравнивает отчёт', () => {
   it('идущий месяц — с тем же числом дней прошлого: 1–15 окт с 1–15 сент', () => {
@@ -141,5 +141,67 @@ describe('buildReport — сравнение идущего месяца', () =>
     expect(r.prevTotal).toBe(16)
     expect(r.prevDative).toBe('сентябрю')
     expect(r.prevName).toBe('сентябрь')
+  })
+})
+
+describe('buildReport — сумма к оплате', () => {
+  const group = { id: 'g', name: 'Проекты', item_name: 'Проект', sort_order: 0 } as unknown as Group
+  const client = { id: 'c', name: 'А-Лизинг', group_id: 'g', hourly_rate: 40, rate_currency: 'BYN' } as unknown as GroupItem
+  const sprint = {
+    id: 't',
+    name: 'Спринт 7',
+    item_ids: ['c'],
+    status_id: null,
+    planned_hours: 4,
+    fact_hours: 6,
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    parent_id: null,
+    hourly_rate: null,
+    rate_currency: null,
+  } as unknown as Task
+  const entry = {
+    id: 'e',
+    task_id: 't',
+    entry_type: 'manual_adjustment',
+    started_at: null,
+    ended_at: null,
+    duration_seconds: 6 * 3600,
+    duration_minutes: 360,
+    note: null,
+    effective_date: '2026-10-05',
+    created_at: '2026-10-05T12:00:00Z',
+  } as TimeEntry
+  const input = (includeOvertime: boolean) => ({
+    from: '2026-10-01',
+    to: '2026-10-31',
+    tasks: [sprint],
+    groups: [group],
+    items: [client],
+    statuses: [],
+    entries: [entry],
+    comments: [],
+    closedTaskIds: [],
+    firstEntryDate: '2026-01-01',
+    perDay: null,
+    perMonth: null,
+    generatedAt: new Date(2026, 9, 20, 12, 0),
+    options: { includeChecks: false, includeComments: false, includeOvertime },
+  })
+
+  it('до плана — в итог, переработка отдельно', () => {
+    const r = buildReport(input(false))
+    expect(r.sprints[0].bill).toMatchObject({ hours: 4, amount: 160, overHours: 2, overAmount: 80 })
+    expect(r.billing).toEqual([{ currency: 'BYN', hours: 4, amount: 160, overHours: 2, overAmount: 80, due: 160 }])
+  })
+
+  it('с галочкой переработка входит в итог', () => {
+    expect(buildReport(input(true)).billing[0].due).toBe(240)
+  })
+
+  it('без ставок раздела нет', () => {
+    const r = buildReport({ ...input(false), items: [{ ...client, hourly_rate: null } as GroupItem] })
+    expect(r.billing).toEqual([])
+    expect(r.sprints[0].bill).toBeNull()
   })
 })

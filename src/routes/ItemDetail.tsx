@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AttachmentsBlock } from '../components/AttachmentsBlock'
 import { TaskListItem } from '../components/TaskListItem'
+import { RateSheet } from '../components/RateSheet'
+import { formatRate, type RateCurrency } from '../lib/rate'
 import { ArrowLeft, ChevronDown, Drive } from '../components/Icon'
 import { EmptyState, FieldLabel, Overline, Segmented } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -115,6 +117,8 @@ export function ItemDetail() {
 
       <ItemDescription item={item} />
 
+      <ItemRate item={item} />
+
       <DriveFolder item={item} />
 
       <div
@@ -224,6 +228,60 @@ function DriveFolder({ item }: { item: GroupItem }) {
         Сменить
       </button>
     </div>
+  )
+}
+
+/**
+ * Ставка в час: по ней в отчёте считается сумма к оплате у задач этого значения.
+ * У отдельного спринта её можно переопределить — в его карточке.
+ */
+function ItemRate({ item }: { item: GroupItem }) {
+  const update = useUpdateGroupItem()
+  const { showError, showSuccess } = useToast()
+  const [open, setOpen] = useState(false)
+  const has = item.hourly_rate != null && Number(item.hourly_rate) > 0
+  const currency = (item.rate_currency ?? 'BYN') as RateCurrency
+
+  return (
+    <>
+      {has ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex min-h-12 items-center gap-3 rounded-sm px-3 text-left active:bg-surface-sunken lg:hover:bg-surface-hover"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <span className="flex-1 text-base text-text-secondary">Ставка в час</span>
+          <span className="tabular font-mono text-base text-text">{formatRate(Number(item.hourly_rate), currency)}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex min-h-11 items-center gap-2.5 self-start rounded-sm px-3 text-sm text-text-secondary"
+          style={{ border: '1px dashed var(--border-strong)' }}
+        >
+          Задать ставку в час
+        </button>
+      )}
+      <RateSheet
+        open={open}
+        title={`Ставка · ${item.name}`}
+        value={{ hourly_rate: item.hourly_rate, rate_currency: item.rate_currency as RateCurrency | null }}
+        onCancel={() => setOpen(false)}
+        onSubmit={(v) => {
+          setOpen(false)
+          update.mutate(
+            { id: item.id, fields: v },
+            {
+              onError: (e) => showError(describeError(e)),
+              onSuccess: () =>
+                showSuccess(v.hourly_rate ? `Ставка: ${formatRate(v.hourly_rate, v.rate_currency ?? 'BYN')}` : 'Ставка убрана'),
+            },
+          )
+        }}
+      />
+    </>
   )
 }
 

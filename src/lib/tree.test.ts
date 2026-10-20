@@ -31,6 +31,8 @@ function task(fields: Partial<Task> & { id: string }): Task {
     abc_letter: null,
     abc_rank: null,
     delegated_to: null,
+    hourly_rate: null,
+    rate_currency: null,
     parent_id: null,
     workspace_id: 'w',
     created_at: '2026-10-01T10:00:00Z',

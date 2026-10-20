@@ -3,6 +3,7 @@ import { entryNote } from './notes'
 import { formatDayMonth, overlapsPeriod, toDateString } from './period'
 import { dayNormFor, DEFAULT_WORK_DAYS, isWorkday, periodNorm } from './norm'
 import { entryMinutes } from './time'
+import { billSprint, billTotals, resolveRate, type BillTotal, type SprintBill } from './rate'
 import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
 
 /**
@@ -16,6 +17,8 @@ export interface ReportOptions {
   includeChecks: boolean
   /** комментарии к задачам и к сессиям учёта в журнале — пишутся для себя и бывают неформальными */
   includeComments: boolean
+  /** переработку сверх плана — в итог к оплате; по умолчанию нет: план — договорённость с клиентом */
+  includeOvertime?: boolean
 }
 
 export interface ReportInput {
@@ -107,6 +110,8 @@ export interface SprintRow {
   endDate: string | null
   overdue: boolean
   group: SprintGroup
+  /** сумма к оплате; null — ставка не задана ни у спринта, ни у клиента */
+  bill: SprintBill | null
 }
 
 export interface JournalRow {
@@ -197,6 +202,8 @@ export interface ReportData {
   directions: DirectionRow[]
   groups: DirectionGroup[]
   sprints: SprintRow[]
+  /** итоги к оплате по валютам; пусто — ставок нет, раздела в отчёте нет */
+  billing: BillTotal[]
 
   composition: { timer: number; added: number; removed: number; sessions: number; manualCount: number }
   checks: ReportChecks | null
@@ -570,6 +577,7 @@ export function buildReport(input: ReportInput): ReportData {
     if (head) headPeriodMinutes.set(head.id, (headPeriodMinutes.get(head.id) ?? 0) + entryMinutes(e))
   }
   const closedIds = new Set(input.closedTaskIds)
+  const groupOrder = input.groups.map((g) => g.id)
   const sprints: SprintRow[] = tasks
     .filter((t) => !t.parent_id)
     .filter((t) => {
@@ -587,14 +595,17 @@ export function buildReport(input: ReportInput): ReportData {
       const plan = t.planned_hours
       const pctOfPlan = plan > 0 ? Math.round((factTotal / plan) * 100) : null
       const over = plan > 0 ? Math.max(0, factTotal - plan) : 0
+      const factPeriod = toHours(headPeriodMinutes.get(t.id) ?? 0)
+      const bill = billSprint(resolveRate(t, input.items, groupOrder), plan, factTotal, factPeriod)
       return {
+        bill,
         id: t.id,
         name: t.name.trim(),
         outer: valueName(t, outerGroup),
         inner: valueName(t, innerGroup),
         plan,
         factTotal,
-        factPeriod: toHours(headPeriodMinutes.get(t.id) ?? 0),
+        factPeriod,
         pct: pctOfPlan,
         over,
         status: status ? (isFinal ? 'закрыт' : status.label) : 'без статуса',
@@ -775,6 +786,7 @@ export function buildReport(input: ReportInput): ReportData {
     directions,
     groups,
     sprints,
+    billing: billTotals(sprints.map((s) => s.bill), input.options.includeOvertime === true),
     composition,
     checks,
     journal,

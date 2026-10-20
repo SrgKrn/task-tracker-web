@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { DatePicker } from './DatePicker'
 import { ChipPicker } from './ChipPicker'
 import { DurationSheet } from './DurationSheet'
+import { RateSheet } from './RateSheet'
+import { formatRate, itemRate, type RateCurrency } from '../lib/rate'
 import { GroupFields } from './GroupFields'
 import { ChevronDown } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
@@ -25,6 +27,9 @@ export interface TaskFormValues {
   is_daily: boolean
   /** спринт подзадачи; у головной задачи — null */
   parent_id?: string | null
+  /** своя ставка спринта; null — как у клиента */
+  hourly_rate?: number | null
+  rate_currency?: string | null
 }
 
 interface TaskFormProps {
@@ -59,6 +64,7 @@ export function TaskForm({
   const [draft, setValues] = useState<TaskFormValues>(initial)
   const values = onFieldChange ? initial : draft
   const [editingPlan, setEditingPlan] = useState(false)
+  const [editingRate, setEditingRate] = useState(false)
 
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
@@ -112,6 +118,14 @@ export function TaskForm({
       const st = statuses.find((x) => x.id === id)
       return st ? `var(--status-${stageTone(st, statuses)})` : null
     }
+    // ставка — только у спринта: подзадачи считаются по ставке спринта
+    const inherited = sprints ? null : itemRate(values.item_ids, model.items, model.groups.map((g) => g.id))
+    const ownRate = values.hourly_rate != null && Number(values.hourly_rate) > 0
+    const rateText = ownRate
+      ? formatRate(Number(values.hourly_rate), (values.rate_currency ?? 'BYN') as RateCurrency)
+      : inherited
+        ? `${formatRate(inherited.rate, inherited.currency)} · как у клиента`
+        : 'не задана'
     return (
       <>
       <ListGroup clip={false}>
@@ -141,6 +155,21 @@ export function TaskForm({
           </span>
           <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
         </button>
+        {!sprints && (
+          <button
+            type="button"
+            onClick={() => setEditingRate(true)}
+            className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
+          >
+            <span className="text-text-secondary">Ставка</span>
+            <span
+              className={`tabular min-w-0 flex-1 truncate text-right font-mono ${ownRate ? 'text-text' : 'text-text-tertiary'}`}
+            >
+              {rateText}
+            </span>
+            <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+          </button>
+        )}
         <div className="flex items-center gap-3 px-3">
           <span className="shrink-0 text-base text-text-secondary">Начало</span>
           <DatePicker row className="flex-1" value={values.start_date} onChange={(v) => set('start_date', v)} ariaLabel="Начало" />
@@ -180,6 +209,25 @@ export function TaskForm({
             set('planned_hours', value)
           }}
         />
+        {!sprints && (
+          <RateSheet
+            open={editingRate}
+            title="Ставка спринта"
+            value={{
+              hourly_rate: values.hourly_rate ?? null,
+              rate_currency: (values.rate_currency ?? null) as RateCurrency | null,
+            }}
+            inheritedLabel={inherited ? `${formatRate(inherited.rate, inherited.currency)} у «${inherited.itemName}»` : ''}
+            onCancel={() => setEditingRate(false)}
+            onSubmit={(v) => {
+              setEditingRate(false)
+              // ставка и валюта — одной правкой: «Вернуть» откатывает обе
+              if (onFieldChange && (v.hourly_rate !== (values.hourly_rate ?? null) || v.rate_currency !== (values.rate_currency ?? null))) {
+                onFieldChange({ hourly_rate: v.hourly_rate, rate_currency: v.rate_currency })
+              }
+            }}
+          />
+        )}
       </>
     )
   }

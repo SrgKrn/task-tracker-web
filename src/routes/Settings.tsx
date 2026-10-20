@@ -182,12 +182,16 @@ function loadExportOptions(): ReportOptions {
     const raw = localStorage.getItem(EXPORT_OPTIONS_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<ReportOptions>
-      return { includeChecks: parsed.includeChecks === true, includeComments: parsed.includeComments === true }
+      return {
+        includeChecks: parsed.includeChecks === true,
+        includeComments: parsed.includeComments === true,
+        includeOvertime: parsed.includeOvertime === true,
+      }
     }
   } catch {
     // приватный режим или испорченное значение — берём значения по умолчанию
   }
-  return { includeChecks: false, includeComments: false }
+  return { includeChecks: false, includeComments: false, includeOvertime: false }
 }
 
 function ExportSection() {
@@ -350,12 +354,17 @@ function ExportSection() {
               title: 'Проверка учёта',
               hint: 'ночные таймеры, дни в минусе, будни без записей — только в PDF',
             },
+            {
+              key: 'includeOvertime',
+              title: 'Переработку — в сумму к оплате',
+              hint: 'часы сверх плана × ставка; без галочки они видны отдельной строкой, но в итог не идут',
+            },
           ] as const
         ).map((o) => (
           <label key={o.key} className="flex min-h-11 items-center gap-2.5 py-1">
             <input
               type="checkbox"
-              checked={options[o.key]}
+              checked={!!options[o.key]}
               onChange={(e) => setOption(o.key, e.target.checked)}
               className="h-[18px] w-[18px] shrink-0 accent-accent"
             />

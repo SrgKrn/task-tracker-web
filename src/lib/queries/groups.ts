@@ -178,7 +178,7 @@ export function useCreateGroupItem() {
 }
 
 export type GroupItemFields = Partial<
-  Pick<GroupItem, 'name' | 'description' | 'archived' | 'parent_item_id' | 'drive_folder_id' | 'drive_folder_name' | 'color'>
+  Pick<GroupItem, 'name' | 'description' | 'archived' | 'parent_item_id' | 'drive_folder_id' | 'drive_folder_name' | 'color' | 'hourly_rate' | 'rate_currency'>
 >
 
 export function useUpdateGroupItem() {

@@ -46,6 +46,9 @@ export interface GroupItem {
   drive_folder_name: string | null
   /** метка дизайн-системы 'label-1' … 'label-8' (цвет — из токенов темы); null — без цвета */
   color: LabelColor | null
+  /** ставка в час (обычно у клиента); null — не задана */
+  hourly_rate: number | null
+  rate_currency: string | null
   workspace_id: string
   created_at: string
   updated_at: string
@@ -103,6 +106,9 @@ export interface Task {
   abc_rank: number | null
   /** кому поручено */
   delegated_to: string | null
+  /** своя ставка спринта; null — как у клиента */
+  hourly_rate: number | null
+  rate_currency: string | null
   created_at: string
   updated_at: string
 }
