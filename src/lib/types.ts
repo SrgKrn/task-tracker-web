@@ -132,6 +132,8 @@ export interface Workspace {
   priority_method: PriorityMethod
   focus_mode: FocusMode
   focus_settings: FocusSettings
+  /** «Работа с клиентами»: ставка, «К оплате» и ссылка для клиента. Выключено — ничего про деньги */
+  client_work: boolean
   created_at: string
   updated_at: string
 }

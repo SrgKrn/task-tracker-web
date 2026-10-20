@@ -14,6 +14,7 @@ import { formatHoursMinutes } from '../lib/time'
 import { describeError, useToast } from '../lib/Toast'
 import { missingRequired, useGroupModel } from '../lib/groups'
 import { useCreateStatus } from '../lib/queries/statuses'
+import { useClientWork } from '../lib/workspace'
 import type { Status } from '../lib/types'
 
 export interface TaskFormValues {
@@ -69,6 +70,8 @@ export function TaskForm({
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const model = useGroupModel()
+  // ставка — только в пространстве «Работа с клиентами»
+  const clientWork = useClientWork()
   const createStatus = useCreateStatus()
 
   function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
@@ -119,7 +122,8 @@ export function TaskForm({
       return st ? `var(--status-${stageTone(st, statuses)})` : null
     }
     // ставка — только у спринта: подзадачи считаются по ставке спринта
-    const inherited = sprints ? null : itemRate(values.item_ids, model.items, model.groups.map((g) => g.id))
+    const showRate = !sprints && clientWork
+    const inherited = !showRate ? null : itemRate(values.item_ids, model.items, model.groups.map((g) => g.id))
     const ownRate = values.hourly_rate != null && Number(values.hourly_rate) > 0
     const rateText = ownRate
       ? formatRate(Number(values.hourly_rate), (values.rate_currency ?? 'BYN') as RateCurrency)
@@ -155,7 +159,7 @@ export function TaskForm({
           </span>
           <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
         </button>
-        {!sprints && (
+        {showRate && (
           <button
             type="button"
             onClick={() => setEditingRate(true)}
@@ -209,7 +213,7 @@ export function TaskForm({
             set('planned_hours', value)
           }}
         />
-        {!sprints && (
+        {showRate && (
           <RateSheet
             open={editingRate}
             title="Ставка спринта"

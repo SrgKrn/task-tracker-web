@@ -16,6 +16,7 @@ import { useUpdateGroupItem } from '../lib/queries/groups'
 import { useItemActivity } from '../lib/queries/itemActivity'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
+import { useClientWork } from '../lib/workspace'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { entryMinutes, formatHoursMinutes, formatHoursRu } from '../lib/time'
 import { childrenByParent } from '../lib/tree'
@@ -44,6 +45,7 @@ export function ItemDetail() {
   const setTab = (t: Tab) => setParams(t === 'tasks' ? {} : { tab: t }, { replace: true })
 
   const model = useGroupModel()
+  const clientWork = useClientWork()
   const { data: tasks = [] } = useTasks()
   const { data: statuses = [] } = useStatuses()
 
@@ -117,9 +119,10 @@ export function ItemDetail() {
 
       <ItemDescription item={item} />
 
-      <ItemRate item={item} />
+      {/* ставка и отчёт клиенту — только в пространстве «Работа с клиентами» */}
+      {clientWork && <ItemRate item={item} />}
 
-      {item.hourly_rate != null && Number(item.hourly_rate) > 0 && (
+      {clientWork && item.hourly_rate != null && Number(item.hourly_rate) > 0 && (
         <Link
           to={`/settings/export?client=${item.id}`}
           className="-mt-2 min-h-11 self-start py-2 text-sm font-medium text-accent-text"

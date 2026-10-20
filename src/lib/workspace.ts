@@ -109,6 +109,7 @@ export type WorkspaceFields = Partial<
     | 'priority_method'
     | 'focus_mode'
     | 'focus_settings'
+    | 'client_work'
   >
 >
 
@@ -180,4 +181,9 @@ export function useOtherWorkspace(workspaceId: string | undefined): Workspace | 
   const { data: list = [] } = useWorkspaces()
   if (!workspaceId || workspaceId === activeId) return undefined
   return list.find((w) => w.id === workspaceId)
+}
+
+/** В активном пространстве — работа с клиентами: показывать ставку, «К оплате», ссылку для клиента. */
+export function useClientWork(): boolean {
+  return useActiveWorkspace()?.client_work === true
 }

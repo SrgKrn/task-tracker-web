@@ -8,8 +8,8 @@ import { ArrowLeft, Camera, Check, ChevronRight, Drive, Plus } from '../componen
 import { Avatar } from '../components/Avatar'
 import { WorkspaceList } from '../components/Workspaces'
 import { useAvatarUpload, useProfile } from '../lib/profile'
-import { useActiveWorkspace, useDeleteWorkspace, useUpdateActiveWorkspace, useUpdateWorkspace, useWorkspaces } from '../lib/workspace'
-import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, Tag, fieldClass } from '../components/ui'
+import { useActiveWorkspace, useClientWork, useDeleteWorkspace, useUpdateActiveWorkspace, useUpdateWorkspace, useWorkspaces } from '../lib/workspace'
+import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, Switch, Tag, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
@@ -197,6 +197,7 @@ function loadExportOptions(): ReportOptions {
 
 function ExportSection() {
   const [searchParams] = useSearchParams()
+  const clientWork = useClientWork()
   const [range, setRange] = useState(loadExportRange)
   const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
@@ -362,7 +363,10 @@ function ExportSection() {
               hint: 'часы сверх плана × ставка; без галочки они видны отдельной строкой, но в итог не идут',
             },
           ] as const
-        ).map((o) => (
+        )
+          // переработка в сумме — только при работе с клиентами
+          .filter((o) => clientWork || o.key !== 'includeOvertime')
+          .map((o) => (
           <label key={o.key} className="flex min-h-11 items-center gap-2.5 py-1">
             <input
               type="checkbox"
@@ -415,6 +419,7 @@ function ExportSection() {
           </span>
         </div>
       )}
+      {clientWork && (
       <ClientShare
         from={from}
         to={to}
@@ -422,6 +427,7 @@ function ExportSection() {
         initialItemId={searchParams.get('client')}
         load={() => loadReport({ from, to, tasks, groups, items, statuses, options })}
       />
+      )}
     </div>
   )
 }
@@ -779,7 +785,7 @@ function WorkspacesManager() {
           >
             <ClientDot color={w.color} size={10} />
             <span className="min-w-0 flex-1 truncate text-base text-text">{w.name}</span>
-            <span className="text-sm text-text-secondary">Название, цвет</span>
+            <span className="text-sm text-text-secondary">{w.client_work ? 'С клиентами' : 'Название, цвет'}</span>
             <ChevronRight size={15} className="text-text-secondary" />
           </button>
         ))}
@@ -796,6 +802,7 @@ function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => voi
   const onError = (e: unknown) => showError(describeError(e))
   const [name, setName] = useState(ws.name)
   const [color, setColor] = useState<LabelColor>(ws.color)
+  const [clientWork, setClientWork] = useState(ws.client_work === true)
   const [deleting, setDeleting] = useState(false)
   const [confirm, setConfirm] = useState('')
   return (
@@ -822,12 +829,21 @@ function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => voi
           ))}
         </div>
       </div>
+      <div className="flex min-h-12 items-center gap-3">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-base text-text">Работа с клиентами</span>
+          <span className="text-sm text-text-secondary">
+            Ставка в час, сумма к оплате в отчёте и ссылка для клиента. Для личных дел и учёбы не нужно
+          </span>
+        </span>
+        <Switch on={clientWork} onChange={setClientWork} ariaLabel="Работа с клиентами" />
+      </div>
       <Button
         variant="primary"
         disabled={!name.trim()}
         onClick={() =>
           update.mutate(
-            { id: ws.id, fields: { name: name.trim(), color } },
+            { id: ws.id, fields: { name: name.trim(), color, client_work: clientWork } },
             { onError, onSuccess: () => { showSuccess('Сохранено'); onClose() } },
           )
         }

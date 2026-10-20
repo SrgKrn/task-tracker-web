@@ -72,17 +72,20 @@ export async function loadReport(args: {
     ),
     supabase.from('time_entries').select('effective_date').eq('workspace_id', ws).order('effective_date').limit(1).maybeSingle(),
     // норма — пространства, а не профиля
-    supabase.from('workspaces').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week').eq('id', ws).maybeSingle(),
+    supabase.from('workspaces').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week, client_work').eq('id', ws).maybeSingle(),
   ])
   if (first.error) throw first.error
   if (settings.error) throw settings.error
 
+  // без «Работы с клиентами» ставок в отчёте нет: ни «К оплате», ни колонок суммы
+  const clientWork = (settings.data as { client_work?: boolean } | null)?.client_work === true
+  const noRate = { hourly_rate: null, rate_currency: null }
   return buildReport({
     from,
     to,
-    tasks: args.tasks,
+    tasks: clientWork ? args.tasks : args.tasks.map((t) => ({ ...t, ...noRate })),
     groups: args.groups,
-    items: args.items,
+    items: clientWork ? args.items : args.items.map((i) => ({ ...i, ...noRate })),
     statuses: args.statuses,
     entries,
     comments,
