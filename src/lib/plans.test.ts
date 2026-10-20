@@ -11,19 +11,22 @@ describe('plans', () => {
   })
 
   it('годовая оплата — сумма за год на 12', () => {
-    expect(monthlyPrice(plus, 'usd', 'year')).toBe(2.5)
-    expect(monthlyPrice(pro, 'byn', 'month')).toBe(21)
+    expect(monthlyPrice(plus, 'usd', 'year')).toBe(3)
+    expect(monthlyPrice(plus, 'usd', 'month')).toBe(3.99)
+    expect(monthlyPrice(pro, 'usd', 'year')).toBe(6)
+    expect(monthlyPrice(pro, 'byn', 'year')).toBe(18)
+    expect(monthlyPrice(pro, 'byn', 'month')).toBe(24)
     expect(monthlyPrice(free, 'usd', 'year')).toBe(0)
   })
 
   it('формат цены', () => {
-    expect(formatPrice(2.5, 'usd')).toBe('$2,5')
-    expect(formatPrice(21, 'byn')).toBe('21 BYN')
+    expect(formatPrice(3, 'usd')).toBe('$3')
+    expect(formatPrice(7.99, 'usd')).toBe('$7,99')
+    expect(formatPrice(108, 'byn')).toBe('108 BYN')
   })
 
-  it('скидка за год', () => {
-    expect(yearlySaving(plus, 'usd')).toBe(17)
-    expect(yearlySaving(pro, 'usd')).toBe(21)
+  it('скидка за год — 25 % у обоих тарифов в обеих валютах', () => {
+    for (const p of [plus, pro]) for (const c of ['usd', 'byn'] as const) expect(yearlySaving(p, c)).toBe(25)
   })
 
   it('пожизненный действует как «Про»', () => {

@@ -51,7 +51,7 @@ export const PLANS: PlanInfo[] = [
     name: 'Плюс',
     who: 'Несколько сфер жизни в одном трекере',
     key: 'До 5 пространств и интеграции',
-    price: { usd: { month: 3, year: 30 }, byn: { month: 9, year: 90 } },
+    price: { usd: { month: 3.99, year: 36 }, byn: { month: 12, year: 108 } },
     inherits: 'Старта',
     features: [
       { text: 'Работа, учёба, спорт, личное — отдельно' },
@@ -66,7 +66,7 @@ export const PLANS: PlanInfo[] = [
     name: 'Про',
     who: 'Отчитываетесь перед клиентами часами',
     key: 'Работа с клиентами',
-    price: { usd: { month: 7, year: 66 }, byn: { month: 21, year: 204 } },
+    price: { usd: { month: 7.99, year: 72 }, byn: { month: 24, year: 216 } },
     inherits: 'Плюса',
     features: [
       { text: 'Ставка в час у клиента и спринта' },
@@ -114,7 +114,7 @@ export function monthlyPrice(plan: PlanInfo, currency: Currency, billing: Billin
   return billing === 'year' ? p.year / 12 : p.month
 }
 
-/** $2,5 · 7,5 BYN — без лишних нулей, запятая как в остальном приложении. */
+/** $3 · $3,99 · 12 BYN — без лишних нулей, запятая как в остальном приложении. */
 export function formatPrice(value: number, currency: Currency): string {
   const n = String(Math.round(value * 100) / 100).replace('.', ',')
   return currency === 'usd' ? `$${n}` : `${n} BYN`
