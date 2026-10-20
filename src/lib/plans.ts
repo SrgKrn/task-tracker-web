@@ -1,9 +1,14 @@
 /**
- * Тарифы: каталог для экрана «Профиль → Тариф». Цены и состав — из тарифной сетки
- * (pricing.html, 20.10.2026). Лимиты пока нигде не проверяются: это только витрина.
+ * Тарифы: каталог для экрана «Профиль → Тариф». Одна сетка для всех, две границы:
+ * число пространств (сферы жизни) — «Плюс», «Работа с клиентами» (деньги) — «Про».
+ * Лимиты пока нигде не проверяются: это только витрина.
  */
 
-export type PlanId = 'free' | 'pro' | 'studio' | 'lifetime'
+import type { Workspace } from './types'
+
+/** studio — старое значение, в базе его ни у кого нет; оставлено, чтобы старая строка не ломала экран */
+export type PlanId = 'free' | 'plus' | 'pro' | 'lifetime' | 'studio'
+export type PaidPlan = 'free' | 'plus' | 'pro'
 export type Currency = 'usd' | 'byn'
 export type Billing = 'month' | 'year'
 
@@ -14,9 +19,11 @@ export interface PlanFeature {
 }
 
 export interface PlanInfo {
-  id: Exclude<PlanId, 'lifetime'>
+  id: PaidPlan
   name: string
   who: string
+  /** главное отличие одной строкой — выделено в карточке */
+  key: string
   /** цена в месяц при помесячной оплате и сумма за год; у бесплатного — null */
   price: Record<Currency, { month: number; year: number }> | null
   /** первая строка списка — «Всё из …, плюс:» */
@@ -28,60 +35,76 @@ export const PLANS: PlanInfo[] = [
   {
     id: 'free',
     name: 'Старт',
-    who: 'Попробовать на своих клиентах',
+    who: 'Одна сфера: только работа или только учёба',
+    key: '1 пространство, всё ядро',
     price: null,
     features: [
-      { text: 'До 3 клиентов, задачи и спринты без ограничений' },
-      { text: 'Таймер, ручной учёт, план часов и норма' },
-      { text: '«Сводка» за текущий и прошлый месяц' },
+      { text: 'Задачи, спринты, подзадачи, этапы' },
+      { text: 'Таймер и учёт, план часов, норма' },
+      { text: '«Сегодня», «Сводка», вся история' },
       { text: 'Фокус и методики приоритетов' },
       { text: 'Плитка дня, пуш-напоминания' },
-      { text: 'Файлы до 200 МБ' },
+    ],
+  },
+  {
+    id: 'plus',
+    name: 'Плюс',
+    who: 'Несколько сфер жизни в одном трекере',
+    key: 'До 5 пространств и интеграции',
+    price: { usd: { month: 3, year: 30 }, byn: { month: 9, year: 90 } },
+    inherits: 'Старта',
+    features: [
+      { text: 'Работа, учёба, спорт, личное — отдельно' },
+      { text: 'Итоги дня и недели в Telegram' },
+      { text: 'Google Календарь и Диск' },
+      { text: 'Отчёты PDF и Excel' },
+      { text: 'Мозаика года, хронология' },
     ],
   },
   {
     id: 'pro',
     name: 'Про',
-    who: 'Постоянные клиенты и отчёты им по часам',
-    price: { usd: { month: 5, year: 48 }, byn: { month: 15, year: 144 } },
-    inherits: 'Старта',
+    who: 'Отчитываетесь перед клиентами часами',
+    key: 'Работа с клиентами',
+    price: { usd: { month: 7, year: 66 }, byn: { month: 21, year: 204 } },
+    inherits: 'Плюса',
     features: [
-      { text: 'Клиенты без ограничений, вся история' },
-      { text: 'Отчёты PDF и Excel' },
-      { text: 'Telegram: итоги дня и недели, команды' },
-      { text: 'Google Календарь и Диск' },
-      { text: 'До 3 пространств, пресеты, холст групп' },
-      { text: 'Хронология, мозаика года' },
-      { text: 'Файлы до 5 ГБ' },
-    ],
-  },
-  {
-    id: 'studio',
-    name: 'Студия',
-    who: 'Отчёт клиенту — часть вашей работы',
-    price: { usd: { month: 9, year: 84 }, byn: { month: 27, year: 252 } },
-    inherits: 'Про',
-    features: [
-      { text: 'Пространства без ограничений' },
-      { text: 'Свой логотип и реквизиты в отчётах', soon: true },
-      { text: 'Отчёт клиенту по ссылке', soon: true },
-      { text: 'Ставка в час и сумма в отчёте', soon: true },
-      { text: 'Файлы до 25 ГБ' },
-      { text: 'Быстрый ответ поддержки' },
+      { text: 'Ставка в час у клиента и спринта' },
+      { text: 'Сумма к оплате в отчёте' },
+      { text: 'Отчёт клиенту по ссылке' },
+      { text: 'Свой логотип в отчёте', soon: true },
     ],
   },
 ]
 
 export const PLAN_NAME: Record<PlanId, string> = {
   free: 'Старт',
+  plus: 'Плюс',
   pro: 'Про',
-  studio: 'Студия',
   lifetime: 'Пожизненный',
+  studio: 'Про',
 }
 
-/** Тариф, чьи возможности действуют: у пожизненного — всё из «Студии». */
-export function effectivePlan(plan: PlanId): Exclude<PlanId, 'lifetime'> {
-  return plan === 'lifetime' ? 'studio' : plan
+/** Тариф, чьи возможности действуют: у пожизненного — всё из «Про». */
+export function effectivePlan(plan: PlanId): PaidPlan {
+  if (plan === 'lifetime' || plan === 'studio') return 'pro'
+  return plan
+}
+
+export const PLAN_RANK: Record<PaidPlan, number> = { free: 0, plus: 1, pro: 2 }
+
+/**
+ * Какой тариф подходит по тому, как человек пользуется трекером: есть пространство
+ * с «Работой с клиентами» — «Про»; больше одного пространства — «Плюс»; иначе «Старт».
+ */
+export function recommendPlan(workspaces: Pick<Workspace, 'client_work'>[]): { plan: PaidPlan; why: string } {
+  if (workspaces.some((w) => w.client_work)) {
+    return { plan: 'pro', why: 'У вас есть пространство с работой с клиентами — ставка, сумма и ссылка для клиента входят в «Про».' }
+  }
+  if (workspaces.length > 1) {
+    return { plan: 'plus', why: `У вас ${workspaces.length} пространства — несколько сфер жизни входят в «Плюс».` }
+  }
+  return { plan: 'free', why: 'Одно пространство без работы с клиентами — хватает «Старта».' }
 }
 
 /** Цена в месяц для выбранной оплаты: за год — годовая сумма, делённая на 12. */
@@ -91,13 +114,13 @@ export function monthlyPrice(plan: PlanInfo, currency: Currency, billing: Billin
   return billing === 'year' ? p.year / 12 : p.month
 }
 
-/** $4 · $4,5 · 12 BYN — без лишних нулей, запятая как в остальном приложении. */
+/** $2,5 · 7,5 BYN — без лишних нулей, запятая как в остальном приложении. */
 export function formatPrice(value: number, currency: Currency): string {
   const n = String(Math.round(value * 100) / 100).replace('.', ',')
   return currency === 'usd' ? `$${n}` : `${n} BYN`
 }
 
-/** Скидка за год в процентах, округлённая: у «Про» и «Студии» — 20 и 22. */
+/** Скидка за год в процентах, округлённая. */
 export function yearlySaving(plan: PlanInfo, currency: Currency): number {
   if (!plan.price) return 0
   const p = plan.price[currency]

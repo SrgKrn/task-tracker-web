@@ -4,16 +4,20 @@ import { Button, Card, Overline, Segmented, Skeleton, Tag } from './ui'
 import {
   PLANS,
   PLAN_NAME,
+  PLAN_RANK,
   effectivePlan,
   formatPrice,
   monthlyPrice,
+  recommendPlan,
   yearlySaving,
   type Billing,
   type Currency,
+  type PaidPlan,
   type PlanId,
   type PlanInfo,
 } from '../lib/plans'
 import { useUserPlan } from '../lib/queries/plan'
+import { useWorkspaces } from '../lib/workspace'
 
 const PREFS_KEY = 'semternity.pricing'
 
@@ -29,12 +33,10 @@ function loadPrefs(): { currency: Currency; billing: Billing } {
   }
 }
 
-const PLAN_RANK: Record<Exclude<PlanId, 'lifetime'>, number> = { free: 0, pro: 1, studio: 2 }
-
 /** Описание текущего тарифа под его названием. */
 function currentText(plan: PlanId, paidUntil: string | null): string {
-  if (plan === 'lifetime') return 'Всё из «Студии» без оплаты и без срока. Спасибо, что пользуетесь трекером с первых версий.'
-  if (plan === 'free') return 'Бесплатно, до 3 клиентов. Отчёты, Telegram-итоги и Google — на «Про».'
+  if (plan === 'lifetime') return 'Всё из «Про» без оплаты и без срока. Спасибо, что пользуетесь трекером с первых версий.'
+  if (plan === 'free') return 'Бесплатно: одно пространство и всё ядро трекера.'
   if (paidUntil) {
     const d = new Date(paidUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
     return `Оплачен до ${d}.`
@@ -42,7 +44,6 @@ function currentText(plan: PlanId, paidUntil: string | null): string {
   return 'Оплачен.'
 }
 
-/** Карточка текущего тарифа — первое, что видно на экране. */
 function CurrentPlan({ plan, paidUntil }: { plan: PlanId; paidUntil: string | null }) {
   return (
     <Card className="flex flex-col gap-1.5 p-4">
@@ -59,12 +60,15 @@ function CurrentPlan({ plan, paidUntil }: { plan: PlanId; paidUntil: string | nu
 function PlanCard({
   info,
   current,
+  recommended,
   currency,
   billing,
 }: {
   info: PlanInfo
   /** тариф пользователя */
   current: PlanId
+  /** подходит по тому, как пользуется трекером */
+  recommended: boolean
   currency: Currency
   billing: Billing
 }) {
@@ -72,11 +76,13 @@ function PlanCard({
   const isCurrent = info.id === active
   const covered = PLAN_RANK[info.id] < PLAN_RANK[active]
   const price = monthlyPrice(info, currency, billing)
+  // рамкой выделяем действующий тариф; пока он «Старт» — тот, что подходит
+  const highlight = isCurrent ? current !== 'free' || recommended : recommended && active === 'free'
 
   return (
     <article
       className={`flex flex-col gap-3 rounded-md border bg-surface p-4 ${
-        isCurrent ? 'border-accent ring-1 ring-accent' : 'border-border'
+        highlight ? 'border-accent ring-1 ring-accent' : 'border-border'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -84,8 +90,13 @@ function PlanCard({
           <span className="text-lg font-semibold text-text">{info.name}</span>
           <span className="text-sm text-text-secondary">{info.who}</span>
         </span>
-        {isCurrent && <Tag tone="accent">{current === 'lifetime' ? 'входит навсегда' : 'ваш тариф'}</Tag>}
-        {covered && <Tag>входит в ваш</Tag>}
+        {isCurrent ? (
+          <Tag tone="accent">{current === 'lifetime' ? 'входит навсегда' : 'ваш тариф'}</Tag>
+        ) : covered ? (
+          <Tag>входит в ваш</Tag>
+        ) : recommended ? (
+          <Tag tone="accent">вам подходит</Tag>
+        ) : null}
       </div>
 
       <div className="flex flex-col">
@@ -105,6 +116,8 @@ function PlanCard({
           </span>
         )}
       </div>
+
+      <p className="rounded-sm bg-surface-sunken px-3 py-2 text-base font-medium text-text">{info.key}</p>
 
       <ul className="flex flex-col gap-2">
         {info.inherits && <li className="text-sm font-medium text-text-secondary">Всё из «{info.inherits}», плюс:</li>}
@@ -126,9 +139,10 @@ function PlanCard({
   )
 }
 
-/** Экран «Профиль → Тариф»: текущий тариф и сетка. Покупки пока нет — только витрина. */
+/** Экран «Профиль → Тариф»: текущий тариф, что подходит, сетка. Покупки пока нет — только витрина. */
 export function PlanScreen() {
   const { data, isLoading } = useUserPlan()
+  const { data: workspaces = [] } = useWorkspaces()
   const [prefs, setPrefs] = useState(loadPrefs)
 
   function update(next: Partial<typeof prefs>) {
@@ -143,9 +157,15 @@ export function PlanScreen() {
 
   if (isLoading || !data) return <Skeleton className="h-28" />
 
+  const rec = recommendPlan(workspaces)
+  const active = effectivePlan(data.plan)
+  // подсказку показываем, только если подходящий тариф выше действующего
+  const needsMore = PLAN_RANK[rec.plan as PaidPlan] > PLAN_RANK[active]
+
   return (
     <>
       <CurrentPlan plan={data.plan} paidUntil={data.paid_until} />
+      {needsMore && <p className="px-0.5 text-sm text-text-secondary">{rec.why}</p>}
 
       <section className="mt-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -171,18 +191,26 @@ export function PlanScreen() {
         </div>
 
         {PLANS.map((p) => (
-          <PlanCard key={p.id} info={p} current={data.plan} currency={prefs.currency} billing={prefs.billing} />
+          <PlanCard
+            key={p.id}
+            info={p}
+            current={data.plan}
+            recommended={p.id === rec.plan}
+            currency={prefs.currency}
+            billing={prefs.billing}
+          />
         ))}
 
         <div className="flex flex-col gap-1 rounded-md border border-dashed border-border-strong px-4 py-3">
           <span className="flex items-center gap-2 text-base font-medium text-text">
             Команда <Tag>скоро</Tag>
           </span>
-          <span className="text-sm text-text-secondary">Общие клиенты, роли и сводка по людям.</span>
+          <span className="text-sm text-text-secondary">Общие пространства, роли и сводка по людям, оплата за место.</span>
         </div>
 
         <p className="px-0.5 text-sm text-text-tertiary">
-          Цены в BYN фиксированные и не меняются вместе с курсом. Записи и отчёты остаются вашими на любом тарифе.
+          «Работа с клиентами» включается в настройках пространства. Цены в BYN фиксированные. При переходе на более
+          дешёвый тариф ничего не удаляется.
         </p>
       </section>
     </>
