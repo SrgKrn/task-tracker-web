@@ -730,6 +730,9 @@ function money(value: number, currency: string): string {
   return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}${frac ? `,${frac}` : ''} ${currency}`
 }
 
+/** часы к оплате — с сотыми: сумма считается от точных часов */
+const h2 = (h: number) => h.toFixed(2).replace('.', ',')
+
 function billingPage(p: Pdf, r: ReportData) {
   if (!r.billing.length) return
   const withOver = r.options.includeOvertime === true
@@ -739,7 +742,7 @@ function billingPage(p: Pdf, r: ReportData) {
     r.billing.map((t) => ({
       label: `Итого, ${t.currency}`,
       value: money(t.due, t.currency),
-      sub: t.overHours > 0.004 ? `сверх плана ${f1(t.overHours)} ч · ${money(t.overAmount, t.currency)}` : `${f1(t.hours)} ч к оплате`,
+      sub: t.overHours > 0.004 ? `сверх плана ${h2(t.overHours)} ч · ${money(t.overAmount, t.currency)}` : `${h2(t.hours)} ч к оплате`,
     })),
   )
 
@@ -759,14 +762,15 @@ function billingPage(p: Pdf, r: ReportData) {
     const cy = p.y + 9
     const tag = s.inner || s.outer
     p.text(tag ? `${s.name} · ${tag}` : s.name, cols.name, cy + 3, { s: 8.2, w: 280 })
-    p.text(f1(b.hours), cols.hours, cy + 3, { f: 'mono', s: 7.6, a: 'right' })
+    // с сотыми: сумма считается от точных часов, и «часы × ставка» должно сходиться
+    p.text(h2(b.hours), cols.hours, cy + 3, { f: 'mono', s: 7.6, a: 'right' })
     p.text(money(b.rate, b.currency), cols.rate, cy + 3, { f: 'mono', s: 7.6, c: C.muted, a: 'right' })
     p.text(money(b.amount, b.currency), cols.sum, cy + 3, { f: 'mono', s: 7.6, b: true, a: 'right' })
     p.y += 17
     if (extra) {
       const oy = p.y + 3
       p.text(withOver ? 'сверх плана' : 'сверх плана — не в итоге', cols.name + 10, oy, { s: 7.4, c: C.terraInk })
-      p.text(f1(b.overHours), cols.hours, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
+      p.text(h2(b.overHours), cols.hours, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
       p.text(money(b.overAmount, b.currency), cols.sum, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
       p.y += 13
     }
@@ -777,7 +781,7 @@ function billingPage(p: Pdf, r: ReportData) {
     p.ensure(18)
     p.y += 14
     p.text(`Итого к оплате, ${t.currency}`, cols.name, p.y, { b: true, s: 9 })
-    p.text(f1(t.hours + (withOver ? t.overHours : 0)), cols.hours, p.y, { f: 'mono', s: 8, a: 'right' })
+    p.text(h2(t.hours + (withOver ? t.overHours : 0)), cols.hours, p.y, { f: 'mono', s: 8, a: 'right' })
     p.text(money(t.due, t.currency), cols.sum, p.y, { f: 'mono', s: 9, b: true, a: 'right' })
   }
   p.y += 16
@@ -941,6 +945,18 @@ export async function exportPdf(r: ReportData) {
   journalPage(p, r)
   p.footers()
   p.doc.save(`Отчёт_${r.from}_${r.to}.pdf`)
+}
+
+/**
+ * PDF для клиента по ссылке: только спринты и сумма к оплате — без обзора, разрезов
+ * и журнала. r — снимок, приведённый к виду отчёта (snapshotAsReport).
+ */
+export function renderClientPdf(r: ReportData): jsPDF {
+  const p = new Pdf(r)
+  sprintsPage(p, r)
+  billingPage(p, r)
+  p.footers()
+  return p.doc
 }
 
 /** Тот же документ без скачивания — для просмотра и проверки вёрстки. */

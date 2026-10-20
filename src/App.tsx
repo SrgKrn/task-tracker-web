@@ -1,5 +1,5 @@
 import { SettingsShell } from './components/SettingsMenu'
-import { lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { useAuth } from './lib/AuthContext'
@@ -30,6 +30,7 @@ const PlanSettings = lazy(() => settingsRoute().then((m) => ({ default: m.PlanSe
 const ProfileSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ProfileSettings })))
 const FocusSettingsPage = lazy(() => settingsRoute().then((m) => ({ default: m.FocusSettingsPage })))
 const WorkspacesSettings = lazy(() => settingsRoute().then((m) => ({ default: m.WorkspacesSettings })))
+const SharedReport = lazy(() => import('./routes/SharedReport').then((m) => ({ default: m.SharedReport })))
 const TariffSettings = lazy(() => settingsRoute().then((m) => ({ default: m.TariffSettings })))
 const MethodSettings = lazy(() => settingsRoute().then((m) => ({ default: m.MethodSettings })))
 const ExportSettings = lazy(() => settingsRoute().then((m) => ({ default: m.ExportSettings })))
@@ -57,6 +58,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
+      {/* отчёт клиенту по ссылке — без входа и без оболочки приложения */}
+      <Route
+        path="/r/:token"
+        element={
+          <Suspense fallback={null}>
+            <SharedReport />
+          </Suspense>
+        }
+      />
       {/* возврат из Google: может открыться вне приложения, без входа — свой маршрут */}
       <Route path="/oauth/google" element={<OAuthGoogle />} />
       {/* первый запуск — без вкладок и плашек: сначала выбрать, для чего трекер */}

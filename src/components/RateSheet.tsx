@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button, Segmented, Sheet, SheetActions, fieldClass } from './ui'
 import { RATE_CURRENCIES, formatRate, type RateCurrency } from '../lib/rate'
 
@@ -27,20 +27,33 @@ export function RateSheet({
   onCancel: () => void
   onSubmit: (value: RateValue) => void
 }) {
-  const [text, setText] = useState('')
-  const [currency, setCurrency] = useState<RateCurrency>('BYN')
+  return (
+    <Sheet open={open} onClose={onCancel} title={title}>
+      {/* поля монтируются при открытии — сразу с текущим значением, без сброса после первого кадра */}
+      <RateFields value={value} inheritedLabel={inheritedLabel} onCancel={onCancel} onSubmit={onSubmit} />
+    </Sheet>
+  )
+}
 
-  useEffect(() => {
-    if (!open) return
-    setText(value.hourly_rate != null ? String(value.hourly_rate).replace('.', ',') : '')
-    setCurrency(value.rate_currency ?? 'BYN')
-  }, [open, value.hourly_rate, value.rate_currency])
+function RateFields({
+  value,
+  inheritedLabel,
+  onCancel,
+  onSubmit,
+}: {
+  value: RateValue
+  inheritedLabel?: string
+  onCancel: () => void
+  onSubmit: (value: RateValue) => void
+}) {
+  const [text, setText] = useState(() => (value.hourly_rate != null ? String(value.hourly_rate).replace('.', ',') : ''))
+  const [currency, setCurrency] = useState<RateCurrency>(value.rate_currency ?? 'BYN')
 
   const parsed = text.trim() === '' ? null : Number(text.replace(/\s/g, '').replace(',', '.'))
   const invalid = parsed !== null && (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000)
 
   return (
-    <Sheet open={open} onClose={onCancel} title={title}>
+    <>
       <div className="flex gap-2">
         <input
           id="rate-amount"
@@ -83,6 +96,6 @@ export function RateSheet({
         confirmDisabled={invalid}
         confirmLabel={parsed === null ? 'Убрать ставку' : `Сохранить · ${formatRate(parsed, currency)}`}
       />
-    </Sheet>
+    </>
   )
 }

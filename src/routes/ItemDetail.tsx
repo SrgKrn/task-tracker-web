@@ -119,6 +119,15 @@ export function ItemDetail() {
 
       <ItemRate item={item} />
 
+      {item.hourly_rate != null && Number(item.hourly_rate) > 0 && (
+        <Link
+          to={`/settings/export?client=${item.id}`}
+          className="-mt-2 min-h-11 self-start py-2 text-sm font-medium text-accent-text"
+        >
+          Отчёт клиенту по ссылке
+        </Link>
+      )}
+
       <DriveFolder item={item} />
 
       <div

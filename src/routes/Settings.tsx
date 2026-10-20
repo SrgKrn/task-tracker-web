@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { NotificationsCard, TelegramCard, ThemeCard, TimeBlockCard } from '../components/AppPreferences'
 import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
@@ -28,6 +28,7 @@ import {
 } from '../lib/queries/userSettings'
 import { MethodExplainer } from '../components/Priority'
 import { PlanScreen } from '../components/PlanScreen'
+import { ClientShare } from '../components/ClientShare'
 import { PLAN_NAME } from '../lib/plans'
 import { useUserPlan } from '../lib/queries/plan'
 import { FocusExplainer, FocusSettingsForm } from '../components/FocusSettings'
@@ -195,6 +196,7 @@ function loadExportOptions(): ReportOptions {
 }
 
 function ExportSection() {
+  const [searchParams] = useSearchParams()
   const [range, setRange] = useState(loadExportRange)
   const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
@@ -413,6 +415,13 @@ function ExportSection() {
           </span>
         </div>
       )}
+      <ClientShare
+        from={from}
+        to={to}
+        tasks={tasks}
+        initialItemId={searchParams.get('client')}
+        load={() => loadReport({ from, to, tasks, groups, items, statuses, options })}
+      />
     </div>
   )
 }
