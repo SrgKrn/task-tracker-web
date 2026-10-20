@@ -4,7 +4,7 @@ import { describeError, UserError, useToast } from '../lib/Toast'
 import { liveNotificationEnabled, setLiveNotificationEnabled, usePush } from '../lib/push'
 import { useTelegramActions, useTelegramLink, useTelegramStatus } from '../lib/telegram'
 import { setTheme, useTheme, type ThemeChoice } from '../lib/theme'
-import { timeZoneOptions } from '../lib/insight'
+import { timeZoneOptions } from '../lib/timezones'
 import { useSaveTimeBlockSettings, useUserSettings } from '../lib/queries/userSettings'
 
 const card = { background: 'var(--surface)', border: '1px solid var(--border)' }
@@ -284,8 +284,8 @@ export function TelegramCard() {
 }
 
 /**
- * Блок «Время» — факт дня и цитата на «Сегодня» и в «Итогах дня». Пояс общий для аккаунта:
- * по нему считается, какой день «вчера», серии и лучшие часы.
+ * Плитка дня — на «Сегодня» и картинкой в «Итогах дня» Telegram. Пояс общий для аккаунта:
+ * по нему сервер считает, какой день сегодня.
  */
 export function TimeBlockCard() {
   const { data: settings } = useUserSettings()
@@ -299,8 +299,8 @@ export function TimeBlockCard() {
       <Toggle
         on={settings?.show_time_block !== false}
         onChange={(v) => save.mutate({ show_time_block: v }, { onError })}
-        title="Показывать блок «Время» в сводке"
-        hint="факт дня о вашем ритме, рекордах и клиентах — и цитата к нему"
+        title="Показывать плитку дня"
+        hint="на «Сегодня» и картинкой в «Итогах дня» Telegram"
       />
       <label className="flex min-h-11 items-center justify-between gap-3 py-1">
         <span className="text-base text-text-secondary">Часовой пояс</span>

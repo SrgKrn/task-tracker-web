@@ -60,7 +60,6 @@ const GLOBAL_KEYS = new Set([
   'calendar_sources',
   'telegram_link',
   'push',
-  'day_insight',
 ])
 
 /** Перейти в пространство: всё, что зависит от него, перечитается. */

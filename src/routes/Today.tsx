@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DayPlanSheet } from '../components/DayPlanSheet'
 import { DayByMethod } from '../components/DayByMethod'
 import { MethodInfoSheet, PriorityBadge } from '../components/Priority'
-import { InsightQuote } from '../components/InsightCard'
+import { TodayTile } from '../components/DayTile'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { Ring } from '../components/Ring'
 import { ArrowRight, History } from '../components/Icon'
@@ -29,7 +29,8 @@ import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { usePriorityMethod } from '../lib/queries/userSettings'
+import { usePriorityMethod, useUserSettings } from '../lib/queries/userSettings'
+import { useDayTiles, useMinuteClock } from '../lib/dayTile'
 import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
@@ -94,6 +95,13 @@ export function Today() {
   const liveHours = activeTimer && taskById.has(activeTimer.task_id) ? elapsedHours(activeTimer.started_at) : 0
   const dayFact = (factByDay.get(today) ?? 0) + liveHours
   const dayNorm = dayNormFor(today, normSettingsOf(workspace)) ?? DEFAULT_DAY_NORM
+
+  // плитка дня: идущий учёт дорисовывается раз в минуту, а не каждую секунду
+  const { data: settings, isLoading: settingsLoading } = useUserSettings()
+  const showTile = !settingsLoading && settings?.show_time_block !== false
+  const minute = useMinuteClock(!!activeTimer)
+  const { tiles: todayTiles } = useDayTiles(today, today, today, minute)
+  const todayTile = todayTiles.get(today)
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
@@ -270,8 +278,8 @@ export function Today() {
               <span className="first-letter:uppercase">{todayCountLabel}</span>
             </span>
           </div>
-          {/* цитата дня — нажатие открывает факт дня; блок «Время» */}
-          <InsightQuote className="mt-0.5 lg:max-w-105" />
+          {/* плитка дня — заменила цитату: днём собирается, по нажатию — разбор и мозаика */}
+          {showTile && todayTile && <TodayTile tile={todayTile} day={today} className="mt-0.5 lg:max-w-105" />}
         </div>
 
         {/* вход в хронологию — в углу, вне колонки: не раздвигает строку даты */}

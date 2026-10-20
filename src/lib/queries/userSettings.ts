@@ -72,7 +72,7 @@ export function useSaveDriveReportsFolder() {
   })
 }
 
-/** Блок «Время»: показывать ли его и в каком поясе считать дни. Блок дня пересчитается. */
+/** Плитка дня: показывать ли её (на «Сегодня» и в «Итогах дня») и в каком поясе считать дни. */
 export function useSaveTimeBlockSettings() {
   const qc = useQueryClient()
   return useMutation({
@@ -86,10 +86,7 @@ export function useSaveTimeBlockSettings() {
     },
     onMutate: (input) =>
       qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, ...input } : s)),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['user_settings'] })
-      qc.invalidateQueries({ queryKey: ['day_insight'] })
-    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
   })
 }
 

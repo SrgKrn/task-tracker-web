@@ -135,6 +135,9 @@ export const Keyboard = (p: IconProps) => svg(<><rect x="2" y="6" width="20" hei
 /** хронология: часы со стрелкой назад */
 export const History = (p: IconProps) =>
   svg(<><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v4h4" /><path d="M12 7v5l3 2" /></>, p)
+/** мозаика: квадрат из пятен разной площади */
+export const Mosaic = (p: IconProps) =>
+  svg(<><rect x="3" y="3" width="10" height="11" rx="1.5" /><rect x="15" y="3" width="6" height="6" rx="1.5" /><rect x="15" y="11" width="6" height="10" rx="1.5" /><rect x="3" y="16" width="10" height="5" rx="1.5" /></>, p)
 export const Pencil = (p: IconProps) =>
   svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>, p)
 export const Flag = (p: IconProps) => svg(<path d="M5 21V4h11l-2 4 2 4H5" />, p)
