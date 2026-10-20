@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { planLimitMessage } from './limits'
 import { Check, Close } from '../components/Icon'
 
 interface ToastAction {
@@ -116,6 +117,12 @@ export function describeError(error: unknown): string {
     error && typeof error === 'object' && 'message' in error
       ? String((error as { message: unknown }).message)
       : String(error)
+  // упёрлись в лимит тарифа — база отвечает plan_limit:<что>, объясняем по-человечески
+  const limit = message.match(/plan_limit:[a-z_]+/)
+  if (limit) {
+    const text = planLimitMessage(limit[0])
+    if (text) return text
+  }
   // свои проверки база пишет по-русски («…есть в задачах — его можно отправить в архив»):
   // их показываем как есть, а английские системные — переводим или обобщаем
   if (/[а-яё]/i.test(message)) return message

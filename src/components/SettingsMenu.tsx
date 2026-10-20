@@ -195,7 +195,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           to: '/settings/tariff',
           glyph: TariffGlyph,
           title: 'Тариф',
-          value: userPlan ? (userPlan.plan === 'lifetime' ? 'Пожизненный' : PLAN_NAME[userPlan.plan]) : undefined,
+          value: userPlan ? (userPlan.plan === 'lifetime' ? 'Пожизненный' : PLAN_NAME[userPlan.effective]) : undefined,
         },
         { to: '/changelog', glyph: <Sparkle size={15} />, title: 'История изменений', value: `Версия ${LATEST_RELEASE.version}` },
       ],

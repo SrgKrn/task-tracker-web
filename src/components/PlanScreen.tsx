@@ -5,7 +5,6 @@ import {
   PLANS,
   PLAN_NAME,
   PLAN_RANK,
-  effectivePlan,
   formatPrice,
   monthlyPrice,
   recommendPlan,
@@ -34,9 +33,13 @@ function loadPrefs(): { currency: Currency; billing: Billing } {
 }
 
 /** Описание текущего тарифа под его названием. */
-function currentText(plan: PlanId, paidUntil: string | null): string {
-  if (plan === 'lifetime') return 'Всё из «Про» без оплаты и без срока. Спасибо, что пользуетесь трекером с первых версий.'
-  if (plan === 'free') return 'Бесплатно: одно пространство и всё ядро трекера.'
+function currentText(plan: PlanId, paidUntil: string | null, trial = false): string {
+  if (trial && paidUntil) {
+    const d = new Date(paidUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    return `Пробный период до ${d}. Потом — «Старт», если не продлить.`
+  }
+  if (plan === 'lifetime') return 'Всё из «Про», без оплаты, без срока и без лимитов на пространства, группы и файлы. Спасибо, что пользуетесь трекером с первых версий.'
+  if (plan === 'free') return 'Бесплатно: одно пространство, три группы и всё ядро трекера.'
   if (paidUntil) {
     const d = new Date(paidUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
     return `Оплачен до ${d}.`
@@ -44,15 +47,16 @@ function currentText(plan: PlanId, paidUntil: string | null): string {
   return 'Оплачен.'
 }
 
-function CurrentPlan({ plan, paidUntil }: { plan: PlanId; paidUntil: string | null }) {
+function CurrentPlan({ plan, paidUntil, trial }: { plan: PlanId; paidUntil: string | null; trial: boolean }) {
   return (
     <Card className="flex flex-col gap-1.5 p-4">
       <Overline>Ваш тариф</Overline>
       <span className="flex items-center gap-2">
         <span className="text-xl font-semibold tracking-[-0.01em] text-text">{PLAN_NAME[plan]}</span>
         {plan === 'lifetime' && <Tag tone="accent">безлимит навсегда</Tag>}
+        {trial && <Tag tone="accent">пробный</Tag>}
       </span>
-      <p className="text-sm text-text-secondary">{currentText(plan, paidUntil)}</p>
+      <p className="text-sm text-text-secondary">{currentText(plan, paidUntil, trial)}</p>
     </Card>
   )
 }
@@ -60,19 +64,21 @@ function CurrentPlan({ plan, paidUntil }: { plan: PlanId; paidUntil: string | nu
 function PlanCard({
   info,
   current,
+  active,
   recommended,
   currency,
   billing,
 }: {
   info: PlanInfo
-  /** тариф пользователя */
+  /** записанный тариф пользователя */
   current: PlanId
+  /** действующий: пожизненный — Про, кончился срок — Старт */
+  active: PaidPlan
   /** подходит по тому, как пользуется трекером */
   recommended: boolean
   currency: Currency
   billing: Billing
 }) {
-  const active = effectivePlan(current)
   const isCurrent = info.id === active
   const covered = PLAN_RANK[info.id] < PLAN_RANK[active]
   const price = monthlyPrice(info, currency, billing)
@@ -158,13 +164,17 @@ export function PlanScreen() {
   if (isLoading || !data) return <Skeleton className="h-28" />
 
   const rec = recommendPlan(workspaces)
-  const active = effectivePlan(data.plan)
+  const active = data.effective
   // подсказку показываем, только если подходящий тариф выше действующего
   const needsMore = PLAN_RANK[rec.plan as PaidPlan] > PLAN_RANK[active]
 
   return (
     <>
-      <CurrentPlan plan={data.plan} paidUntil={data.paid_until} />
+      <CurrentPlan
+        plan={data.effective === 'free' && data.plan !== 'free' && data.plan !== 'lifetime' ? 'free' : data.plan}
+        paidUntil={data.paid_until}
+        trial={data.trial && data.effective !== 'free'}
+      />
       {needsMore && <p className="px-0.5 text-sm text-text-secondary">{rec.why}</p>}
 
       <section className="mt-4 flex flex-col gap-3">
@@ -195,6 +205,7 @@ export function PlanScreen() {
             key={p.id}
             info={p}
             current={data.plan}
+            active={active}
             recommended={p.id === rec.plan}
             currency={prefs.currency}
             billing={prefs.billing}
@@ -209,8 +220,8 @@ export function PlanScreen() {
         </div>
 
         <p className="px-0.5 text-sm text-text-tertiary">
-          «Работа с клиентами» включается в настройках пространства. Цены в BYN фиксированные. При переходе на более
-          дешёвый тариф ничего не удаляется.
+          «Работа с клиентами» включается в настройках пространства. Цены в BYN фиксированные. Платные тарифы можно
+          попробовать 7 дней. При переходе на более дешёвый тариф лишнее уходит в архив и возвращается при оплате.
         </p>
       </section>
     </>

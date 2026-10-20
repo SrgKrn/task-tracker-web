@@ -470,8 +470,8 @@ export function Settings() {
         >
           <span className="min-w-0 flex-1 text-base text-text">Тариф</span>
           {plan && (
-            <Tag tone={plan.plan === 'free' ? 'neutral' : 'accent'}>
-              {plan.plan === 'lifetime' ? 'Пожизненный безлимит' : PLAN_NAME[plan.plan]}
+            <Tag tone={plan.effective === 'free' ? 'neutral' : 'accent'}>
+              {plan.plan === 'lifetime' ? 'Пожизненный безлимит' : PLAN_NAME[plan.effective]}
             </Tag>
           )}
           <ChevronRight size={15} className="shrink-0 text-text-secondary" />
