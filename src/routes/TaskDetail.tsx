@@ -41,6 +41,7 @@ import {
 } from '../lib/queries/timer'
 import { useAddComment } from '../lib/queries/comments'
 import { elapsedHours, entrySeconds, formatClock, formatHoursMinutes, useTicker } from '../lib/time'
+import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
 
 export function TaskDetail() {
@@ -70,7 +71,8 @@ export function TaskDetail() {
   const { data: entries = [] } = useTimeEntries(id)
   const createNextSprint = useCreateNextSprint()
 
-  const childrenOf = useMemo(() => childrenByParent(allTasks), [allTasks])
+  const manualSort = useTaskSort() === 'manual'
+  const childrenOf = useMemo(() => childrenByParent(allTasks, manualSort), [allTasks, manualSort])
   const subtasks = (id && childrenOf.get(id)) || []
   const parent = task?.parent_id ? allTasks.find((t) => t.id === task.parent_id) : undefined
 

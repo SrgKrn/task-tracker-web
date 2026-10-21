@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
 import { Close } from './Icon'
@@ -388,14 +388,18 @@ export function ListGroup({
   children,
   className = '',
   clip = true,
+  ref,
 }: {
   children: ReactNode
   className?: string
   /** обрезать по скруглению (нужно свайпу строк); без обрезки — для списков с выпадающим календарём */
   clip?: boolean
+  /** контейнер строк — для перетаскивания (useDragSort) */
+  ref?: Ref<HTMLDivElement>
 }) {
   return (
     <div
+      ref={ref}
       className={`flex flex-col divide-y divide-divider rounded-md border border-border bg-surface ${clip ? 'overflow-hidden' : ''} ${className}`}
     >
       {children}

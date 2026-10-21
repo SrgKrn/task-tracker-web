@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { addInputId, setOpen, startAdding, stopAdding, useAddingFor } from '../lib/expanded'
 import { Link } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
@@ -6,7 +6,10 @@ import { Check, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { describeError, useToast } from '../lib/Toast'
 import { useStatuses } from '../lib/queries/statuses'
-import { useCreateTask, useUpdateTask } from '../lib/queries/tasks'
+import { useCreateTask, useReorderTasks, useUpdateTask } from '../lib/queries/tasks'
+import { reorderPatch } from '../lib/dragSort'
+import { useTaskSort } from '../lib/taskSort'
+import { useDragSort } from './useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 import { isOverdue } from '../lib/tree'
@@ -43,6 +46,10 @@ export function SubtaskList({
   const onError = (error: unknown) => showError(describeError(error))
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
+  // свой порядок — подзадачи переставляются долгим нажатием, как задачи в списке
+  const manual = useTaskSort() === 'manual'
+  const reorder = useReorderTasks()
+  const boxRef = useRef<HTMLDivElement>(null)
   // «закрыть» ставит первый финальный статус. Если финальных нет вовсе,
   // закрывать нечем — кнопку не показываем, а не придумываем статус за пользователя
   const finalStatus = useMemo(
@@ -54,6 +61,13 @@ export function SubtaskList({
     ? subtasks.filter((t) => !(t.status_id && statusById.get(t.status_id)?.is_final))
     : subtasks
   const hiddenCount = subtasks.length - visible.length
+  useDragSort(boxRef, {
+    enabled: manual && visible.length > 1,
+    onDrop: (from, to) => {
+      const patch = reorderPatch(visible, from, to)
+      if (patch.length) reorder.mutate(patch, { onError })
+    },
+  })
 
   function toggleDone(task: Task, isDone: boolean) {
     if (!finalStatus) return
@@ -79,13 +93,14 @@ export function SubtaskList({
   return (
     <div
       id={id}
-      className={`flex flex-col gap-1.5 ${nested ? 'ml-4 border-l border-divider pt-0.5 pb-3 pl-3' : ''}`}
+      ref={boxRef}
+      className={`flex flex-col gap-1.5 ${manual ? 'sortable' : ''} ${nested ? 'ml-4 border-l border-divider pt-0.5 pb-3 pl-3' : ''}`}
     >
       {visible.map((task) => {
         const status = task.status_id ? statusById.get(task.status_id) : undefined
         return (
+          <div key={task.id} data-sort-row>
           <SubtaskRow
-            key={task.id}
             task={task}
             status={status}
             activeTimer={activeTimer}
@@ -94,6 +109,7 @@ export function SubtaskList({
             onStop={() => stopTimer.mutate(undefined, { onError })}
             onToggleDone={() => toggleDone(task, !!status?.is_final)}
           />
+          </div>
         )
       })}
 

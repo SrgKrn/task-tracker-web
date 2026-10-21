@@ -35,6 +35,7 @@ import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
+import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
@@ -74,7 +75,8 @@ export function Today() {
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const taskById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
-  const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
+  const manualSort = useTaskSort() === 'manual'
+  const childrenOf = useMemo(() => childrenByParent(tasks, manualSort), [tasks, manualSort])
 
   /** факт по дням недели — из одного запроса за всю неделю */
   const factByDay = useMemo(() => {

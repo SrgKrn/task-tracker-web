@@ -117,6 +117,13 @@ input[type="number"] {
   backdrop-filter: blur(20px) saturate(1.4);
 }
 
+/* свой порядок: долгое нажатие перетаскивает строку — без меню ссылки и выделения текста iOS */
+.sortable [data-sort-row] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 @media (max-width: 1023.98px) {
   .app-content {
     padding-bottom: calc(var(--tabbar-space) + 24px);

@@ -19,6 +19,7 @@ import { useTasks } from '../lib/queries/tasks'
 import { useClientWork } from '../lib/workspace'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { entryMinutes, formatHoursMinutes, formatHoursRu } from '../lib/time'
+import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent } from '../lib/tree'
 import type { GroupItem, Status, Task } from '../lib/types'
 
@@ -53,7 +54,8 @@ export function ItemDetail() {
   const group = item ? model.groupById.get(item.group_id) : undefined
   const itemTasks = useMemo(() => tasks.filter((t) => !!id && t.item_ids.includes(id)), [tasks, id])
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  const childrenOf = useMemo(() => childrenByParent(itemTasks), [itemTasks])
+  const manualSort = useTaskSort() === 'manual'
+  const childrenOf = useMemo(() => childrenByParent(itemTasks, manualSort), [itemTasks, manualSort])
   const heads = useMemo(() => itemTasks.filter((t) => !t.parent_id), [itemTasks])
   const isDone = (t: Task) => !!t.status_id && !!statusById.get(t.status_id)?.is_final
 

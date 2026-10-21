@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import { activeWorkspaceId } from '../workspace'
 import type { Task } from '../types'
+import type { OrderPatch } from '../dragSort'
 import { removeTaskFiles } from './attachments'
 
 export function useTasks() {
@@ -141,6 +142,33 @@ export function useSetPlanDate() {
       const list = qc.getQueryData<Task[]>(['tasks'])
       const set = new Set(ids)
       if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (set.has(t.id) ? { ...t, plan_date: date } : t)))
+      return { list }
+    },
+    onError: (_e, _v, snapshot) => {
+      if (snapshot?.list) qc.setQueryData(['tasks'], snapshot.list)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+}
+
+/**
+ * Свой порядок (0.41): перетаскивание пишет новое место одной задачи, изредка — всех
+ * соседей (перенумерация). Список меняется сразу; отказ возвращает прежний порядок.
+ */
+export function useReorderTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (patch: OrderPatch[]) => {
+      for (const p of patch) {
+        const { error } = await supabase.from('tasks').update({ sort_order: p.sort_order }).eq('id', p.id)
+        if (error) throw error
+      }
+    },
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const list = qc.getQueryData<Task[]>(['tasks'])
+      const byId = new Map(patch.map((p) => [p.id, p.sort_order]))
+      if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (byId.has(t.id) ? { ...t, sort_order: byId.get(t.id)! } : t)))
       return { list }
     },
     onError: (_e, _v, snapshot) => {

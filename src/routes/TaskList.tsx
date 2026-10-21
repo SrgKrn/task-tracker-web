@@ -1,6 +1,6 @@
 import { ProfileButton } from '../components/Avatar'
 import { WorkspaceTag } from '../components/Workspaces'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
@@ -14,7 +14,10 @@ import { comparePriority } from '../lib/priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
+import { useDeleteTask, useDuplicateTask, useReorderTasks, useTasks } from '../lib/queries/tasks'
+import { compareManual, reorderPatch } from '../lib/dragSort'
+import { setTaskSort, useTaskSort, type TaskSort } from '../lib/taskSort'
+import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
@@ -56,8 +59,8 @@ export function TaskList() {
   const [showFilters, setShowFilters] = useState(false)
   // готовое по умолчанию скрыто: в работе нужны открытые задачи, закрытые — по запросу
   const [hideCompleted, setHideCompleted] = useState(true)
-  /** порядок: по сроку, по созданию или по выбранной методике приоритизации */
-  const [sortMode, setSortMode] = useState<'due' | 'created' | 'method'>('due')
+  /** порядок: по сроку, по созданию, по методике или свой (перетаскиванием); запоминается */
+  const sortMode = useTaskSort()
   const method = usePriorityMethod()
   const today = todayStr()
   // методику выключили — порядок «по методике» больше ничего не значит
@@ -72,7 +75,7 @@ export function TaskList() {
   const filtersActive = !!periodFrom || !!periodTo || Object.keys(selected).length > 0
 
   // в списке только головные задачи; подзадачи живут в раскрывающемся составе спринта
-  const childrenOf = useMemo(() => childrenByParent(tasks), [tasks])
+  const childrenOf = useMemo(() => childrenByParent(tasks, sort === 'manual'), [tasks, sort])
   const heads = useMemo(() => tasks.filter((t) => !t.parent_id), [tasks])
 
 
@@ -106,6 +109,7 @@ export function TaskList() {
 
   const sorted = useMemo(() => {
     if (sort === 'created') return filtered
+    if (sort === 'manual') return [...filtered].sort(compareManual)
     const byDue = (a: Task, b: Task) => {
       if (!a.end_date && !b.end_date) return 0
       if (!a.end_date) return 1
@@ -116,8 +120,16 @@ export function TaskList() {
     const byMethod = comparePriority(method, today)
     return [...filtered].sort(sort === 'method' ? (a, b) => byMethod(a, b) || byDue(a, b) : byDue)
   }, [filtered, sort, method, today])
-  const SORT_LABEL = { due: 'По сроку', created: 'По созданию', method: 'По методике' } as const
-  const nextSort = sort === 'due' ? 'created' : sort === 'created' && method !== 'none' ? 'method' : 'due'
+  const SORT_LABEL: Record<TaskSort, string> = {
+    due: 'По сроку',
+    created: 'По созданию',
+    method: 'По методике',
+    manual: 'Свой порядок',
+  }
+  // по кругу: срок → создание → методика (если выбрана) → свой порядок → срок
+  const nextSort: TaskSort =
+    sort === 'due' ? 'created' : sort === 'created' ? (method !== 'none' ? 'method' : 'manual') : sort === 'method' ? 'manual' : 'due'
+  const reorder = useReorderTasks()
 
   const groups = useMemo(() => {
     const withSum = (id: string, title: string, items: Task[]) => ({
@@ -181,7 +193,7 @@ export function TaskList() {
         <Button
           variant="ghost"
           className="-mr-2 shrink-0"
-          onClick={() => setSortMode(nextSort)}
+          onClick={() => setTaskSort(nextSort)}
           aria-label={`Сейчас ${SORT_LABEL[sort].toLowerCase()}, переключить: ${SORT_LABEL[nextSort].toLowerCase()}`}
         >
           <SortArrows size={16} />
@@ -298,6 +310,9 @@ export function TaskList() {
         </div>
         <Switch on={hideCompleted} onChange={setHideCompleted} label="Без готовых" />
       </div>
+      {sort === 'manual' && (
+        <p className="-mt-1 px-5 pb-2.5 text-sm text-text-tertiary">Удерживайте задачу, чтобы перетащить её на другое место</p>
+      )}
 
       <div className="flex flex-col gap-4 px-5 pb-2">
         {isLoading ? (
@@ -318,10 +333,16 @@ export function TaskList() {
                     </span>
                   </div>
                 )}
-                <ListGroup>
+                <SortableGroup
+                  enabled={sort === 'manual'}
+                  onDrop={(from, to) => {
+                    const patch = reorderPatch(group.items, from, to)
+                    if (patch.length) reorder.mutate(patch, { onError })
+                  }}
+                >
                 {group.items.map((task) => (
+                  <div key={task.id} data-sort-row>
                   <TaskListItem
-                    key={task.id}
                     task={task}
                     badge={<PriorityBadge task={task} method={method} today={today} />}
                     status={task.status_id ? statusById.get(task.status_id) : undefined}
@@ -341,8 +362,9 @@ export function TaskList() {
                     forceExpanded={matchedInside.has(task.id)}
                     hideDoneSubtasks={hideCompleted}
                   />
+                  </div>
                 ))}
-                </ListGroup>
+                </SortableGroup>
               </div>
             ))}
             {groups.length === 0 && (
@@ -408,5 +430,24 @@ function FactSum({
     <>
       {formatHoursRu(fact)} / {formatHoursRu(plan)} ч
     </>
+  )
+}
+
+/** Группа строк, которые можно переставлять долгим нажатием (свой порядок). */
+function SortableGroup({
+  enabled,
+  onDrop,
+  children,
+}: {
+  enabled: boolean
+  onDrop: (from: number, to: number) => void
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  useDragSort(ref, { enabled, onDrop })
+  return (
+    <ListGroup ref={ref} className={enabled ? 'sortable' : ''}>
+      {children}
+    </ListGroup>
   )
 }

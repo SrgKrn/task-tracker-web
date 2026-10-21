@@ -1,4 +1,5 @@
 import { plural } from './time'
+import { compareManual } from './dragSort'
 import type { Status, Task } from './types'
 
 /**
@@ -19,8 +20,8 @@ export function compareSubtasks(a: Task, b: Task): number {
   return a.created_at.localeCompare(b.created_at)
 }
 
-/** подзадачи по id спринта, внутри — по сроку (compareSubtasks) */
-export function childrenByParent(tasks: Task[]): Map<string, Task[]> {
+/** подзадачи по id спринта, внутри — по сроку (compareSubtasks) или в своём порядке */
+export function childrenByParent(tasks: Task[], manual = false): Map<string, Task[]> {
   const map = new Map<string, Task[]>()
   for (const t of tasks) {
     if (!t.parent_id) continue
@@ -28,7 +29,7 @@ export function childrenByParent(tasks: Task[]): Map<string, Task[]> {
     if (list) list.push(t)
     else map.set(t.parent_id, [t])
   }
-  for (const list of map.values()) list.sort(compareSubtasks)
+  for (const list of map.values()) list.sort(manual ? compareManual : compareSubtasks)
   return map
 }
 

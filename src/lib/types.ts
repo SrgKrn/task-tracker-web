@@ -111,6 +111,8 @@ export interface Task {
   rate_currency: string | null
   created_at: string
   updated_at: string
+  /** место в своём порядке среди соседей (0.41): головных пространства или подзадач спринта */
+  sort_order: number
 }
 
 /**

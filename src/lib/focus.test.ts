@@ -26,6 +26,7 @@ function task(fields: Partial<Task> & { id: string }): Task {
     abc_letter: null,
     abc_rank: null,
     delegated_to: null,
+    sort_order: 0,
     hourly_rate: null,
     rate_currency: null,
     created_at: '2026-10-01T10:00:00Z',
