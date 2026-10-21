@@ -15,6 +15,7 @@ import { entrySeconds, formatDuration, plural } from '../lib/time'
 import { formatShortDate, toDateString, todayStr, addDays } from '../lib/period'
 import type { Comment, TimeEntry } from '../lib/types'
 import { ArrowUp, Comment as CommentIcon, MoreDots } from './Icon'
+import { UpgradeNote, useGate } from './Upgrade'
 
 const ADJUSTMENTS: [string, string, string] = ['правка', 'правки', 'правок']
 
@@ -60,6 +61,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
   const { data: entries = [] } = useTimeEntries(taskId)
   const { data: comments = [] } = useComments(taskId)
   const { data: files = [] } = useAttachments({ taskIds: [taskId] })
+  const historyDays = useGate().plan?.limits.history_days ?? null
 
   /*
    * Ручные правки за день — одной строкой с суммой: пять нажатий «+15 мин» давали пять
@@ -105,8 +107,12 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
   const dayOf = (row: TimelineRow) =>
     row.kind === 'timer' || row.kind === 'adjustment' ? row.entry.effective_date : toDateString(new Date(row.at))
   rows.sort((a, b) => dayOf(b).localeCompare(dayOf(a)) || b.at.localeCompare(a.at))
+  // глубина истории по тарифу: на «Старте» — год, как в «Сводке»; факт задачи при этом не меняется
+  const cutoff = historyDays === null ? null : addDays(todayStr(), -historyDays)
+  const shown = cutoff === null ? rows : rows.filter((row) => dayOf(row) >= cutoff)
+  const hiddenByPlan = rows.length - shown.length
   const days: { day: string; seconds: number; rows: TimelineRow[] }[] = []
-  for (const row of rows) {
+  for (const row of shown) {
     const day = dayOf(row)
     let group = days[days.length - 1]
     if (!group || group.day !== day) {
@@ -220,6 +226,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
       {rows.length === 0 && (
         <EmptyState title="Истории пока нет">Здесь появятся сессии учёта, правки, комментарии и файлы.</EmptyState>
       )}
+      {hiddenByPlan > 0 && <UpgradeNote need="plus" what="История старше года" />}
 
       <EntryNoteSheet entry={noting} onClose={() => setNoting(null)} />
       <CommentSheet comment={editing} onClose={() => setEditing(null)} />
