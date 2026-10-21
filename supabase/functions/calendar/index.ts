@@ -8,6 +8,7 @@
 //     подписываются в календаре, и учёт виден рядом со встречами.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import ICAL from 'npm:ical.js@2.1.0'
+import { limitsOf, PLAN_TEXT } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -503,14 +504,20 @@ Deno.serve(async (req) => {
     const users = new Set<string>()
     let events = 0
     let failed = 0
+    let skipped = 0
     for (const src of (sources ?? []) as Source[]) {
+      // календарь — на «Про»; кончился тариф — источник остаётся, но не обновляется
+      if (!(await limitsOf(db, src.user_id)).gcal) {
+        skipped++
+        continue
+      }
       const r = await syncSource(db, src, creds)
       events += r.events
       if (r.error) failed++
       users.add(src.user_id)
     }
     for (const u of users) await suggestFor(db, u)
-    return json({ sources: sources?.length ?? 0, events, failed })
+    return json({ sources: sources?.length ?? 0, events, failed, skipped })
   }
 
   // ── приложение
@@ -519,6 +526,16 @@ Deno.serve(async (req) => {
   const user = auth?.user
   if (!user) return json({ error: 'forbidden' }, 403)
   const body = await req.json().catch(() => ({}))
+
+  // встречи из календаря — на «Про»: подключить, добавить и обновить; убрать и лента учёта — всегда
+  if (body?.action === 'add' || body?.action === 'add_google' || body?.action === 'sync') {
+    const L = await limitsOf(db, user.id)
+    if (!L.gcal) return json({ error: PLAN_TEXT.gcal }, 403)
+    if (body.action !== 'sync' && L.calendars !== null) {
+      const { count } = await db.from('calendar_sources').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+      if ((count ?? 0) >= L.calendars) return json({ error: `На вашем тарифе — не больше ${L.calendars} календарей` }, 403)
+    }
+  }
 
   switch (body?.action) {
     case 'add': {

@@ -7,6 +7,7 @@
 // кроме сервисного ключа этой функции. В репозиторий они не попадают.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
+import { limitsOf } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,9 @@ Deno.serve(async (req) => {
   ) {
     const token = secret.telegram_bot_token
     if (!token) return false
+    // Telegram-напоминания — с «Плюса», о встречах — ещё и с календарём («Про»); пуш остаётся всем
+    const L = await limitsOf(db, userId)
+    if (!L.tg_reminders || (kind === 'notify_meetings' && !L.gcal)) return false
     const { data: acc } = await db
       .from('telegram_accounts')
       .select('chat_id, notify_long_timer, notify_meetings')
@@ -192,6 +196,8 @@ Deno.serve(async (req) => {
       .eq('reminded', false)
       .select('id')
     if (!claimed?.length || running.has(ev.user_id)) continue
+    // встречи — с календарём («Про»); остались после перехода на тариф дешевле — молчим
+    if (!(await limitsOf(db, ev.user_id)).gcal) continue
     const { data: task } = ev.suggested_task_id
       ? await db.from('tasks').select('id, name').eq('id', ev.suggested_task_id).maybeSingle()
       : { data: null }

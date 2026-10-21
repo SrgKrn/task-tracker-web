@@ -12,6 +12,7 @@
 // Настройки в app_secrets: google_client_id, google_client_secret, google_api_key (для окна
 // выбора файлов), google_app_id (номер проекта Google Cloud).
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { limitsOf, PLAN_TEXT } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -185,6 +186,11 @@ Deno.serve(async (req) => {
     case 'auth_url': {
       if (!configured) return json({ error: 'Google ещё не настроен' }, 409)
       const service: Service = body.service === 'calendar' ? 'calendar' : 'drive'
+      // Диск и Календарь — на «Про»
+      const L = await limitsOf(db, user.id)
+      if (service === 'calendar' ? !L.gcal : !L.gdrive) {
+        return json({ error: service === 'calendar' ? PLAN_TEXT.gcal : PLAN_TEXT.gdrive }, 403)
+      }
       await db.from('google_link_states').delete().eq('user_id', user.id)
       const state = randomState(service)
       const { error } = await db.from('google_link_states').insert({ state, user_id: user.id })
@@ -206,6 +212,7 @@ Deno.serve(async (req) => {
 
     case 'token': {
       if (!account?.scope.includes(SCOPES.drive)) return json({ error: 'Google Диск не подключён' }, 409)
+      if (!(await limitsOf(db, user.id)).gdrive) return json({ error: PLAN_TEXT.gdrive }, 403)
       try {
         return json(await accessToken(account.refresh_token))
       } catch (e) {

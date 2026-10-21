@@ -12,6 +12,7 @@
 // в репозиторий не попадают.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { buildSegments, makeTile, tilePng, type DayTile, type TileClient } from './tile.ts'
+import { limitsOf, PLAN_TEXT, type PlanLimits } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -746,6 +747,13 @@ Deno.serve(async (req) => {
           )
           return
         }
+        // Telegram — с «Плюса»: без тарифа не привязываем
+        const L0 = await limitsOf(db, link.user_id)
+        if (!L0.tg_reminders && !L0.tg_digest) {
+          await db.from('telegram_link_codes').delete().eq('user_id', link.user_id)
+          await say(chatId, PLAN_TEXT.tg_digest)
+          return
+        }
         await db.from('telegram_accounts').upsert({
           user_id: link.user_id,
           chat_id: chatId,
@@ -769,6 +777,11 @@ Deno.serve(async (req) => {
       }
       if (!text) return
       const command = text.split(/[\s@]/)[0].toLowerCase()
+      // команды и комментарии — часть «итогов и команд» (с «Плюса»); напоминания — отдельно
+      if (!(await limitsOf(db, acc.user_id)).tg_digest) {
+        await say(chatId, PLAN_TEXT.tg_digest)
+        return
+      }
       if (command === '/today' || command === '/week') {
         const spaces = await workspacesOf(db, acc.user_id)
         if (spaces.length > 1) {
@@ -834,6 +847,17 @@ Deno.serve(async (req) => {
     }
     const userId = acc.user_id
     const timezone = acc.timezone
+    // кнопка — по тарифу: напоминание о долгом учёте, встречи календаря, остальное — итоги и команды
+    const need: keyof PlanLimits =
+      action === 'stop' || action === 'keep'
+        ? 'tg_reminders'
+        : ['sk', 'lg', 'lt', 'pk', 'mt'].includes(action)
+          ? 'gcal'
+          : 'tg_digest'
+    if (!(await limitsOf(db, userId))[need]) {
+      await answer(PLAN_TEXT[need as 'tg_digest' | 'tg_reminders' | 'gcal'].split('.')[0])
+      return
+    }
 
     // выбор пространства для /today и /week
     if (action === 'dd' || action === 'dw') {
@@ -1076,6 +1100,8 @@ Deno.serve(async (req) => {
       for (const acc of accounts ?? []) {
         const { hour, weekday } = localParts(now, acc.timezone)
         if (hour !== acc.summary_hour) continue
+        // итоги — с «Плюса»; кончился тариф — не шлём, привязка остаётся
+        if (!(await limitsOf(db, acc.user_id)).tg_digest) continue
         const today = localDate(now, acc.timezone)
         if (acc.daily_summary && acc.last_daily_on !== today) {
           // отметка до отправки: два наложившихся запуска не пришлют сводку дважды
@@ -1146,6 +1172,8 @@ Deno.serve(async (req) => {
 
     case 'link': {
       if (!configured) return json({ error: 'Бот ещё не настроен' }, 409)
+      const Llink = await limitsOf(db, user.id)
+      if (!Llink.tg_reminders && !Llink.tg_digest) return json({ error: PLAN_TEXT.tg_digest }, 403)
       await db.from('telegram_link_codes').delete().eq('user_id', user.id)
       const code = randomCode()
       const timezone = typeof body.timezone === 'string' && body.timezone.length < 64 ? body.timezone : 'Europe/Moscow'
@@ -1176,6 +1204,7 @@ Deno.serve(async (req) => {
 
     case 'digest_now': {
       if (!account) return json({ error: 'Telegram не подключён' }, 409)
+      if (!(await limitsOf(db, user.id)).tg_digest) return json({ error: PLAN_TEXT.tg_digest }, 403)
       const { data: acc } = await db.from('telegram_accounts').select('timezone').eq('user_id', user.id).maybeSingle()
       const tz = acc?.timezone ?? 'Europe/Moscow'
       const d = await dailyDigest(user.id, tz, localDate(new Date(), tz))
