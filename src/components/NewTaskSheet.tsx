@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DatePicker } from './DatePicker'
@@ -155,7 +156,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
         />
 
         <input
-          autoFocus
+          autoFocus={focusOnOpen}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Что нужно сделать"

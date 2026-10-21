@@ -37,6 +37,8 @@ import { useFocusPrefs } from '../lib/queries/focus'
 import { FOCUS_INFO } from '../lib/focus'
 import { METHODS, METHOD_ORDER } from '../lib/priority'
 import type { LabelColor, PriorityMethod, Workspace } from '../lib/types'
+import { PasswordRules } from '../components/PasswordRules'
+import { isStrongPassword } from '../lib/password'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
@@ -595,6 +597,7 @@ function ProfileForm() {
   const [emailBusy, setEmailBusy] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
+  const [repeat, setRepeat] = useState('')
   const [passBusy, setPassBusy] = useState(false)
 
   return (
@@ -705,6 +708,7 @@ function ProfileForm() {
             if (error) return onError(error)
             setCurrent('')
             setNext('')
+            setRepeat('')
             showSuccess('Пароль изменён')
           }}
         >
@@ -722,10 +726,20 @@ function ProfileForm() {
             type="password"
             className={fieldClass}
             value={next}
-            placeholder="Новый пароль, от 8 символов"
+            placeholder="Новый пароль"
             autoComplete="new-password"
             onChange={(e) => setNext(e.target.value)}
           />
+          <input
+            id="profile-repeat-password"
+            type="password"
+            className={fieldClass}
+            value={repeat}
+            placeholder="Новый пароль ещё раз"
+            autoComplete="new-password"
+            onChange={(e) => setRepeat(e.target.value)}
+          />
+          {(next || repeat) && <PasswordRules password={next} repeat={repeat} />}
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
@@ -740,7 +754,7 @@ function ProfileForm() {
             >
               Не помню текущий
             </button>
-            <Button type="submit" variant="primary" disabled={!current || next.length < 8} loading={passBusy}>
+            <Button type="submit" variant="primary" disabled={!current || !isStrongPassword(next) || next !== repeat} loading={passBusy}>
               Сохранить пароль
             </Button>
           </div>

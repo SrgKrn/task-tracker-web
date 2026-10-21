@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useState } from 'react'
 import { Button, Segmented, Sheet, SheetActions, fieldClass } from './ui'
 import { RATE_CURRENCIES, formatRate, type RateCurrency } from '../lib/rate'
@@ -57,7 +58,7 @@ function RateFields({
       <div className="flex gap-2">
         <input
           id="rate-amount"
-          autoFocus
+          autoFocus={focusOnOpen}
           inputMode="decimal"
           value={text}
           onChange={(e) => setText(e.target.value)}

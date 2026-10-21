@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatDueDate, toDateString, todayStr } from '../lib/period'
 import { ChevronDown, ChevronLeft, ChevronRight } from './Icon'
+import { touchDevice } from '../lib/device'
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 const MONTHS = [
@@ -47,8 +48,10 @@ function monthGrid(year: number, month: number): (string | null)[] {
 }
 
 /**
- * Календарь в стиле приложения вместо нативного `<input type="date">`:
- * тот на iOS открывает системное колесо, инородное рядом с графитом и латунью.
+ * На компьютере — календарь в стиле приложения. На телефоне — системный выбор даты:
+ * свой календарь там мелкий и неудобный под палец. Кнопка выглядит одинаково, а поверх
+ * неё на телефоне лежит прозрачное `<input type="date">` — нажатие открывает календарь
+ * устройства, «Сбросить» в нём очищает дату.
  */
 export function DatePicker({
   value,
@@ -100,6 +103,33 @@ export function DatePicker({
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
   }
 
+  const face = (
+    <>
+      <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
+      <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+    </>
+  )
+
+  if (touchDevice) {
+    return (
+      // обрезано рамкой: у iOS своя ширина поля даты, и без этого страница уезжала вбок
+      <div className={`relative min-w-0 overflow-hidden ${className}`}>
+        <div className={`flex w-full items-center text-left ${trigger}`} aria-hidden>
+          {face}
+        </div>
+        <input
+          type="date"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value || null)}
+          aria-label={ariaLabel ?? placeholder}
+          // 16 px — меньше iOS увеличивает страницу при нажатии
+          className="absolute inset-0 h-full w-full min-w-0 cursor-pointer appearance-none opacity-0"
+          style={{ fontSize: 16 }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div ref={wrapRef} className={`relative min-w-0 ${className}`}>
       <button
@@ -108,8 +138,7 @@ export function DatePicker({
         aria-label={ariaLabel}
         className={`flex w-full items-center text-left ${trigger}`}
       >
-        <span className="truncate">{value ? formatDisplay(value) : placeholder}</span>
-        <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+        {face}
       </button>
 
       {open && (

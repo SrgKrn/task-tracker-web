@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useMemo, useState } from 'react'
 import { AdjustmentNote, DurationInput, draftFromMinutes, draftMinutes, type DurationDraft } from './DurationInput'
 import { Sheet } from './ui'
@@ -89,7 +90,7 @@ export function SubtractSheet({
 
   return (
     <Sheet open={open} onClose={onCancel} title="Отнять время">
-      <DurationInput autoFocus value={draft} onChange={setDraft} />
+      <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       {(nothing || tooMuch) && (
         <span className="font-mono text-xs text-danger-text">

@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown, Plus, Search } from './Icon'
 import { Chip, FieldLabel, Sheet } from './ui'
@@ -146,7 +147,7 @@ export function PickerField({
         >
           <Search size={16} />
           <input
-            autoFocus
+            autoFocus={focusOnOpen}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"

@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from '../components/Icon'
+import { ArrowLeft, ChevronDown } from '../components/Icon'
 import { Overline } from '../components/ui'
 import { CHANGE_LABEL, LATEST_RELEASE, RELEASES, type ChangeKind } from '../lib/changelog'
 import { useMarkReleaseSeen, useUserSettings } from '../lib/queries/userSettings'
@@ -20,6 +20,15 @@ export function Changelog() {
   const navigate = useNavigate()
   const { data: settings, isFetched } = useUserSettings()
   const markSeen = useMarkReleaseSeen()
+  // список длинный: открыта только последняя версия, остальные — по нажатию на заголовок
+  const [open, setOpen] = useState<Set<string>>(() => new Set([LATEST_RELEASE.version]))
+  const toggle = (version: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(version)) next.delete(version)
+      else next.add(version)
+      return next
+    })
 
   // открыли страницу — уведомление о новой версии больше не нужно
   useEffect(() => {
@@ -39,10 +48,17 @@ export function Changelog() {
       </button>
       <h1 className="text-xl font-semibold leading-[1.1] tracking-[-.02em] text-text">История изменений</h1>
 
-      {RELEASES.map((release, ri) => (
-        <section key={release.version} className="mt-6 flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+      {RELEASES.map((release, ri) => {
+        const expanded = open.has(release.version)
+        return (
+        <section key={release.version} className={`flex flex-col gap-3 ${ri === 0 ? 'mt-6' : 'mt-4'}`}>
+          <button
+            type="button"
+            onClick={() => toggle(release.version)}
+            aria-expanded={expanded}
+            className="flex w-full flex-col gap-1 text-left"
+          >
+            <span className="flex w-full items-center gap-2">
               <Overline>Версия {release.version}</Overline>
               {ri === 0 && (
                 <span
@@ -53,12 +69,19 @@ export function Changelog() {
                 </span>
               )}
               <span className="ml-auto font-mono text-xs text-text-secondary">{releaseDate(release.date)}</span>
-            </div>
-            <h2 className="text-lg font-semibold leading-[1.25] text-text" style={{ textWrap: 'balance' }}>
-              {release.title}
-            </h2>
-          </div>
+            </span>
+            <span role="heading" aria-level={2} className="block text-lg font-semibold leading-[1.25] text-text" style={{ textWrap: 'balance' }}>
+              <span className="flex items-start justify-between gap-3">
+                {release.title}
+                <ChevronDown
+                  size={16}
+                  className={`mt-1 shrink-0 text-text-tertiary transition-transform ${expanded ? 'rotate-180' : ''}`}
+                />
+              </span>
+            </span>
+          </button>
 
+          {expanded && (
           <div className="flex flex-col gap-[9px]">
             {release.changes.map((c) => (
               <article
@@ -80,8 +103,10 @@ export function Changelog() {
               </article>
             ))}
           </div>
+          )}
         </section>
-      ))}
+        )
+      })}
     </div>
   )
 }

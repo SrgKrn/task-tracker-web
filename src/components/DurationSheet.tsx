@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useState } from 'react'
 import { AdjustmentNote, DurationInput, draftFromMinutes, draftMinutes, type DurationDraft } from './DurationInput'
 import { Sheet, SheetActions } from './ui'
@@ -24,7 +25,7 @@ export function DurationSheet({ open, title, hours, onCancel, onSubmit }: Durati
 
   return (
     <Sheet open={open} onClose={onCancel} title={title}>
-      <DurationInput autoFocus value={draft} onChange={setDraft} />
+      <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <SheetActions
         onCancel={onCancel}
         onConfirm={() => minutes !== null && onSubmit(minutes / 60)}
@@ -66,7 +67,7 @@ export function AddTimeSheet({
 
   return (
     <Sheet open={open} onClose={onCancel} title="Добавить время">
-      <DurationInput autoFocus value={draft} onChange={setDraft} />
+      <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       <span className="font-mono text-xs text-text-secondary">
         {valid ? `запись +${formatHoursMinutes(minutes / 60)} за ${adjustDateLabel}` : 'укажите, сколько добавить'}

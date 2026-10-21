@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff } from '../components/Icon'
 import { FieldLabel, Logo, Segmented } from '../components/ui'
+import { PasswordRules } from '../components/PasswordRules'
+import { MIN_PASSWORD, isStrongPassword } from '../lib/password'
 import { supabase } from '../lib/supabaseClient'
+
+/** поле входа: почта, пароль, повтор пароля */
+const FIELD =
+  'h-[46px] rounded-sm border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent'
 
 type Mode = 'signin' | 'signup'
 type Screen = Mode | 'reset' | 'newPassword'
 
-const MIN_PASSWORD = 6
 
 /**
  * Supabase отдаёт ошибки строками на английском («Invalid login credentials»).
@@ -18,6 +23,9 @@ function describeAuthError(message: string): string {
   if (m.includes('email not confirmed')) return 'Почта ещё не подтверждена — проверьте письмо.'
   if (m.includes('already registered') || m.includes('already been registered')) {
     return 'Такая почта уже зарегистрирована. Попробуйте войти.'
+  }
+  if (m.includes('password should contain') || m.includes('weak')) {
+    return 'Пароль: от 8 символов, с цифрой, строчной и заглавной буквой.'
   }
   if (m.includes('password should be at least')) {
     return `Пароль должен быть не короче ${MIN_PASSWORD} символов.`
@@ -38,6 +46,7 @@ export function Login() {
   const [screen, setScreen] = useState<Screen>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [repeat, setRepeat] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
@@ -50,6 +59,7 @@ export function Login() {
       if (event === 'PASSWORD_RECOVERY') {
         setScreen('newPassword')
         setPassword('')
+        setRepeat('')
         setInfo(null)
         setError(null)
       }
@@ -67,6 +77,11 @@ export function Login() {
     e.preventDefault()
     setError(null)
     setInfo(null)
+    // новый пароль — по правилам и дважды; вход старым паролем не проверяем
+    if (newPassword && !isStrongPassword(password)) {
+      return setError('Пароль: от 8 символов, с цифрой, строчной и заглавной буквой.')
+    }
+    if (newPassword && password !== repeat) return setError('Пароли не совпадают.')
     setLoading(true)
     try {
       if (screen === 'signin') {
@@ -98,7 +113,7 @@ export function Login() {
 
   const isAuthMode = screen === 'signin' || screen === 'signup'
   const needsPassword = screen !== 'reset'
-  const passwordTooShort = screen !== 'signin' && password.length > 0 && password.length < MIN_PASSWORD
+  const newPassword = screen === 'signup' || screen === 'newPassword'
 
   const submitLabel = loading
     ? 'Секунду…'
@@ -170,7 +185,7 @@ export function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-[46px] rounded-sm px-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
+                className={`${FIELD} px-3.5`}
                 style={fieldStyle}
               />
             </div>
@@ -196,10 +211,10 @@ export function Login() {
                   required
                   minLength={screen === 'signin' ? undefined : MIN_PASSWORD}
                   autoComplete={screen === 'signin' ? 'current-password' : 'new-password'}
-                  placeholder={screen === 'signin' ? 'Ваш пароль' : `Минимум ${MIN_PASSWORD} символов`}
+                  placeholder={screen === 'signin' ? 'Ваш пароль' : `Не короче ${MIN_PASSWORD} символов`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-[46px] w-full rounded-sm pr-12 pl-3.5 border border-border bg-surface text-[length:var(--input-size)] text-text placeholder:text-text-tertiary focus:border-accent"
+                  className={`${FIELD} w-full pr-12 pl-3.5`}
                   style={fieldStyle}
                 />
                 <button
@@ -211,10 +226,21 @@ export function Login() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {passwordTooShort && (
-                <span className="text-xs text-text-secondary">
-                  Ещё {MIN_PASSWORD - password.length} симв. до минимума
-                </span>
+              {newPassword && (
+                <>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    placeholder="Пароль ещё раз"
+                    aria-label="Пароль ещё раз"
+                    value={repeat}
+                    onChange={(e) => setRepeat(e.target.value)}
+                    className={`${FIELD} mt-1 w-full px-3.5`}
+                    style={fieldStyle}
+                  />
+                  <PasswordRules password={password} repeat={repeat} />
+                </>
               )}
             </div>
           )}

@@ -75,7 +75,8 @@ export function WorkspaceSwitcherSheet({ open, onClose }: { open: boolean; onClo
  * Метка пространства в подписи над заголовком главного экрана: цветная точка и название.
  * Пространство одно — метки нет. Нажатие — выбор пространства.
  */
-export function WorkspaceTag({ className = '' }: { className?: string }) {
+/** full — во всю ширину родителя; по умолчанию 60 %: справа обычно кнопки шапки */
+export function WorkspaceTag({ className = '', full = false }: { className?: string; full?: boolean }) {
   const { data: list = [] } = useWorkspaces()
   const ws = useActiveWorkspace()
   const [open, setOpen] = useState(false)
@@ -85,7 +86,7 @@ export function WorkspaceTag({ className = '' }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`hit-44 inline-flex h-6 max-w-[60%] items-center gap-1.5 rounded-full bg-surface-sunken pr-2 pl-2 text-xs font-medium text-text-secondary ${className}`}
+        className={`hit-44 inline-flex h-6 ${full ? 'max-w-full' : 'max-w-[60%]'} items-center gap-1.5 rounded-full bg-surface-sunken pr-2 pl-2 text-xs font-medium text-text-secondary ${className}`}
         aria-label={`Пространство «${ws.name}», сменить`}
       >
         <ClientDot color={ws.color} size={7} />

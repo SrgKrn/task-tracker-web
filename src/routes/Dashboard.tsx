@@ -232,9 +232,12 @@ export function Dashboard() {
       {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
       <div className="safe-top">
       <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:pb-5">
-        <div className="flex items-end justify-between gap-3 lg:order-1">
-          <div className="flex flex-col gap-0.5">
-            <WorkspaceTag className="mb-1 self-start" />
+        {/* пространство — своей строкой во всю ширину: в строке заголовка справа «Отчёт» и
+            аватар, и длинное название обрезалось до пары слов */}
+        <div className="flex flex-col gap-1 lg:order-1">
+        <WorkspaceTag full className="self-start" />
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <Overline>
               {shortDate(from)} — {shortDate(to)}
             </Overline>
@@ -249,6 +252,7 @@ export function Dashboard() {
             Отчёт
           </Link>
           <ProfileButton className="ml-1" />
+        </div>
         </div>
         {/* период — выбор одного из трёх, поэтому сегменты, а не чипы фильтра. Подписи
             короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}

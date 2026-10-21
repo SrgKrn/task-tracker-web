@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useState } from 'react'
 import { EmptyState, Overline, Sheet, SheetActions, fieldClass } from './ui'
 import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
@@ -256,7 +257,7 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
     >
       <span className="-mt-2 font-mono text-sm text-text-secondary">{entrySummary(entry)}</span>
       <textarea
-        autoFocus
+        autoFocus={focusOnOpen}
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
@@ -337,7 +338,7 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
     <Sheet open onClose={onClose} title="Комментарий">
       <span className="-mt-2 font-mono text-sm text-text-secondary">{formatDateTime(comment.created_at)}</span>
       <textarea
-        autoFocus
+        autoFocus={focusOnOpen}
         rows={4}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

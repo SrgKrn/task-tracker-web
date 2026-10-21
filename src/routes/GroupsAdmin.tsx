@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -196,7 +197,7 @@ export function NewGroupSheet({
       <div className="flex flex-col gap-1.5">
         <FieldLabel>Как называется группа</FieldLabel>
         <input
-          autoFocus
+          autoFocus={focusOnOpen}
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например: Клиенты"

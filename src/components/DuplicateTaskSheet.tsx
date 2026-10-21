@@ -1,3 +1,4 @@
+import { focusOnOpen } from '../lib/device'
 import { useEffect, useState } from 'react'
 import { DatePicker } from './DatePicker'
 import { FieldLabel, Sheet, SheetActions } from './ui'
@@ -47,7 +48,7 @@ export function DuplicateTaskSheet({
         <FieldLabel htmlFor="duplicate-name">Название</FieldLabel>
         <input
           id="duplicate-name"
-          autoFocus
+          autoFocus={focusOnOpen}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
