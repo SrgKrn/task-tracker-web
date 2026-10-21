@@ -59,7 +59,7 @@ function SignedIn() {
           <FocusBreakBar />
         </div>
         {onTaskCard && <ActiveTimerBar />}
-        <div className={`app-content pb-24 lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
+        <div className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <Suspense fallback={null}>
             <Outlet />

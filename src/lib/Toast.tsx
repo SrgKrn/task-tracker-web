@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {/* снизу по центру, над таб-баром: сверху и так живут плашка учёта и «нет сети».
           На широком экране — в правом нижнем углу */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[var(--z-toast)] flex flex-col items-center gap-2 px-4 lg:right-6 lg:bottom-6 lg:left-auto lg:items-end">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-space)+12px)] z-[var(--z-toast)] flex flex-col items-center gap-2 px-4 lg:right-6 lg:bottom-6 lg:left-auto lg:items-end">
         {toasts.map((t) => (
           <div
             key={t.id}

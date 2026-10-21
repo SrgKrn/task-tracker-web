@@ -1,10 +1,16 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useKeyboardOpen } from '../lib/viewport'
 import { Plus } from './Icon'
 import { NAV_TABS, type NavTab } from './navTabs'
 
+/**
+ * Нижняя панель телефона — парящая «пилюля», как в Telegram: четыре вкладки, активная —
+ * в мягкой подложке; «Новая задача» — отдельный кружок справа. Пока открыта клавиатура,
+ * панель прячется: над клавиатурой она только закрывала поле.
+ */
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
-  const [today, tasks, summary, focus] = NAV_TABS
+  const keyboard = useKeyboardOpen()
 
   const item = (tab: NavTab) => {
     const active = tab.match(location.pathname)
@@ -13,37 +19,32 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         key={tab.to}
         to={tab.to}
         aria-current={active ? 'page' : undefined}
-        className={`flex min-h-11 flex-1 flex-col items-center justify-end gap-[5px] text-xs font-medium ${
-          active ? 'text-accent-text' : 'text-text-secondary'
+        className={`flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full text-xs font-medium ${
+          active ? 'bg-surface-selected text-accent-text' : 'text-text-secondary'
         }`}
       >
         <span className={active ? 'text-accent' : undefined}>
           <tab.Icon size={20} />
         </span>
-        {tab.label}
+        <span className="truncate">{tab.label}</span>
       </Link>
     )
   }
 
   return (
-    <nav
-      className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex items-end border-t border-border bg-surface pt-[9px] pb-[26px] lg:hidden"
-    >
-      <div className="mx-auto flex w-full max-w-lg items-end">
-        {item(today)}
-        {item(tasks)}
-        <span className="flex w-14 shrink-0 justify-center">
-          <button
-            type="button"
-            onClick={onCreate}
-            aria-label="Новая задача"
-            className="mb-1.5 flex h-[50px] w-[50px] items-center justify-center rounded-full bg-accent text-on-accent shadow-popover"
-          >
-            <Plus size={22} />
-          </button>
-        </span>
-        {item(summary)}
-        {item(focus)}
+    <nav className="tabbar fixed inset-x-0 z-40 px-3 lg:hidden" data-hidden={keyboard || undefined}>
+      <div className="mx-auto flex max-w-lg items-center gap-2">
+        <div className="tabbar-pill flex h-[var(--tabbar-h)] min-w-0 flex-1 items-stretch rounded-full border border-border p-1 shadow-popover">
+          {NAV_TABS.map(item)}
+        </div>
+        <button
+          type="button"
+          onClick={onCreate}
+          aria-label="Новая задача"
+          className="flex h-[var(--tabbar-h)] w-[var(--tabbar-h)] shrink-0 items-center justify-center rounded-full bg-accent text-on-accent shadow-popover"
+        >
+          <Plus size={24} />
+        </button>
       </div>
     </nav>
   )

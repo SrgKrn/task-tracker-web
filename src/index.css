@@ -86,6 +86,44 @@ input[type="number"] {
 }
 
 /*
+ * Нижняя панель телефона — парящая «пилюля» (0.41). Отступ снизу: над полоской «домой»
+ * iPhone, на телефонах без неё — 12 px. --tabbar-space — сколько панель занимает снизу:
+ * от него отступают содержимое страницы, тосты и баннер новой версии.
+ */
+:root {
+  --tabbar-h: 64px;
+  --tabbar-bottom: max(calc(env(safe-area-inset-bottom, 0px) - 8px), 12px);
+  --tabbar-space: calc(var(--tabbar-bottom) + var(--tabbar-h));
+}
+
+.tabbar {
+  bottom: var(--tabbar-bottom);
+  transition:
+    translate var(--duration-base, 200ms) var(--ease-out, ease-out),
+    opacity var(--duration-base, 200ms) var(--ease-out, ease-out);
+}
+
+/* пока открыта клавиатура — панель уезжает вниз */
+.tabbar[data-hidden] {
+  translate: 0 calc(100% + var(--tabbar-bottom) + 16px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* полупрозрачная подложка с размытием — то, что прокручивается, видно сквозь панель */
+.tabbar-pill {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+@media (max-width: 1023.98px) {
+  .app-content {
+    padding-bottom: calc(var(--tabbar-space) + 24px);
+  }
+}
+
+/*
  * Область нажатия до 44px без изменения внешнего вида: макет задаёт мелкие
  * элементы (кольцо 32, аватар 30, шаги ±), а палец требует 44 по iOS HIG.
  * Растягиваем невидимый слой от центра, поэтому вёрстка не сдвигается.

@@ -33,7 +33,7 @@ export function ReleaseBanner() {
     <div
       role="status"
       // над таб-баром на телефоне, в углу на компьютере
-      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+104px)] z-40 flex items-start gap-3 rounded-lg p-3.5 lg:right-6 lg:bottom-6 lg:left-auto lg:w-[380px]"
+      className="fixed inset-x-4 bottom-[calc(var(--tabbar-space)+16px)] z-40 flex items-start gap-3 rounded-lg p-3.5 lg:right-6 lg:bottom-6 lg:left-auto lg:w-[380px]"
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--timer-border)',
