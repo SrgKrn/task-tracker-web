@@ -130,3 +130,19 @@ export function planLimitMessage(code: string): string | null {
       return null
   }
 }
+
+/**
+ * Где поместится ещё одно: самый дешёвый тариф, у которого лимит больше count.
+ * null — дальше некуда (уже максимум).
+ */
+export function planForMore(key: 'workspaces' | 'groups', count: number): PaidPlan | null {
+  return ORDER.find((p) => {
+    const v = PLAN_LIMITS[p][key]
+    return v === null || v > count
+  }) ?? null
+}
+
+/** Можно ли добавить ещё одно при лимите limit (null — без ограничения). */
+export function hasRoom(limit: number | null, count: number): boolean {
+  return limit === null || count < limit
+}

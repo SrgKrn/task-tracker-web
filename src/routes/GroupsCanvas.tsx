@@ -14,6 +14,7 @@ import { useCreateGroup, useCreateGroupItem, useUpdateGroup } from '../lib/queri
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { plural } from '../lib/time'
+import { RoomNote, useRoom } from '../components/Upgrade'
 import type { Group, GroupItem } from '../lib/types'
 
 const VALUES: [string, string, string] = ['значение', 'значения', 'значений']
@@ -574,6 +575,7 @@ function AddGroupSheet({
   const { showError, showSuccess } = useToast()
   const [busy, setBusy] = useState<string | null>(null)
   const [presetCode, setPresetCode] = useState<string | null>(null)
+  const room = useRoom('groups', existing.length)
 
   async function add(t: (typeof TEMPLATES)[number]) {
     setBusy(t.name)
@@ -592,6 +594,11 @@ function AddGroupSheet({
   return (
     presetCode ? (
       <PresetMergeSheet code={presetCode} onCode={setPresetCode} existing={existing} onClose={() => { setPresetCode(null); onClose() }} />
+    ) : (
+    !room.allowed ? (
+      <Sheet open={open} onClose={onClose} title="Новая группа">
+        <RoomNote room={room} what="Ещё одна группа в этом пространстве" max="Это максимум групп в пространстве." />
+      </Sheet>
     ) : (
     <Sheet open={open} onClose={onClose} title="Новая группа">
       <p className="-mt-2 text-sm text-text-secondary">Шаблон потом можно переименовать и дополнить</p>
@@ -635,6 +642,7 @@ function AddGroupSheet({
         </button>
       </ListGroup>
     </Sheet>
+    )
     )
   )
 }

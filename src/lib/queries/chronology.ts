@@ -149,18 +149,21 @@ async function loadPage(to: string, firstDayKnown: string | null | undefined): P
  * Хронология неделями от даты anchor (по умолчанию — сегодня) назад; следующая неделя —
  * при прокрутке к концу.
  */
-export function useChronology(anchor: string = todayStr()) {
+export function useChronology(anchor: string = todayStr(), limitDays: number | null = null) {
+  // глубина хронологии по тарифу: раньше этой даты не подгружаем
+  const cutoff = limitDays === null ? null : addDays(todayStr(), -limitDays)
   return useInfiniteQuery({
-    queryKey: ['chronology', anchor],
+    queryKey: ['chronology', anchor, cutoff],
     initialPageParam: anchor,
     queryFn: ({ pageParam, client }) => {
-      const pages = client.getQueryData<{ pages: ChronoPage[] }>(['chronology', anchor])?.pages
+      const pages = client.getQueryData<{ pages: ChronoPage[] }>(['chronology', anchor, cutoff])?.pages
       return loadPage(pageParam, pages?.[0]?.firstDay)
     },
     getNextPageParam: (last) => {
       const next = addDays(last.from, -1)
       // учёта раньше нет — но изменения задач могли быть до первой записи: ещё неделя запаса
       if (!last.firstDay || next < addDays(last.firstDay, -PAGE_DAYS)) return undefined
+      if (cutoff && next < cutoff) return undefined
       return next
     },
     staleTime: 30 * 1000,

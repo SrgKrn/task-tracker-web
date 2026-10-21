@@ -11,6 +11,7 @@ import { METHODS, METHOD_ORDER } from '../lib/priority'
 import { BLANK_PRESET, PRESETS, presetByCode, presetPayload, type Preset } from '../lib/presets'
 import { useApplyPreset } from '../lib/queries/userSettings'
 import { describeError, useToast } from '../lib/Toast'
+import { RoomNote, useRoom } from '../components/Upgrade'
 import type { FocusMode, PriorityMethod } from '../lib/types'
 
 /** короткое название пространства по пресету — его можно сменить на втором шаге */
@@ -43,6 +44,8 @@ export function Welcome({ mode = 'first' }: { mode?: 'first' | 'new' }) {
   const [examples, setExamples] = useState(true)
   const [name, setName] = useState<string | null>(null)
   const { data: workspaces = [] } = useWorkspaces()
+  // лимит пространств — только для «Новое пространство»; первое есть у всех
+  const room = useRoom('workspaces', isNew ? workspaces.filter((w) => !w.archived_at).length : 0)
 
   if (loading) return null
   if (!session) return <Navigate to="/login" replace />
@@ -117,6 +120,7 @@ export function Welcome({ mode = 'first' }: { mode?: 'first' | 'new' }) {
               : 'Подготовим группы, этапы и норму часов. Потом всё можно поменять.'}
           </p>
         </div>
+        {isNew && <RoomNote room={room} what="Ещё одно пространство" max="Это максимум пространств." />}
         <div role="radiogroup" aria-label="Для чего трекер" className="flex flex-col gap-2">
           {[...PRESETS, BLANK_PRESET].map((p) => {
             const on = p.code === code

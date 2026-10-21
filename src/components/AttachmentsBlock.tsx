@@ -4,16 +4,21 @@ import { Close, Drive, Paperclip, Plus } from './Icon'
 import { FieldLabel } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { pickFromDrive, useGoogleStatus } from '../lib/google'
+import { useGate } from './Upgrade'
+import { planLimitMessage } from '../lib/limits'
 import {
   useAddDriveFiles,
   useAttachments,
   useDeleteAttachment,
   useUploadAttachments,
   type AttachmentWithUrl,
+  useStorageUsed,
 } from '../lib/queries/attachments'
 
 /** лимит хранилища на один файл */
-const MAX_BYTES = 50 * 1024 * 1024
+const MB = 1024 * 1024
+/** предел хранилища на один файл; тариф может ограничить сильнее */
+const MAX_BYTES = 50 * MB
 
 interface AttachmentsBlockProps {
   /**
@@ -66,6 +71,8 @@ export function AttachmentsBlock({
   const { data: google } = useGoogleStatus()
   const driveReady = !!google?.linked?.drive && !!google.apiKey
   const { showError, showSuccess } = useToast()
+  const gate = useGate()
+  const { data: used = 0 } = useStorageUsed()
   const inputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [deleting, setDeleting] = useState<AttachmentWithUrl | null>(null)
@@ -74,9 +81,20 @@ export function AttachmentsBlock({
     const picked = Array.from(list ?? [])
     if (inputRef.current) inputRef.current.value = ''
     if (picked.length === 0) return
-    const tooBig = picked.find((f) => f.size > MAX_BYTES)
+    // по тарифу (если загрузился), но не больше, чем примет хранилище
+    const L = gate.plan?.limits
+    const fileMax = Math.min(MAX_BYTES, L?.file_mb != null ? L.file_mb * MB : MAX_BYTES)
+    const tooBig = picked.find((f) => f.size > fileMax)
     if (tooBig) {
-      showError(`«${tooBig.name}» больше 50 МБ — такой файл не поместится`)
+      showError(
+        fileMax < MAX_BYTES
+          ? planLimitMessage('plan_limit:file_mb') ?? `«${tooBig.name}» слишком большой`
+          : `«${tooBig.name}» больше ${MAX_BYTES / MB} МБ — такой файл не поместится`,
+      )
+      return
+    }
+    if (L?.storage_mb != null && used + picked.reduce((s, f) => s + f.size, 0) > L.storage_mb * MB) {
+      showError(planLimitMessage('plan_limit:storage_mb') ?? 'Место под файлы закончилось')
       return
     }
     setProgress({ done: 0, total: picked.length })

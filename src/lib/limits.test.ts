@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import sql from '../../supabase/migrations/0032_plan_limits.sql?raw'
-import { PLAN_LIMITS, cheapestWith, planLimitMessage } from './limits'
+import { PLAN_LIMITS, cheapestWith, planForMore, planLimitMessage } from './limits'
 
 /** Лимиты из миграции: JSON после ('free', '…') и т. д. */
 function migrationLimits(): Record<string, unknown> {
@@ -32,5 +32,15 @@ describe('limits', () => {
     expect(planLimitMessage('plan_limit:storage_mb')).toContain('1 ГБ')
     expect(planLimitMessage('plan_limit:groups')).toContain('без ограничений')
     expect(planLimitMessage('plan_limit:nope')).toBeNull()
+  })
+})
+
+describe('planForMore', () => {
+  it('следующее пространство и группа', () => {
+    expect(planForMore('workspaces', 1)).toBe('plus')
+    expect(planForMore('workspaces', 3)).toBe('pro')
+    expect(planForMore('workspaces', 5)).toBeNull()
+    expect(planForMore('groups', 3)).toBe('plus')
+    expect(planForMore('groups', 5)).toBe('pro')
   })
 })

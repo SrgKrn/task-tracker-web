@@ -20,6 +20,7 @@ import {
 } from '../lib/queries/groups'
 import { useTasks } from '../lib/queries/tasks'
 import { plural } from '../lib/time'
+import { RoomNote, useRoom } from '../components/Upgrade'
 import type { Group, GroupItem, LabelColor } from '../lib/types'
 
 const VALUES: [string, string, string] = ['значение', 'значения', 'значений']
@@ -179,6 +180,16 @@ export function NewGroupSheet({
   }, [open])
 
   const canCreate = !!name.trim()
+  // лимит групп пространства по тарифу
+  const room = useRoom('groups', model.groups.length)
+
+  if (!room.allowed) {
+    return (
+      <Sheet open={open} onClose={onClose} title="Новая группа">
+        <RoomNote room={room} what="Ещё одна группа в этом пространстве" max="Это максимум групп в пространстве." />
+      </Sheet>
+    )
+  }
 
   return (
     <Sheet open={open} onClose={onClose} title="Новая группа">

@@ -7,6 +7,7 @@ import { Segmented } from '../components/ui'
 import { WorkspaceTag } from '../components/Workspaces'
 import { monthRecords, tileNumber, useDayTiles, type DayTile } from '../lib/dayTile'
 import { addDays, toDateString, todayStr } from '../lib/period'
+import { UpgradeNote, useGate } from '../components/Upgrade'
 import { formatHoursRu } from '../lib/time'
 
 type View = 'month' | 'year'
@@ -60,6 +61,8 @@ export function Mosaic() {
   const yearHours = worked.reduce((s, t) => s + t.total, 0) / 60
   const selTile = tiles.get(selected)
 
+  const yearLocked = useGate().plan?.limits.mosaic === 'month'
+
   return (
     <div className="safe-top-page page page-wide mx-auto flex max-w-lg flex-col gap-4 overflow-x-clip px-5 pt-3.5 pb-8">
       <div className="flex flex-col gap-1">
@@ -89,6 +92,10 @@ export function Mosaic() {
         ]}
       />
 
+      {/* мозаика года — с «Плюса»; на «Старте» вместо полотна подсказка */}
+      {view === 'year' && yearLocked ? (
+        <UpgradeNote need="plus" what="Мозаика за год" />
+      ) : (
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8">
         <section className="flex min-w-0 flex-col gap-3 rounded-md bg-surface p-4">
           <div className="flex items-center justify-between gap-2">
@@ -144,6 +151,7 @@ export function Mosaic() {
           )}
         </aside>
       </div>
+      )}
     </div>
   )
 }

@@ -25,6 +25,7 @@ import { useTasks } from '../lib/queries/tasks'
 import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf, periodNorm, workdaysBetween } from '../lib/norm'
 import { TASKS, entryMinutes, formatHoursRu, plural } from '../lib/time'
+import { UpgradeNote, useGate } from '../components/Upgrade'
 import { headIdOf } from '../lib/tree'
 
 type PresetKey = PeriodPreset['key'] | 'custom'
@@ -49,6 +50,10 @@ function shortDate(iso: string): string {
 export function Dashboard() {
   const [preset, setPreset] = useState<PresetKey>('this_month')
   const [customFrom, setCustomFrom] = useState(todayStr())
+  // глубина истории по тарифу: на «Старте» — год; раньше начало периода не ставим
+  const historyDays = useGate().plan?.limits.history_days ?? null
+  const minFrom = historyDays === null ? null : addDays(todayStr(), -historyDays)
+  const [historyCut, setHistoryCut] = useState(false)
   const [customTo, setCustomTo] = useState(todayStr())
   const [groupChoice, setGroupChoice] = useState<string | null>(loadGroupChoice)
 
@@ -264,7 +269,12 @@ export function Dashboard() {
               className="flex-1"
               ariaLabel="Начало периода"
               value={customFrom}
-              onChange={(v) => setCustomFrom(v ?? todayStr())}
+              onChange={(v) => {
+                const next = v ?? todayStr()
+                const cut = !!minFrom && next < minFrom
+                setHistoryCut(cut)
+                setCustomFrom(cut ? minFrom! : next)
+              }}
             />
             <span className="text-sm text-text-secondary">—</span>
             <DatePicker
@@ -275,6 +285,9 @@ export function Dashboard() {
               onChange={(v) => setCustomTo(v ?? todayStr())}
             />
           </div>
+        )}
+        {preset === 'custom' && historyCut && historyDays !== null && (
+          <UpgradeNote className="lg:order-4 lg:basis-full" need="plus" what={`История старше ${historyDays === 365 ? 'года' : historyDays + ' дней'}`} />
         )}
       </div>
       </div>

@@ -99,7 +99,10 @@ export function useUploadAttachments() {
         onProgress?.(i + 1, files.length)
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attachments'] })
+      qc.invalidateQueries({ queryKey: ['storage_used'] })
+    },
   })
 }
 
@@ -156,5 +159,18 @@ export function useAddDriveFiles() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments'] }),
+  })
+}
+
+/** Сколько места заняли свои файлы в хранилище (ссылки на Диск не считаются) — для лимита тарифа. */
+export function useStorageUsed() {
+  return useQuery({
+    queryKey: ['storage_used'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('attachments').select('size').not('path', 'is', null)
+      if (error) throw error
+      return ((data ?? []) as { size: number | null }[]).reduce((sum, r) => sum + Number(r.size ?? 0), 0)
+    },
   })
 }

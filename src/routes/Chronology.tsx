@@ -19,6 +19,7 @@ import { useChronology } from '../lib/queries/chronology'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { formatDuration, plural } from '../lib/time'
+import { UpgradeNote, useGate } from '../components/Upgrade'
 import type { Status, Task } from '../lib/types'
 
 const FILTERS: { value: ChronoFilter; label: string }[] = [
@@ -513,7 +514,11 @@ export function Chronology() {
   const [anchor, setAnchor] = useState(today)
   const [filter, setFilter] = useState<ChronoFilter>('all')
   const look = useLookup()
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useChronology(anchor)
+  const chronoDays = useGate().plan?.limits.chronology_days ?? null
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useChronology(anchor, chronoDays)
+  // упёрлись в глубину тарифа, а не в начало учёта
+  const oldest = data?.pages[data.pages.length - 1]?.from
+  const cutByPlan = chronoDays !== null && !hasNextPage && !!oldest && oldest <= addDays(today, -chronoDays + 7)
   const dateInput = useRef<HTMLInputElement>(null)
   const sentinel = useRef<HTMLDivElement>(null)
 
@@ -614,10 +619,11 @@ export function Chronology() {
           <button type="button" onClick={() => fetchNextPage()} className="h-11 px-4 font-medium text-accent-text">
             Показать ещё
           </button>
-        ) : visible.length ? (
+        ) : cutByPlan ? null : visible.length ? (
           'Раньше записей нет'
         ) : null}
       </div>
+      {cutByPlan && <UpgradeNote need="plus" what={`Хронология старше ${chronoDays} дней`} />}
     </div>
   )
 }

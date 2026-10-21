@@ -28,6 +28,7 @@ import {
 } from '../lib/queries/userSettings'
 import { MethodExplainer } from '../components/Priority'
 import { PlanScreen } from '../components/PlanScreen'
+import { Gated, RoomNote, UpgradeNote, useGate, useRoom } from '../components/Upgrade'
 import { ClientShare } from '../components/ClientShare'
 import { PLAN_NAME } from '../lib/plans'
 import { useUserPlan } from '../lib/queries/plan'
@@ -198,6 +199,12 @@ function loadExportOptions(): ReportOptions {
 function ExportSection() {
   const [searchParams] = useSearchParams()
   const clientWork = useClientWork()
+  // лимиты тарифа; пока не загрузились — не прячем (обойти их не даст база)
+  const L = useGate().plan?.limits
+  const canExport = !L || L.export
+  const canExtras = !L || L.export_extras
+  const canDrive = !L || L.export_drive
+  const canShare = !L || L.billing
   const [range, setRange] = useState(loadExportRange)
   const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
@@ -326,6 +333,10 @@ function ExportSection() {
           читать и отправлять, Excel — чтобы разбирать самому.
         </span>
       </div>
+      {!canExport ? (
+        <UpgradeNote need="plus" what="Отчёт PDF и Excel" />
+      ) : (
+      <>
       <div className="flex items-center gap-2">
         <DatePicker
           small
@@ -364,8 +375,8 @@ function ExportSection() {
             },
           ] as const
         )
-          // переработка в сумме — только при работе с клиентами
-          .filter((o) => clientWork || o.key !== 'includeOvertime')
+          // переработка в сумме — только при работе с клиентами; комментарии и проверка — с «Плюса»
+          .filter((o) => (o.key === 'includeOvertime' ? clientWork : canExtras))
           .map((o) => (
           <label key={o.key} className="flex min-h-11 items-center gap-2.5 py-1">
             <input
@@ -395,7 +406,7 @@ function ExportSection() {
           </button>
         ))}
       </div>
-      {google?.linked?.drive && (
+      {google?.linked?.drive && canDrive && (
         <div className="flex flex-col gap-1.5">
           <div className="flex gap-[9px]">
             {(['excel', 'pdf'] as const).map((format) => (
@@ -419,7 +430,10 @@ function ExportSection() {
           </span>
         </div>
       )}
-      {clientWork && (
+      </>
+      )}
+      {clientWork && !canShare && <UpgradeNote need="pro" what="Ссылка для клиента" />}
+      {clientWork && canShare && (
       <ClientShare
         from={from}
         to={to}
@@ -761,6 +775,7 @@ function WorkspacesManager() {
   const navigate = useNavigate()
   const { data: list = [] } = useWorkspaces()
   const [editing, setEditing] = useState<Workspace | null>(null)
+  const room = useRoom('workspaces', list.filter((w) => !w.archived_at).length)
   return (
     <>
       <p className="text-sm text-text-secondary">
@@ -768,12 +783,16 @@ function WorkspacesManager() {
         идёт по одной задаче, из любого пространства.
       </p>
       <WorkspaceList />
-      <div className="flex gap-2">
-        <Button variant="primary" className="flex-1" onClick={() => navigate('/workspaces/new')}>
-          <Plus size={15} />
-          Новое пространство
-        </Button>
-      </div>
+      {room.allowed ? (
+        <div className="flex gap-2">
+          <Button variant="primary" className="flex-1" onClick={() => navigate('/workspaces/new')}>
+            <Plus size={15} />
+            Новое пространство
+          </Button>
+        </div>
+      ) : (
+        <RoomNote room={room} what="Ещё одно пространство" max="Это максимум пространств на вашем тарифе." />
+      )}
       <Overline className="mt-3 px-0.5">Настроить</Overline>
       <ListGroup>
         {list.map((w) => (
@@ -803,6 +822,7 @@ function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => voi
   const [name, setName] = useState(ws.name)
   const [color, setColor] = useState<LabelColor>(ws.color)
   const [clientWork, setClientWork] = useState(ws.client_work === true)
+  const gate = useGate()
   const [deleting, setDeleting] = useState(false)
   const [confirm, setConfirm] = useState('')
   return (
@@ -829,7 +849,11 @@ function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => voi
           ))}
         </div>
       </div>
-      <div className="flex min-h-12 items-center gap-3">
+{/* на тарифе без «Про» включить нельзя — подсказка вместо переключателя; уже включённую можно выключить */}
+      {gate.plan && !gate.plan.limits.client_work && !ws.client_work ? (
+        <UpgradeNote need="pro" what="Работа с клиентами: ставка, сумма к оплате, ссылка для клиента" />
+      ) : (
+            <div className="flex min-h-12 items-center gap-3">
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-base text-text">Работа с клиентами</span>
           <span className="text-sm text-text-secondary">
@@ -838,6 +862,7 @@ function WorkspaceEditSheet({ ws, onClose }: { ws: Workspace; onClose: () => voi
         </span>
         <Switch on={clientWork} onChange={setClientWork} ariaLabel="Работа с клиентами" />
       </div>
+      )}
       <Button
         variant="primary"
         disabled={!name.trim()}
@@ -917,7 +942,9 @@ export function NotificationSettings() {
 export function TelegramSettings() {
   return (
     <SettingsPage title="Telegram">
-      <TelegramCard />
+      <Gated allow={(l) => l.tg_reminders || l.tg_digest} need="plus" what="Telegram: напоминания, итоги дня и недели, команды">
+        <TelegramCard />
+      </Gated>
     </SettingsPage>
   )
 }
@@ -1016,7 +1043,9 @@ export function ExportSettings() {
 export function CalendarSettings() {
   return (
     <SettingsPage title="Google Календарь">
-      <CalendarCard />
+      <Gated allow={(l) => l.gcal} need="pro" what="Google Календарь и встречи на «Сегодня»">
+        <CalendarCard />
+      </Gated>
     </SettingsPage>
   )
 }
@@ -1024,7 +1053,9 @@ export function CalendarSettings() {
 export function DriveSettings() {
   return (
     <SettingsPage title="Google Диск">
-      <DriveCard />
+      <Gated allow={(l) => l.gdrive} need="pro" what="Google Диск: файлы и папки клиентов">
+        <DriveCard />
+      </Gated>
     </SettingsPage>
   )
 }

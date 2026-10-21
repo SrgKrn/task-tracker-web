@@ -134,6 +134,8 @@ export interface Workspace {
   focus_settings: FocusSettings
   /** «Работа с клиентами»: ставка, «К оплате» и ссылка для клиента. Выключено — ничего про деньги */
   client_work: boolean
+  /** в архиве после перехода на тариф дешевле — в лимит пространств не входит */
+  archived_at?: string | null
   created_at: string
   updated_at: string
 }

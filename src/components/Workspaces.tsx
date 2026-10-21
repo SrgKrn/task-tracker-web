@@ -5,6 +5,7 @@ import { Check, ChevronRight, Plus } from './Icon'
 import { ClientDot, ListGroup, Sheet } from './ui'
 import { switchWorkspace, useActiveWorkspace, useWorkspaces } from '../lib/workspace'
 import { tap } from '../lib/haptics'
+import { RoomNote, useRoom } from './Upgrade'
 
 /** Список пространств с отметкой текущего — для шторки и профиля. */
 export function WorkspaceList({ onPicked }: { onPicked?: () => void }) {
@@ -38,10 +39,14 @@ export function WorkspaceList({ onPicked }: { onPicked?: () => void }) {
 /** Шторка выбора пространства — с меток пространства на главных экранах. */
 export function WorkspaceSwitcherSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
+  const { data: list = [] } = useWorkspaces()
+  const room = useRoom('workspaces', list.filter((w) => !w.archived_at).length)
   return (
     <Sheet open={open} onClose={onClose} title="Пространство">
       <WorkspaceList onPicked={onClose} />
+      <RoomNote room={room} what="Ещё одно пространство" max="Это максимум пространств." />
       <div className="flex gap-2">
+        {room.allowed && (
         <button
           type="button"
           onClick={() => {
@@ -53,6 +58,7 @@ export function WorkspaceSwitcherSheet({ open, onClose }: { open: boolean; onClo
           <Plus size={15} />
           Новое
         </button>
+        )}
         <Link
           to="/settings/workspaces"
           onClick={onClose}

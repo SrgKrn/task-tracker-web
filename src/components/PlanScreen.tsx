@@ -16,6 +16,10 @@ import {
   type PlanInfo,
 } from '../lib/plans'
 import { useUserPlan } from '../lib/queries/plan'
+import { useGate } from './Upgrade'
+import { TRIAL_DAYS } from '../lib/limits'
+import { useStartTrial } from '../lib/queries/plan'
+import { describeError, useToast } from '../lib/Toast'
 import { useWorkspaces } from '../lib/workspace'
 
 const PREFS_KEY = 'semternity.pricing'
@@ -136,11 +140,7 @@ function PlanCard({
         ))}
       </ul>
 
-      {!isCurrent && !covered && (
-        <Button variant="secondary" disabled>
-          Оплата появится позже
-        </Button>
-      )}
+      {!isCurrent && !covered && <PlanAction plan={info.id} name={info.name} />}
     </article>
   )
 }
@@ -225,5 +225,37 @@ export function PlanScreen() {
         </p>
       </section>
     </>
+  )
+}
+
+/** Под тарифом выше действующего: пробный период, если его ещё не брали; оплаты пока нет. */
+function PlanAction({ plan, name }: { plan: PaidPlan; name: string }) {
+  const { canTrial } = useGate()
+  const start = useStartTrial()
+  const { showError, showSuccess } = useToast()
+  if (plan === 'free') return null
+  if (!canTrial) {
+    return (
+      <Button variant="secondary" disabled>
+        Оплата появится позже
+      </Button>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Button
+        variant="primary"
+        loading={start.isPending}
+        onClick={() =>
+          start.mutate(plan, {
+            onError: (e) => showError(describeError(e)),
+            onSuccess: () => showSuccess(`Пробный «${name}» на ${TRIAL_DAYS} дней включён`),
+          })
+        }
+      >
+        Попробовать {TRIAL_DAYS} дней бесплатно
+      </Button>
+      <span className="text-center text-xs text-text-tertiary">Пробный — один раз на аккаунт. Оплата появится позже.</span>
+    </div>
   )
 }
