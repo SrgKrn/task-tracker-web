@@ -41,6 +41,8 @@ const StatusesAdmin = lazy(() => import('./routes/StatusesAdmin').then((m) => ({
 const Chronology = lazy(() => import('./routes/Chronology').then((m) => ({ default: m.Chronology })))
 const Mosaic = lazy(() => import('./routes/Mosaic').then((m) => ({ default: m.Mosaic })))
 const Changelog = lazy(() => import('./routes/Changelog').then((m) => ({ default: m.Changelog })))
+const FeedbackPage = lazy(() => import('./routes/Feedback').then((m) => ({ default: m.FeedbackPage })))
+const AdminPage = lazy(() => import('./routes/Admin').then((m) => ({ default: m.AdminPage })))
 
 /** старые ссылки на проект и раздел: значения переехали в группы с теми же id */
 function LegacyItemRedirect() {
@@ -105,6 +107,8 @@ export default function App() {
         <Route path="/settings/focus" element={<FocusSettingsPage />} />
         <Route path="/focus" element={<Focus />} />
         <Route path="/changelog" element={<SettingsShell><Changelog /></SettingsShell>} />
+        <Route path="/settings/feedback" element={<FeedbackPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
     </Routes>
   )

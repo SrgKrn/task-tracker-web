@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -7,6 +8,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    // версия из package.json — в обращениях и в «версиях у пользователей» админки
+    __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version),
   },
   plugins: [
     react(),

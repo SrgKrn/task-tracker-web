@@ -153,3 +153,12 @@ export const Home = (p: IconProps) => svg(<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1
 export const Rocket = (p: IconProps) =>
   svg(<><path d="M12 3c3.5 2 5.5 5.5 5.5 9.5L15 16H9l-2.5-3.5C6.5 8.5 8.5 5 12 3z" /><circle cx="12" cy="10" r="1.8" /><path d="M9 16l-2 5 3-1.5M15 16l2 5-3-1.5" /></>, p)
 export const Dumbbell = (p: IconProps) => svg(<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11" />, p)
+export const Star = (p: IconProps & { filled?: boolean }) =>
+  svg(
+    <path
+      d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"
+      fill={p.filled ? 'currentColor' : 'none'}
+    />,
+    p,
+  )
+export const Shield = (p: IconProps) => svg(<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z" />, p)

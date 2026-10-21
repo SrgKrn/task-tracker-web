@@ -37,8 +37,11 @@ Deno.serve(async (req) => {
   // фото профиля — всё в папке пользователя
   const { data: avatars } = await db.storage.from('avatars').list(userId)
   if (avatars?.length) await db.storage.from('avatars').remove(avatars.map((a) => `${userId}/${a.name}`))
+  // скриншоты обращений «Написать нам» — тоже папка пользователя
+  const { data: shots } = await db.storage.from('feedback').list(userId, { limit: 1000 })
+  if (shots?.length) await db.storage.from('feedback').remove(shots.map((s) => `${userId}/${s.name}`))
 
   const { error } = await db.auth.admin.deleteUser(userId)
   if (error) return json({ error: error.message }, 500)
-  return json({ deleted: true, files: attachmentPaths.length + (avatars?.length ?? 0) })
+  return json({ deleted: true, files: attachmentPaths.length + (avatars?.length ?? 0) + (shots?.length ?? 0) })
 })

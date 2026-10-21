@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { TabFocus } from './Icon'
-import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Download, Drive as DriveIcon, History, Mosaic as MosaicIcon, Send, Sparkle } from './Icon'
+import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Comment as CommentIcon, Download, Drive as DriveIcon, History, Mosaic as MosaicIcon, Send, Shield, Sparkle } from './Icon'
 import { ClientDot, ListGroup, Overline } from './ui'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
@@ -16,6 +16,8 @@ import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
 import { PLAN_NAME } from '../lib/plans'
 import { useUserPlan } from '../lib/queries/plan'
+import { useAllFeedback, useIsAdmin, useUnreadReplies } from '../lib/queries/feedback'
+import { plural } from '../lib/time'
 
 /* ── меню «Ещё» ─────────────────────────────────────────────────── */
 
@@ -96,6 +98,11 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
   const { data: calendars = [] } = useCalendarSources()
   const { data: google } = useGoogleStatus()
   const { data: userPlan } = useUserPlan()
+  const unreadReplies = useUnreadReplies()
+  const { data: isAdmin = false } = useIsAdmin()
+  // админу — сколько обращений ждёт ответа; остальным запрос не уходит
+  const { data: allFeedback = [] } = useAllFeedback(isAdmin)
+  const newFeedback = allFeedback.filter((f) => f.status === 'new').length
 
   // норма, методика и фокус — активного пространства
   const ws = useActiveWorkspace()
@@ -197,7 +204,23 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           title: 'Тариф',
           value: userPlan ? (userPlan.plan === 'lifetime' ? 'Пожизненный' : PLAN_NAME[userPlan.effective]) : undefined,
         },
+        {
+          to: '/settings/feedback',
+          glyph: <CommentIcon size={15} />,
+          title: 'Написать нам',
+          value: unreadReplies ? `${plural(unreadReplies, ['новый ответ', 'новых ответа', 'новых ответов'])}` : 'идея, ошибка, отзыв',
+        },
         { to: '/changelog', glyph: <Sparkle size={15} />, title: 'История изменений', value: `Версия ${LATEST_RELEASE.version}` },
+        ...(isAdmin
+          ? [
+              {
+                to: '/admin',
+                glyph: <Shield size={15} />,
+                title: 'Админка',
+                value: newFeedback ? plural(newFeedback, ['новое обращение', 'новых обращения', 'новых обращений']) : 'обращения, люди, цифры',
+              },
+            ]
+          : []),
       ],
     },
   ]

@@ -49,6 +49,11 @@ export function useActiveWorkspaceId(): string {
 /** запросы, которые от пространства не зависят: их при смене не сбрасываем */
 const GLOBAL_KEYS = new Set([
   'workspaces',
+  // обращения и админка не зависят от пространства
+  'feedback',
+  'feedback-shots',
+  'is_admin',
+  'admin',
   'user_settings',
   'active_timer',
   'focus_run',

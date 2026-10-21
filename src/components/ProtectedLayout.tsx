@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { useLiveTimerNotification } from '../lib/push'
+import { reportAppSeen } from '../lib/queries/feedback'
 import { useTask } from '../lib/queries/tasks'
 import { useActiveTimer } from '../lib/queries/timer'
 import { useTheme } from '../lib/theme'
@@ -23,6 +24,9 @@ function useAppEffects() {
   const { data: activeTimer } = useActiveTimer()
   const { data: task } = useTask(activeTimer?.task_id)
   useLiveTimerNotification(activeTimer, task?.name.trim())
+
+  // «был в приложении» и версия — для активности и версий в админке; раз за запуск
+  useEffect(() => reportAppSeen(), [])
 
   // нажали на уведомление при открытом приложении — воркер просит перейти к задаче
   useEffect(() => {

@@ -49,7 +49,7 @@ function firstOfMonthStr(): string {
 }
 
 /** Экран одного пункта «Ещё»: назад в меню, заголовок и сама настройка. */
-function SettingsPage({ title, children }: { title: string; children: React.ReactNode }) {
+export function SettingsPage({ title, children }: { title: string; children: React.ReactNode }) {
   const navigate = useNavigate()
   // меню могли прокрутить вниз — экран пункта открываем с начала
   useEffect(() => {
