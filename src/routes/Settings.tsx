@@ -207,6 +207,8 @@ function ExportSection() {
   const canExtras = !L || L.export_extras
   const canDrive = !L || L.export_drive
   const canShare = !L || L.billing
+  // свой логотип — «Про»; пока тариф грузится, не ставим (картинку всё равно проверит база)
+  const canLogo = !!L?.logo
   const [range, setRange] = useState(loadExportRange)
   const [options, setOptions] = useState(loadExportOptions)
   const { from, to } = range
@@ -266,7 +268,7 @@ function ExportSection() {
     try {
       // записи, комментарии и закрытия грузятся в момент выгрузки: отчёту нужен ещё
       // и прошлый период для сравнения, держать всё это на экране «Ещё» незачем
-      const data = await loadReport({ from, to, tasks, groups, items, statuses, options })
+      const data = await loadReport({ from, to, tasks, groups, items, statuses, options, withLogo: canLogo })
       if (format === 'excel') {
         const { exportExcel } = await import('../lib/exportExcel')
         await exportExcel(data)
@@ -299,7 +301,7 @@ function ExportSection() {
         saveFolder.mutate(folder)
       }
       setGenerating(format === 'excel' ? 'drive-excel' : 'drive-pdf')
-      const data = await loadReport({ from, to, tasks, groups, items, statuses, options })
+      const data = await loadReport({ from, to, tasks, groups, items, statuses, options, withLogo: canLogo })
       let blob: Blob
       let name: string
       if (format === 'excel') {
@@ -434,6 +436,7 @@ function ExportSection() {
       )}
       </>
       )}
+      {canExport && (canLogo ? <ReportLogo /> : <UpgradeNote need="pro" what="Свой логотип в отчёте" />)}
       {clientWork && !canShare && <UpgradeNote need="pro" what="Ссылка для клиента" />}
       {clientWork && canShare && (
       <ClientShare
@@ -441,7 +444,7 @@ function ExportSection() {
         to={to}
         tasks={tasks}
         initialItemId={searchParams.get('client')}
-        load={() => loadReport({ from, to, tasks, groups, items, statuses, options })}
+        load={() => loadReport({ from, to, tasks, groups, items, statuses, options, withLogo: canLogo })}
       />
       )}
     </div>
@@ -1071,5 +1074,68 @@ export function DriveSettings() {
         <DriveCard />
       </Gated>
     </SettingsPage>
+  )
+}
+
+/** Свой логотип в шапке PDF и в отчёте по ссылке («Про»). */
+function ReportLogo() {
+  const { data: settings } = useUserSettings()
+  const savePatch = useSaveSettingsPatch()
+  const { showError, showSuccess } = useToast()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const logo = settings?.report_logo ?? null
+  return (
+    <div className="flex flex-col gap-2 border-t border-divider pt-3">
+      <span className="text-sm font-medium text-text">Логотип в отчёте</span>
+      <span className="text-sm text-text-secondary">
+        {logo ? 'Стоит в шапке PDF и в отчёте по ссылке вместо знака Semternity.' : 'PNG или JPG с прозрачным или белым фоном — встанет в шапку PDF и в отчёт по ссылке.'}
+      </span>
+      {logo && (
+        <span className="logo-plate self-start">
+          <img src={logo} alt="Логотип" />
+        </span>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button loading={busy} onClick={() => fileRef.current?.click()}>
+          {logo ? 'Заменить' : 'Загрузить логотип'}
+        </Button>
+        {logo && (
+          <Button
+            variant="ghost"
+            onClick={() =>
+              savePatch.mutate(
+                { report_logo: null },
+                { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess('Логотип убран') },
+              )
+            }
+          >
+            Убрать
+          </Button>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          setBusy(true)
+          try {
+            const { prepareLogo } = await import('../lib/logo')
+            const data = await prepareLogo(file)
+            await savePatch.mutateAsync({ report_logo: data })
+            showSuccess('Логотип сохранён')
+          } catch (err) {
+            showError(describeError(err))
+          } finally {
+            setBusy(false)
+          }
+        }}
+      />
+    </div>
   )
 }

@@ -109,7 +109,7 @@ export function useSaveSettingsPatch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (
-      patch: Partial<Pick<UserSettings, 'display_name' | 'avatar_path' | 'focus_mode' | 'focus_settings'>>,
+      patch: Partial<Pick<UserSettings, 'display_name' | 'avatar_path' | 'focus_mode' | 'focus_settings' | 'report_logo'>>,
     ) => {
       const {
         data: { user },

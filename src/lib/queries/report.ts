@@ -36,6 +36,8 @@ export async function loadReport(args: {
   items: GroupItem[]
   statuses: Status[]
   options: ReportOptions
+  /** свой логотип в шапке — только если тариф позволяет («Про») */
+  withLogo?: boolean
 }): Promise<ReportData> {
   const { from, to, options } = args
   const prev = previousPeriod(from, to)
@@ -80,7 +82,13 @@ export async function loadReport(args: {
   // без «Работы с клиентами» ставок в отчёте нет: ни «К оплате», ни колонок суммы
   const clientWork = (settings.data as { client_work?: boolean } | null)?.client_work === true
   const noRate = { hourly_rate: null, rate_currency: null }
-  return buildReport({
+  // логотип — из настроек профиля; без него в шапке знак Semternity
+  let logo: string | null = null
+  if (args.withLogo) {
+    const { data } = await supabase.from('user_settings').select('report_logo').maybeSingle()
+    logo = (data as { report_logo?: string | null } | null)?.report_logo ?? null
+  }
+  const report = buildReport({
     from,
     to,
     tasks: clientWork ? args.tasks : args.tasks.map((t) => ({ ...t, ...noRate })),
@@ -97,4 +105,5 @@ export async function loadReport(args: {
     generatedAt: new Date(),
     options,
   })
+  return { ...report, logo }
 }

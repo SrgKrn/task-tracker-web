@@ -11,6 +11,8 @@ export interface ClientSnapshot {
   client: string
   /** кто отправил: имя из профиля */
   owner: string
+  /** свой логотип отправителя (PNG data URL) — в шапке страницы и PDF */
+  logo?: string | null
   from: string
   to: string
   label: string
@@ -46,6 +48,7 @@ export function buildClientSnapshot(args: {
     v: 1,
     client: args.client,
     owner: args.owner,
+    logo: r.logo ?? null,
     from: r.from,
     to: r.to,
     label: r.label,
@@ -74,6 +77,7 @@ export function snapshotAsReport(s: ClientSnapshot): ReportData {
     from: s.from,
     to: s.to,
     label: `${s.client} · ${s.label}`,
+    logo: s.logo ?? null,
     generatedAt: new Date(s.generatedAt),
     options: { includeChecks: false, includeComments: false, includeOvertime: s.includeOvertime },
     sprints: s.sprints,

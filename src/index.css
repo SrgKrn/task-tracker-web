@@ -117,6 +117,25 @@ input[type="number"] {
   backdrop-filter: blur(20px) saturate(1.4);
 }
 
+/*
+ * Свой логотип (отчёт по ссылке, превью в «Экспорте»): у логотипов часто прозрачный фон
+ * и тёмные буквы — на тёмной теме их не видно, поэтому всегда светлая подложка, как бумага PDF.
+ */
+.logo-plate {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 6px);
+  background: #ffffff;
+  border: 1px solid var(--border);
+}
+.logo-plate img {
+  display: block;
+  max-height: 40px;
+  max-width: 200px;
+  object-fit: contain;
+}
+
 /* свой порядок: долгое нажатие перетаскивает строку — без меню ссылки и выделения текста iOS */
 .sortable [data-sort-row] {
   -webkit-touch-callout: none;

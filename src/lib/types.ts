@@ -243,6 +243,8 @@ export interface UserSettings {
   focus_settings: FocusSettings
   /** прошёл первый экран — выбор пресета; null — ещё нет */
   onboarded_at: string | null
+  /** свой логотип в отчёте — PNG data URL (0.41, «Про») */
+  report_logo?: string | null
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null

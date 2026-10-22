@@ -217,6 +217,21 @@ class Pdf {
 
   private runhead() {
     const d = this.doc
+    // свой логотип (тариф «Про») — вместо знака и имени Semternity
+    if (this.r.logo) {
+      try {
+        const { width, height } = d.getImageProperties(this.r.logo)
+        const h = Math.min(18, (110 * height) / width)
+        const w = (h * width) / height
+        d.addImage(this.r.logo, 'PNG', MX, MT + 9 - h, w, h, 'report-logo')
+        this.text('ОТЧЁТ ЗА ПЕРИОД', MX + w + 8, MT + 5.5, { f: 'mono', s: 7, c: C.ink2, sp: 0.5 })
+        this.text(this.r.label.toUpperCase(), PW - MX, MT + 5.5, { f: 'mono', s: 7, c: C.muted, a: 'right' })
+        this.rule(MT + 13)
+        return
+      } catch {
+        // испорченная картинка — шапка как обычно, отчёт всё равно нужен
+      }
+    }
     // знак: незамкнутое кольцо с точкой в разрыве
     const cx = MX + 4.5
     const cy = MT + 3

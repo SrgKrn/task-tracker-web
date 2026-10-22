@@ -157,6 +157,8 @@ export interface ReportDim {
 }
 
 export interface ReportData {
+  /** свой логотип в шапке PDF — PNG data URL; нет — знак Semternity */
+  logo?: string | null
   from: string
   to: string
   label: string

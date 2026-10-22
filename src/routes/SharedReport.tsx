@@ -98,6 +98,11 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
   return (
     <>
       <header className="flex flex-col gap-1.5">
+        {snap.logo && (
+          <span className="logo-plate mb-2 self-start">
+            <img src={snap.logo} alt="" />
+          </span>
+        )}
         <h1 className="text-2xl font-semibold tracking-[-0.02em] text-balance text-text">{snap.client}</h1>
         <p className="text-base text-text-secondary">
           Отчёт за {snap.label}
