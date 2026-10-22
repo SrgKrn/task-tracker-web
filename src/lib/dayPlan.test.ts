@@ -108,6 +108,17 @@ describe('planSections', () => {
     ]
     expect(sections(tasks, { done: ['closed'] })).toEqual({ due: ['sub'] })
   })
+
+  it('все подзадачи закрыты — предлагается сам спринт (раньше он пропадал из окна)', () => {
+    const tasks = [
+      task({ id: 'wclass', plan_date: '2026-10-11', end_date: '2026-10-14' }),
+      task({ id: 'wclass-sub', parent_id: 'wclass' }),
+      task({ id: 'mixed', end_date: TODAY }),
+      task({ id: 'mixed-done', parent_id: 'mixed' }),
+      task({ id: 'mixed-open', parent_id: 'mixed', end_date: TODAY }),
+    ]
+    expect(sections(tasks, { done: ['wclass-sub', 'mixed-done'] })).toEqual({ carry: ['wclass'], due: ['mixed-open'] })
+  })
 })
 
 describe('planDiff', () => {

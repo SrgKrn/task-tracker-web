@@ -74,8 +74,10 @@ export function planSections(input: CandidateInput): PlanSection[] {
   }
 
   const planned = take(open.filter((t) => t.plan_date === today))
-  // дальше — только то, во что можно положить часы: у спринта с подзадачами работа в них
-  const leaves = open.filter((t) => !childrenOf.has(t.id))
+  // дальше — только то, во что можно положить часы: у спринта с открытыми подзадачами работа
+  // в них. Если все подзадачи закрыты, предлагаем сам спринт — иначе открытый спринт пропадал
+  // из окна целиком: подзадачи скрыты как готовые, а он — как «имеющий подзадачи»
+  const leaves = open.filter((t) => !(childrenOf.get(t.id) ?? []).some((c) => !isDone(c)))
   const carry = take(
     leaves
       .filter((t) => t.plan_date && t.plan_date < today && t.plan_date >= carryFrom)
