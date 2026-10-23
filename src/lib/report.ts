@@ -173,6 +173,8 @@ export interface JournalEntry {
   start: string
   end: string
   title: string
+  /** головная задача (спринт) — по ней снимок клиента отбирает свои записи; в снимок не попадает */
+  headId: string
   clientKey: string
   hours: number
   note: string | null
@@ -1040,6 +1042,7 @@ export function buildReport(input: ReportInput): ReportData {
       start: timer ? localTime(e.started_at) : '',
       end: timer ? localTime(e.ended_at) : '',
       title,
+      headId: head?.id ?? e.task_id,
       clientKey: clientOf(e.task_id).key,
       hours: toHours(entryMinutes(e)),
       // у встречи заметка — её название, его заменяет метка «встреча»

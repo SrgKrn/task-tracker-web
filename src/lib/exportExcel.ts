@@ -92,8 +92,8 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
   const prevCol = r.prevName === 'прошлый период' ? 'Прошлый период' : r.prevName[0].toUpperCase() + r.prevName.slice(1)
   const curCol = r.curName === 'этот период' ? 'Этот период' : r.curName[0].toUpperCase() + r.curName.slice(1)
 
-  /* ── Обзор ─────────────────────────────────────────────────── */
-  const ov = wb.addWorksheet('Обзор')
+  /* ── Сводка — те же цифры, что на первом листе PDF ─────────────── */
+  const ov = wb.addWorksheet('Сводка')
   ov.columns = [{ width: 34 }, { width: 16 }, { width: 16 }, { width: 14 }]
   ov.getCell('A1').value = `Отчёт за период: ${r.label}`
   ov.getCell('A1').font = { bold: true, size: 14 }
@@ -110,7 +110,8 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
     ['Часов всего', round2(r.total), round2(r.prevTotal), HOURS],
     ['Цель периода, ч', r.target ? round2(r.target.hours) : null, null, HOURS],
     ['Выполнение цели', r.target && r.target.hours > 0 ? r.total / r.target.hours : null, null, '0%'],
-    ['В среднем за будний день, ч', r.avgPerWeekday !== null ? round2(r.avgPerWeekday) : null, null, HOURS],
+    ['В среднем за рабочий день, ч', r.avgPerWeekday !== null ? round2(r.avgPerWeekday) : null, null, HOURS],
+    ['Прогноз на месяц, ч', r.forecast ? round2(r.forecast.hours) : null, null, HOURS],
     ['Дней с записями', r.daysWithEntries, null, '0'],
     ['Задач в работе', r.inWorkCount, null, '0'],
     ['Закрыто', r.closedCount, null, '0'],
@@ -156,6 +157,63 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
       ov.getCell(`A${line}`).value = `• ${s}`
     }
   }
+
+  // клиенты: часы, доля, сравнение и сумма
+  const block = (title: string) => {
+    line += 2
+    ov.getCell(`A${line}`).value = title
+    ov.getCell(`A${line}`).font = { bold: true }
+    line += 1
+  }
+  if (r.clients.length) {
+    block('Клиенты')
+    const h = ov.getRow(line)
+    h.values = ['Клиент', curCol, prevCol, 'Доля', 'К оплате']
+    h.font = { bold: true }
+    h.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_FILL } }
+    })
+    for (const c of r.clients) {
+      const row = ov.getRow(++line)
+      row.values = [
+        c.name,
+        round2(c.hours),
+        round2(c.prevHours),
+        r.total > 0 ? c.hours / r.total : null,
+        c.money.map((m) => `${m.amount.toFixed(2).replace('.', ',')} ${m.currency}`).join(' · ') || null,
+      ]
+      row.getCell(2).numFmt = HOURS
+      row.getCell(3).numFmt = HOURS
+      row.getCell(4).numFmt = '0%'
+    }
+  }
+  // из чего сложился учёт
+  block('Из чего сложился учёт')
+  const parts: [string, number | string, string][] = [
+    ['Таймер, ч', round2(r.work.timer), HOURS],
+    ['Фокус (Pomodoro и 90/30), ч', round2(r.work.focus), HOURS],
+    ['Встречи из календаря, ч', round2(r.work.meetings), HOURS],
+    ['Вручную, ч', round2(r.work.manual), HOURS],
+    ['Pomodoro, отрезков', r.work.pomodoro, '0'],
+    ['Глубоких сессий 90/30', r.work.deep, '0'],
+    ['Встреч засчитано', r.work.meetingCount, '0'],
+    ['Самый долгий заход, ч', round2(r.work.longest), HOURS],
+  ]
+  for (const [label, value, fmt] of parts) {
+    const row = ov.getRow(line++)
+    row.values = [label, value]
+    row.getCell(2).numFmt = fmt
+  }
+  if (r.method) {
+    block(`По методике: ${r.method.title}`)
+    for (const m of r.method.rows) {
+      const row = ov.getRow(line++)
+      row.values = [m.label, round2(m.hours), null, r.total > 0 ? m.hours / r.total : null]
+      row.getCell(2).numFmt = HOURS
+      row.getCell(4).numFmt = '0%'
+    }
+  }
+  ov.getColumn(5).width = 22
 
   /* ── По дням ───────────────────────────────────────────────── */
   const days = sheet(wb, 'По дням', [
@@ -214,7 +272,7 @@ export function buildWorkbook(r: ReportData): ExcelJS.Workbook {
 
   /* ── Первая группа ─────────────────────────────────────────── */
   // имена листов — из названий групп; Excel не принимает в них : \ / ? * [ ] и повторы
-  const taken = new Set(['Обзор', 'По дням', 'Спринты', 'Журнал', 'Записи'])
+  const taken = new Set(['Сводка', 'По дням', 'Спринты', 'Журнал', 'Записи'])
   const sheetName = (name: string) => {
     const base = name.replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 28) || 'Группа'
     let out = base

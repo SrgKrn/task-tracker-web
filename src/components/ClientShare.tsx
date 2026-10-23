@@ -5,7 +5,7 @@ import { buildClientSnapshot, newShareToken, shareUrl } from '../lib/clientRepor
 import { useGroupModel } from '../lib/groups'
 import { useProfile } from '../lib/profile'
 import { formatRate, type RateCurrency } from '../lib/rate'
-import type { ReportData } from '../lib/report'
+import type { ReportData, ReportOptions } from '../lib/report'
 import { useCreateShare, useReportShares, useRevokeShare, type ReportShare } from '../lib/queries/shares'
 import { describeError, useToast } from '../lib/Toast'
 import type { Task } from '../lib/types'
@@ -40,8 +40,8 @@ export function ClientShare({
   to: string
   tasks: Task[]
   initialItemId?: string | null
-  /** собрать отчёт за период с текущими галочками */
-  load: () => Promise<ReportData>
+  /** собрать отчёт за период с текущими галочками; overrides — поверх них */
+  load: (overrides?: Partial<ReportOptions>) => Promise<ReportData>
 }) {
   const model = useGroupModel()
   const profile = useProfile()
@@ -52,6 +52,8 @@ export function ClientShare({
   const [itemId, setItemId] = useState<string | null>(initialItemId ?? null)
   const [busy, setBusy] = useState(false)
   const [fresh, setFresh] = useState<string | null>(null)
+  // комментарии к учёту пишутся для себя — клиенту по умолчанию не показываем
+  const [withNotes, setWithNotes] = useState(false)
 
   // клиенты со ставкой — первыми: отчёт по ссылке почти всегда про них
   const options = useMemo(() => {
@@ -80,8 +82,16 @@ export function ClientShare({
     if (!item) return
     setBusy(true)
     try {
-      const report = await load()
-      const snapshot = buildClientSnapshot({ report, tasks, itemId, client: item.name, owner: profile.name })
+      const report = await load({ includeComments: withNotes })
+      const snapshot = buildClientSnapshot({
+        report,
+        tasks,
+        itemId,
+        client: item.name,
+        owner: profile.name,
+        color: item.color ?? null,
+        withNotes,
+      })
       if (!snapshot.sprints.length) {
         showError(`У «${item.name}» нет спринтов с часами или сроком в этом периоде`)
         return
@@ -102,8 +112,8 @@ export function ClientShare({
     <section className="mt-6 flex flex-col gap-3">
       <Overline className="px-0.5">Ссылка для клиента</Overline>
       <p className="px-0.5 text-sm text-text-secondary">
-        Клиент откроет отчёт без входа: спринты, часы и сумма к оплате за период выше, можно скачать PDF. Это снимок —
-        новые часы попадут только в новую ссылку.
+        Клиент откроет отчёт без входа: часы по дням, спринты с этапами, сумма к оплате и что сделано, можно скачать
+        PDF. Это снимок — новые часы попадут только в новую ссылку.
       </p>
       <PickerField
         label="Клиент"
@@ -116,6 +126,18 @@ export function ClientShare({
         placeholder="Клиент"
         emptyLabel="Выберите клиента"
       />
+      <label className="flex min-h-11 items-center gap-2.5 px-0.5 py-1">
+        <input
+          type="checkbox"
+          checked={withNotes}
+          onChange={(e) => setWithNotes(e.target.checked)}
+          className="h-4.5 w-4.5 shrink-0 accent-accent"
+        />
+        <span className="flex min-w-0 flex-col">
+          <span className="text-base text-text-secondary">Комментарии к учёту — показать клиенту</span>
+          <span className="text-xs leading-[1.4] text-text-secondary">в разделе «Что сделано»; без галочки — только задачи и часы</span>
+        </span>
+      </label>
       <Button variant="primary" size="lg" disabled={!itemId || busy} loading={busy} onClick={makeLink}>
         Создать ссылку
       </Button>

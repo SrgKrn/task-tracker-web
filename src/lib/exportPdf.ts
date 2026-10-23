@@ -19,6 +19,7 @@ import {
 } from './report'
 import { layoutTile, PNG_PALETTE, type DayTile } from '../../supabase/functions/telegram/tile.ts'
 import type { StageTone } from './stage'
+import { snapshotAsReport, type ClientSnapshot } from './clientReport'
 
 /*
  * Отчёт на бумаге: белый лист, графит и латунь. Латунь — текущий период, серая риска —
@@ -56,6 +57,7 @@ const C = {
   green: '#2E9B5E', // --success
   greenSoft: '#E5F3EA', // --success-soft
   greenInk: '#1F6B3F', // --success-text
+  accentSoft: '#F6E3D9', // --accent-soft
   info: '#4A72C9', // --info
   infoSoft: '#E8EEF8', // --info-soft
   infoInk: '#2A4A85', // --info-text
@@ -83,6 +85,8 @@ interface TextOpts {
 class Pdf {
   doc: jsPDF
   y = 0
+  /** знак Semternity в шапке; у отчёта для клиента — нет */
+  brand = true
   /** заголовок, который повторяется на листах-продолжениях */
   private continuation = ''
   private r: ReportData
@@ -239,6 +243,12 @@ class Pdf {
         // испорченная картинка — шапка как обычно, отчёт всё равно нужен
       }
     }
+    if (!this.brand) {
+      this.text('ОТЧЁТ ДЛЯ КЛИЕНТА', MX, MT + 5.5, { f: 'mono', s: 7, c: C.ink2, sp: 0.5 })
+      this.text(this.r.label.toUpperCase(), PW - MX, MT + 5.5, { f: 'mono', s: 7, c: C.muted, a: 'right', w: 300 })
+      this.rule(MT + 13)
+      return
+    }
     // знак: незамкнутое кольцо с точкой в разрыве
     const cx = MX + 4.5
     const cy = MT + 3
@@ -328,108 +338,6 @@ class Pdf {
   }
 }
 
-/* ── страница 3: спринты ─────────────────────────────────────────── */
-
-function sprintsPage(p: Pdf, r: ReportData) {
-  p.page('Спринты: план и факт')
-  p.legend([{ kind: 'bar', text: 'факт' }, { kind: 'terra', text: 'сверх плана' }, { kind: 'norm', text: 'план' }], p.y - 18)
-
-  p.rule(p.y - 4)
-  p.y -= 4
-  p.tiles([
-    { label: 'В работе', value: String(r.inWorkCount), sub: 'с часами или сроком в периоде' },
-    { label: 'Закрыто', value: String(r.closedCount), sub: 'в финальный статус' },
-    {
-      label: 'Вышли за план',
-      value: String(r.overCount),
-      unit: r.overCount ? `· +${f1(r.overHours)} ч` : '',
-      sub: 'факт за всё время спринта',
-      bad: r.overCount > 0,
-    },
-    { label: 'Срок прошёл', value: String(r.overdueCount), sub: `не закрыты к ${dayMonth(r.to)}`, bad: r.overdueCount > 0 },
-  ])
-
-  const BW = 138
-  // шкала в долях плана, общая для всех строк: черта «план» у всех в одном месте
-  const maxShare = Math.max(...r.sprints.map((s) => (s.pct ?? 0) / 100), 1)
-  const MAXP = Math.min(4, Math.max(1.2, Math.ceil(maxShare * 10) / 10))
-  const cols = { name: MX, bullet: MX + 152, fact: MX + 362, period: MX + 408, status: MX + 474, end: PW - MX }
-
-  p.y += 16
-  for (const [t, x, a] of [['спринт', cols.name, 'left'], [`0 · план · ${Math.round(MAXP * 100)}%`, cols.bullet, 'left'], ['факт / план', cols.fact, 'right'], ['в периоде', cols.period, 'right'], ['статус', cols.status, 'right'], ['срок', cols.end, 'right']] as const) {
-    p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.2, c: C.muted, a })
-  }
-  p.y += 4
-  p.rule(p.y)
-
-  const titles: Record<string, string> = { over: 'Вышли за план', inplan: 'В плане', noplan: 'Без плана' }
-  for (const group of ['over', 'inplan', 'noplan'] as const) {
-    const rows = r.sprints.filter((s) => s.group === group)
-    if (!rows.length) continue
-    p.ensure(36)
-    p.y += 14
-    p.text(titles[group], MX, p.y, { b: true, s: 8.8 })
-    p.text(String(rows.length), PW - MX, p.y, { f: 'mono', s: 7, c: C.muted, a: 'right' })
-    p.y += 4
-    p.rule(p.y)
-    for (const s of rows) {
-      p.ensure(17)
-      const cy = p.y + 9
-      // название и значение группы в одной строке: значение серым, если влезает
-      const nameW = p.width(s.name, { s: 8.2 })
-      const tag = s.inner || s.outer
-      p.text(s.name, cols.name, cy + 3, { s: 8.2, w: 146 })
-      if (tag && nameW < 120) p.text(`· ${tag}`, cols.name + nameW + 3, cy + 3, { s: 7.6, c: C.muted, w: 146 - nameW - 3 })
-
-      // пуля: доля плана на общей для всех шкале
-      p.rect(cols.bullet, cy - 3, BW, 6, C.track)
-      if (s.plan > 0) {
-        const share = s.factTotal / s.plan
-        const xp = cols.bullet + BW / MAXP
-        if (share <= 1) p.hbar(cols.bullet, cols.bullet + (BW * share) / MAXP, cy - 3, 6, C.brass)
-        else {
-          p.rect(cols.bullet, cy - 3, xp - cols.bullet - 0.75, 6, C.brass)
-          p.hbar(xp + 0.75, cols.bullet + (BW * Math.min(share, MAXP)) / MAXP, cy - 3, 6, C.terra)
-        }
-        p.rect(xp - 0.75, cy - 6, 1.5, 12, C.ink)
-      } else {
-        p.text('плана нет', cols.bullet + 4, cy + 2.4, { f: 'mono', s: 6.4, c: C.muted })
-      }
-
-      const pctText = s.pct !== null ? ` ${s.pct}%` : ''
-      const factText = `${f1(s.factTotal)}${s.plan > 0 ? ` / ${f1(s.plan).replace(',0', '')}` : ''}`
-      const pw = p.width(pctText, { f: 'mono', s: 7.6 })
-      p.text(pctText, cols.fact, cy + 3, { f: 'mono', s: 7.6, c: (s.pct ?? 0) > 100 ? C.terraInk : C.muted, a: 'right' })
-      p.text(factText, cols.fact - pw, cy + 3, { f: 'mono', s: 7.6, a: 'right' })
-      p.text(f1(s.factPeriod), cols.period, cy + 3, { f: 'mono', s: 7.6, c: C.muted, a: 'right' })
-      p.text(s.status, cols.status, cy + 3, {
-        f: 'mono',
-        s: 6.8,
-        c: s.isFinal ? C.green : s.status === 'без статуса' ? C.faint : C.ink2,
-        a: 'right',
-        w: 62,
-      })
-      // прошедший срок незакрытого спринта — терракотой прямо в колонке срока
-      p.text(s.endDate ? `${s.endDate.slice(8, 10)}.${s.endDate.slice(5, 7)}` : '—', cols.end, cy + 3, {
-        f: 'mono',
-        b: s.overdue,
-        s: 7.4,
-        c: s.overdue ? C.terraInk : C.muted,
-        a: 'right',
-      })
-      p.y += 17
-      p.rule(p.y, MX, PW - MX, C.track)
-    }
-  }
-  if (!r.sprints.length) {
-    p.y += 20
-    p.text('В этом периоде не было задач с часами или сроком.', MX, p.y, { s: 9, c: C.muted })
-  } else if (r.overdueCount) {
-    p.y += 14
-    p.text(`Срок терракотой — прошёл к ${dayMonth(r.to)}, а спринт не закрыт.`, MX, p.y, { s: 7.6, c: C.muted })
-  }
-}
-
 /* ── к оплате: ставка × часы, переработка отдельно ───────────────── */
 
 /** 1 250,50 BYN — код валюты и обычные пробелы: знаков €/₽ и неразрывного пробела в шрифте отчёта может не быть */
@@ -441,66 +349,6 @@ function money(value: number, currency: string): string {
 
 /** часы к оплате — с сотыми: сумма считается от точных часов */
 const h2 = (h: number) => h.toFixed(2).replace('.', ',')
-
-function billingPage(p: Pdf, r: ReportData) {
-  if (!r.billing.length) return
-  const withOver = r.options.includeOvertime === true
-  p.page('К оплате', withOver ? 'переработка включена в итог' : 'переработка — отдельно, не в итоге')
-
-  p.tiles(
-    r.billing.map((t) => ({
-      label: `Итого, ${t.currency}`,
-      value: money(t.due, t.currency),
-      sub: t.overHours > 0.004 ? `сверх плана ${h2(t.overHours)} ч · ${money(t.overAmount, t.currency)}` : `${h2(t.hours)} ч к оплате`,
-    })),
-  )
-
-  const cols = { name: MX, hours: MX + 300, rate: MX + 380, sum: PW - MX }
-  p.y += 16
-  for (const [t, x, a] of [['спринт', cols.name, 'left'], ['часы', cols.hours, 'right'], ['ставка', cols.rate, 'right'], ['сумма', cols.sum, 'right']] as const) {
-    p.text(t.toUpperCase(), x, p.y, { f: 'mono', s: 6.2, c: C.muted, a })
-  }
-  p.y += 4
-  p.rule(p.y)
-
-  const rows = r.sprints.filter((s) => s.bill)
-  for (const s of rows) {
-    const b = s.bill!
-    const extra = b.overHours > 0.004
-    p.ensure(extra ? 30 : 17)
-    const cy = p.y + 9
-    const tag = s.inner || s.outer
-    p.text(tag ? `${s.name} · ${tag}` : s.name, cols.name, cy + 3, { s: 8.2, w: 280 })
-    // с сотыми: сумма считается от точных часов, и «часы × ставка» должно сходиться
-    p.text(h2(b.hours), cols.hours, cy + 3, { f: 'mono', s: 7.6, a: 'right' })
-    p.text(money(b.rate, b.currency), cols.rate, cy + 3, { f: 'mono', s: 7.6, c: C.muted, a: 'right' })
-    p.text(money(b.amount, b.currency), cols.sum, cy + 3, { f: 'mono', s: 7.6, b: true, a: 'right' })
-    p.y += 17
-    if (extra) {
-      const oy = p.y + 3
-      p.text(withOver ? 'сверх плана' : 'сверх плана — не в итоге', cols.name + 10, oy, { s: 7.4, c: C.terraInk })
-      p.text(h2(b.overHours), cols.hours, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
-      p.text(money(b.overAmount, b.currency), cols.sum, oy, { f: 'mono', s: 7.4, c: C.terraInk, a: 'right' })
-      p.y += 13
-    }
-    p.rule(p.y, MX, PW - MX, C.track)
-  }
-
-  for (const t of r.billing) {
-    p.ensure(18)
-    p.y += 14
-    p.text(`Итого к оплате, ${t.currency}`, cols.name, p.y, { b: true, s: 9 })
-    p.text(h2(t.hours + (withOver ? t.overHours : 0)), cols.hours, p.y, { f: 'mono', s: 8, a: 'right' })
-    p.text(money(t.due, t.currency), cols.sum, p.y, { f: 'mono', s: 9, b: true, a: 'right' })
-  }
-  p.y += 16
-  p.text(
-    'С планом — часы спринта в пределах плана × ставка; без плана — часы за период отчёта. Ставка — спринта или клиента.',
-    MX,
-    p.y,
-    { s: 7.4, c: C.muted, w: CW },
-  )
-}
 
 /** «сентябрь» → «сен»; «этот период» и «прошлый период» — как есть */
 function shortName(name: string): string {
@@ -1297,6 +1145,249 @@ function ownPages(p: Pdf, r: ReportData) {
   if (s.journal) journalPage(p, r)
 }
 
+/* ── лист 4: к оплате — счёт по клиентам ─────────────────────────── */
+
+function billingPage(p: Pdf, r: ReportData) {
+  if (!r.billing.length) return
+  const withOver = r.options.includeOvertime === true
+  p.page('К оплате', withOver ? 'переработка включена в итог' : 'ставка спринта, иначе клиента · переработка — отдельно')
+  p.y += 8
+  const col = { hours: MX + 330, rate: MX + 410, sum: PW - MX }
+  p.text('Клиент и спринт', MX, p.y, { s: 6.8, c: C.muted })
+  p.text('часы к оплате', col.hours, p.y, { s: 6.8, c: C.muted, a: 'right' })
+  p.text('ставка', col.rate, p.y, { s: 6.8, c: C.muted, a: 'right' })
+  p.text('сумма', col.sum, p.y, { s: 6.8, c: C.muted, a: 'right' })
+  p.y += 6
+  p.rule(p.y, MX, PW - MX, C.faint)
+
+  const rows = r.sprints.filter((s) => s.bill)
+  const byClient = new Map<string, typeof rows>()
+  for (const s of rows) byClient.set(s.clientKey, [...(byClient.get(s.clientKey) ?? []), s])
+  const clientName = new Map(r.clients.map((c) => [c.key, c]))
+  // клиенты — в том же порядке, что в сводке: по часам за период
+  const order = new Map(r.clients.map((c, i) => [c.key, i]))
+  const groups = [...byClient].sort(([a], [b]) => (order.get(a) ?? 999) - (order.get(b) ?? 999))
+  for (const [key, list] of groups) {
+    const c = clientName.get(key)
+    p.ensure(40 + list.length * 20)
+    p.y += 20
+    dot(p, MX + 4, p.y - 3.4, labelHex(c?.color), 4)
+    p.text(c?.name ?? 'Без клиента', MX + 14, p.y, { b: true, s: 10, w: 280 })
+    const subtotal = new Map<string, number>()
+    for (const s of list) {
+      const b = s.bill!
+      p.ensure(30)
+      p.y += 18
+      p.text(s.name, MX + 14, p.y, { s: 8.8, w: col.hours - MX - 90 })
+      p.text(h2(b.hours), col.hours, p.y, { f: 'mono', s: 8.6, a: 'right' })
+      p.text(money(b.rate, b.currency), col.rate, p.y, { f: 'mono', s: 8.2, c: C.ink2, a: 'right' })
+      const amount = b.amount + (withOver ? b.overAmount : 0)
+      p.text(money(amount, b.currency), col.sum, p.y, { f: 'mono', s: 8.6, a: 'right' })
+      subtotal.set(b.currency, (subtotal.get(b.currency) ?? 0) + amount)
+      if (b.overHours > 0.004) {
+        p.y += 11
+        p.text(`из ${f1(s.factTotal)} ч · план ${fh(s.plan)} ч · сверх плана ${h2(b.overHours)} ч — ${withOver ? 'в итоге' : 'не в итоге'}`, MX + 14, p.y, {
+          s: 6.8,
+          c: C.terraInk,
+          w: col.hours - MX - 20,
+        })
+      }
+    }
+    p.y += 15
+    p.rule(p.y - 10, MX + 14, PW - MX, C.track)
+    p.text(`Итого ${c?.name ?? ''}`.trim(), MX + 14, p.y, { s: 8.2, c: C.ink2, w: 300 })
+    p.text([...subtotal].map(([cur, v]) => money(v, cur)).join(' · '), col.sum, p.y, { f: 'mono', b: true, s: 9.2, a: 'right' })
+  }
+
+  // итог — плашкой: валюты не складываются
+  p.ensure(110)
+  p.y += 26
+  const boxH = 70
+  p.doc.setFillColor(C.accentSoft)
+  p.doc.roundedRect(MX, p.y, CW, boxH, 7, 7, 'F')
+  p.text('Итого к оплате', MX + 16, p.y + 20, { s: 9, c: C.brassInk })
+  if (r.billing.length > 1) p.text('валюты не складываются', PW - MX - 16, p.y + 20, { s: 7, c: C.brassInk, a: 'right' })
+  const step = Math.min(220, (CW - 32) / r.billing.length)
+  r.billing.forEach((t, i) => p.text(money(t.due, t.currency), MX + 16 + i * step, p.y + 50, { f: 'mono', b: true, s: 20, w: step - 10 }))
+  p.y += boxH + 16
+
+  const over = r.billing.filter((t) => t.overHours > 0.004)
+  if (over.length) {
+    p.ensure(40)
+    card(p, MX, p.y, CW, 34)
+    p.rect(MX, p.y, 3, 34, C.terra)
+    p.text(
+      `Сверх плана ${over.map((t) => `${h2(t.overHours)} ч · ${money(t.overAmount, t.currency)}`).join('; ')}`,
+      MX + 14,
+      p.y + 14,
+      { s: 8.4, b: true, w: CW - 24 },
+    )
+    p.text(withOver ? 'Включено в итог галочкой при выгрузке.' : 'В итог не входит. Включить можно галочкой при выгрузке.', MX + 14, p.y + 26, {
+      s: 7,
+      c: C.ink2,
+    })
+    p.y += 50
+  }
+  p.ensure(14)
+  p.text('С планом — часы спринта в пределах плана × ставка; без плана — часы за период отчёта.', MX, p.y, { s: 7, c: C.muted, w: CW })
+}
+
+/* ── отчёт для клиента: снимок по ссылке ─────────────────────────── */
+
+function clientPages(p: Pdf, s: ClientSnapshot) {
+  const color = labelHex(s.color)
+  p.page(`Отчёт для «${s.client}»`, s.label)
+  p.y += 2
+  p.text(
+    [s.owner ? `Подготовил: ${s.owner}` : '', `сформирован ${formatStamp(new Date(s.generatedAt))}`].filter(Boolean).join(' · '),
+    MX,
+    p.y,
+    { s: 7.8, c: C.ink2 },
+  )
+  const top = p.y + 22
+
+  // часы и план
+  p.text('Часы за период', MX, top + 10, { s: 8.4, c: C.muted })
+  const big = f1(s.hours)
+  p.text(big, MX, top + 48, { b: true, s: 36 })
+  const bw = p.width(big, { b: true, s: 36 })
+  p.text(s.plan ? `ч из ${fh(s.plan)} по плану` : 'ч', MX + bw + 5, top + 48, { s: 13, c: C.ink2 })
+  if (s.plan) {
+    const w = 290
+    const fact = s.sprints.reduce((a, x) => a + x.factTotal, 0)
+    p.rect(MX, top + 60, w, 7, C.track)
+    p.hbar(MX, MX + w * Math.min(1, fact / Math.max(s.plan, 0.001)), top + 60, 7, color)
+    p.text(`факт по спринтам ${f1(fact)} ч · ${pct(fact, s.plan)}% плана`, MX, top + 80, { s: 7.2, c: C.muted })
+  }
+
+  // к оплате
+  if (s.billing.length) {
+    const bx = MX + 330
+    const bwid = PW - MX - bx
+    p.doc.setFillColor(C.accentSoft)
+    p.doc.roundedRect(bx, top, bwid, 86, 7, 7, 'F')
+    p.text('К оплате', bx + 14, top + 18, { s: 8.4, c: C.brassInk })
+    s.billing.forEach((b, i) => {
+      p.text(money(b.due, b.currency), bx + 14, top + 44 + i * 22, { f: 'mono', b: true, s: s.billing.length > 1 ? 14 : 19, w: bwid - 28 })
+    })
+    if (s.billing.length === 1) {
+      const b = s.billing[0]
+      p.text(`${h2(b.hours + (s.includeOvertime ? b.overHours : 0))} ч к оплате`, bx + 14, top + 64, { s: 7.2, c: C.brassInk })
+    }
+  }
+  p.y = top + 108
+
+  // часы по дням
+  const days = s.days ?? []
+  if (days.length && days.length <= 62 && days.some((d) => d.hours > 0)) {
+    p.text('По дням', MX, p.y, { b: true, s: 10.5 })
+    const x0 = MX
+    const y0 = p.y + 12
+    const w = CW
+    const h = 84
+    const gx = 18
+    const hi = Math.max(...days.map((d) => d.hours), 1) * 1.12
+    const y = (v: number) => y0 + ((hi - v) / hi) * h
+    const slot = (w - gx) / days.length
+    const bwid = Math.min(12, slot * 0.62)
+    days.forEach((d, i) => {
+      if (d.weekend) p.rect(x0 + gx + i * slot, y0, slot, h, C.weekend)
+    })
+    const stepV = niceStep(hi)
+    for (let t = stepV; t <= hi; t += stepV) {
+      p.line(x0 + gx, y(t), x0 + w, y(t), C.track)
+      p.text(fh(t), x0 + gx - 4, y(t) + 2.2, { f: 'mono', s: 6.2, c: C.muted, a: 'right' })
+    }
+    const every = Math.ceil(days.length / 31)
+    days.forEach((d, i) => {
+      const bx = x0 + gx + i * slot + (slot - bwid) / 2
+      if (d.hours > 0.004) p.vbar(bx, y(0), y(d.hours), bwid, color, 2.2)
+      if (i % every === 0) {
+        p.text(String(d.day), x0 + gx + i * slot + slot / 2, y0 + h + 10, { f: 'mono', s: 6, c: d.weekend ? C.faint : C.ink2, a: 'center' })
+      }
+    })
+    p.line(x0 + gx, y(0), x0 + w, y(0), C.ink2)
+    p.y = y0 + h + 34
+  }
+
+  // спринты
+  p.ensure(60)
+  p.text('Спринты', MX, p.y, { b: true, s: 10.5 })
+  p.y += 22
+  for (const sp of s.sprints) {
+    const billLine = sp.bill
+      ? `${h2(sp.bill.hours)} ч × ${money(sp.bill.rate, sp.bill.currency)} = ${money(sp.bill.amount + (s.includeOvertime ? sp.bill.overAmount : 0), sp.bill.currency)}`
+      : ''
+    p.ensure(billLine ? 48 : 38)
+    const yy = p.y
+    p.rule(yy - 10, MX, PW - MX, C.track)
+    p.text(sp.name, MX, yy + 3, { s: 9.4, w: 290 })
+    let mx = MX
+    const label = sp.isFinal ? 'Готово' : sp.status === 'без статуса' ? 'Без этапа' : sp.status
+    mx += stageChip(p, mx, yy + 17, label, sp.isFinal ? 'done' : (sp.stageTone ?? null)) + 6
+    const meta = [
+      sp.endDate ? (sp.overdue ? `срок был ${dayMonth(sp.endDate)}` : `до ${dayMonth(sp.endDate)}`) : '',
+      sp.subTotal ? `подзадачи ${sp.subDone}/${sp.subTotal}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    if (meta) p.text(meta, mx, yy + 17, { s: 6.8, c: C.muted, w: 300 - mx + MX })
+    const bx = MX + 316
+    const bwid = 118
+    if (sp.plan > 0) {
+      const inPlan = Math.min(sp.factTotal, sp.plan)
+      p.rect(bx, yy - 1, bwid, 6.5, C.track)
+      p.hbar(bx, bx + (bwid * inPlan) / sp.plan, yy - 1, 6.5, color)
+      p.text(`${f1(inPlan)} / ${fh(sp.plan)} ч`, PW - MX, yy + 4, { f: 'mono', s: 8.2, a: 'right' })
+    } else {
+      p.text(`${f1(sp.factPeriod)} ч`, PW - MX, yy + 4, { f: 'mono', s: 8.2, a: 'right' })
+    }
+    if (billLine) p.text(billLine, PW - MX, yy + 17, { f: 'mono', s: 7.2, c: C.ink2, a: 'right' })
+    p.y += billLine ? 42 : 36
+  }
+  if (s.billing.length) {
+    p.ensure(30)
+    p.y += 4
+    for (const b of s.billing) {
+      p.text(`Итого к оплате, ${b.currency}`, MX, p.y, { b: true, s: 9.4 })
+      p.text(money(b.due, b.currency), PW - MX, p.y, { f: 'mono', b: true, s: 10, a: 'right' })
+      p.y += 16
+    }
+    p.text('С планом к оплате — часы в пределах плана × ставка, без плана — часы за период.', MX, p.y, { s: 7, c: C.muted })
+    p.y += 18
+  }
+
+  // что сделано
+  const journal = s.journal ?? []
+  if (journal.length) {
+    p.ensure(60)
+    p.y += 10
+    p.text('Что сделано', MX, p.y, { b: true, s: 10.5 })
+    p.y += 8
+    for (const day of journal) {
+      p.ensure(36)
+      p.y += 16
+      p.text(`${day.label[0].toUpperCase()}${day.label.slice(1)}`, MX, p.y, { b: true, s: 8.8 })
+      p.text(hm(day.total), PW - MX, p.y, { f: 'mono', s: 8.4, a: 'right' })
+      p.y += 4
+      p.rule(p.y, MX, PW - MX, C.track)
+      for (const row of day.rows) {
+        const note = row.notes.join(' · ')
+        const nh = note ? p.paraHeight(note, CW - 70, { s: 7.4 }, 1.35) : 0
+        p.ensure(16 + nh)
+        p.y += 13
+        p.text(row.title, MX + 10, p.y, { s: 8.4, w: CW - 80 })
+        p.text(hm(row.hours), PW - MX, p.y, { f: 'mono', s: 8, a: 'right' })
+        if (note) {
+          p.y += 10
+          p.y += p.para(note, MX + 10, p.y, CW - 70, { s: 7.4, c: C.ink2 }, 1.35) - 7.4 * 1.35
+        }
+      }
+      p.y += 4
+    }
+  }
+}
+
 export async function exportPdf(r: ReportData) {
   const p = new Pdf(r)
   ownPages(p, r)
@@ -1305,13 +1396,13 @@ export async function exportPdf(r: ReportData) {
 }
 
 /**
- * PDF для клиента по ссылке: только спринты и сумма к оплате — без обзора, разрезов
- * и журнала. r — снимок, приведённый к виду отчёта (snapshotAsReport).
+ * PDF для клиента по ссылке (0.42): часы и план, сумма, дни, спринты с этапами и «что
+ * сделано». Без знака Semternity — отчёт уходит клиенту от имени отправителя.
  */
-export function renderClientPdf(r: ReportData): jsPDF {
-  const p = new Pdf(r)
-  sprintsPage(p, r)
-  billingPage(p, r)
+export function renderClientPdf(snap: ClientSnapshot): jsPDF {
+  const p = new Pdf(snapshotAsReport(snap))
+  p.brand = false
+  clientPages(p, snap)
   p.footers()
   return p.doc
 }

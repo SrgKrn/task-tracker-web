@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Button, Card, Logo, Overline, Skeleton, Tag } from '../components/ui'
-import { snapshotAsReport, type ClientSnapshot } from '../lib/clientReport'
+import { Button, Card, Overline, Skeleton, StageChip } from '../components/ui'
+import type { ClientSnapshot } from '../lib/clientReport'
 import { fetchSharedReport } from '../lib/queries/shares'
 import { formatMoney, formatRate } from '../lib/rate'
-import { f1 } from '../lib/report'
+import { f1, hm } from '../lib/report'
 
 /** часы в расчёте суммы — с сотыми: иначе «22,5 ч × 45» не сходится с суммой от 22,52 ч */
 const f2 = (h: number) => h.toFixed(2).replace('.', ',')
@@ -45,7 +45,7 @@ export function SharedReport() {
     setSaving(true)
     try {
       const { renderClientPdf } = await import('../lib/exportPdf')
-      renderClientPdf(snapshotAsReport(snap)).save(`Отчёт_${snap.client}_${snap.from}_${snap.to}.pdf`)
+      renderClientPdf(snap).save(`Отчёт_${snap.client}_${snap.from}_${snap.to}.pdf`)
     } finally {
       setSaving(false)
     }
@@ -54,11 +54,6 @@ export function SharedReport() {
   return (
     <div className="min-h-dvh bg-bg">
       <div className="safe-top-page mx-auto flex max-w-2xl flex-col gap-5 px-5 pt-6 pb-12">
-        <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
-          <Logo size={20} />
-          Semternity · отчёт
-        </div>
-
         {state.kind === 'loading' && (
           <>
             <Skeleton className="h-9 w-2/3" />
@@ -95,6 +90,11 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
     hour: '2-digit',
     minute: '2-digit',
   })
+  // цвет клиента — как точка в его задачах; у старых ссылок цвета нет — акцент
+  const color = snap.color ? `var(--${snap.color})` : 'var(--accent)'
+  const fact = snap.sprints.reduce((a, s) => a + s.factTotal, 0)
+  const days = snap.days ?? []
+  const maxDay = Math.max(...days.map((d) => d.hours), 0.001)
   return (
     <>
       <header className="flex flex-col gap-1.5">
@@ -112,75 +112,135 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card className="flex min-w-0 flex-col gap-1 p-4">
+        <Card className="flex min-w-0 flex-col gap-2 p-4">
           <Overline>Часы за период</Overline>
-          <span className="tabular font-mono text-2xl font-medium text-text">{f1(snap.hours)}</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="tabular font-mono text-3xl font-medium text-text">{f1(snap.hours)}</span>
+            <span className="text-base text-text-secondary">{snap.plan ? `из ${f1(snap.plan)} ч по плану` : 'ч'}</span>
+          </span>
+          {!!snap.plan && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, (fact / snap.plan) * 100)}%`, background: color }} />
+            </div>
+          )}
         </Card>
         {snap.billing.map((b) => (
-          <Card key={b.currency} className="flex min-w-0 flex-col gap-1 p-4">
-            <Overline>К оплате</Overline>
-            <span className="tabular font-mono text-2xl font-medium text-text">{formatMoney(b.due, b.currency)}</span>
+          <div key={b.currency} className="flex min-w-0 flex-col gap-1 rounded-md bg-accent-soft p-4">
+            <span className="text-sm text-accent-text">К оплате</span>
+            <span className="tabular font-mono text-2xl font-semibold text-text">{formatMoney(b.due, b.currency)}</span>
             {b.overAmount > 0 && !snap.includeOvertime && (
-              <span className="text-sm text-text-tertiary">
-                без переработки {f1(b.overHours)} ч
-              </span>
+              <span className="text-sm text-accent-text">без переработки {f1(b.overHours)} ч</span>
             )}
-          </Card>
+          </div>
         ))}
       </div>
+
+      {days.some((d) => d.hours > 0) && (
+        <section className="flex flex-col gap-2">
+          <Overline className="px-0.5">По дням</Overline>
+          <Card className="p-3">
+            <svg
+              viewBox={`0 0 ${days.length * 10} 60`}
+              className="block h-24 w-full"
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="Часы по дням"
+            >
+              {days.map((d, i) => {
+                const h = (d.hours / maxDay) * 56
+                return (
+                  <g key={d.date}>
+                    {d.weekend && <rect x={i * 10} y={0} width={10} height={60} fill="var(--surface-sunken)" />}
+                    {h > 0 && <rect x={i * 10 + 2} y={60 - h} width={6} height={h} rx={1.2} fill={color} />}
+                  </g>
+                )
+              })}
+            </svg>
+            <div className="mt-1 flex justify-between font-mono text-xs text-text-tertiary">
+              <span>{days[0]?.day}</span>
+              <span>{days[days.length - 1]?.day}</span>
+            </div>
+          </Card>
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <Overline className="px-0.5">Спринты</Overline>
         <div className="flex flex-col divide-y divide-divider rounded-md border border-border bg-surface">
           {snap.sprints.map((s) => {
-            const share = s.plan > 0 ? Math.min(1, s.factTotal / s.plan) : 0
+            const inPlan = s.plan > 0 ? Math.min(s.factTotal, s.plan) : 0
+            const tone = s.isFinal ? 'done' : (s.stageTone ?? 'progress')
+            const label = s.isFinal ? 'Готово' : s.status === 'без статуса' ? undefined : s.status
+            const meta = [
+              s.endDate ? `${s.overdue ? 'срок был' : 'до'} ${s.endDate.slice(8, 10)}.${s.endDate.slice(5, 7)}` : '',
+              s.subTotal ? `подзадачи ${s.subDone}/${s.subTotal}` : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')
             return (
               <div key={s.id} className="flex flex-col gap-2 px-4 py-3.5">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-base font-medium text-text">{s.name}</span>
-                    {(s.inner || s.outer) && <span className="text-sm text-text-secondary">{s.inner || s.outer}</span>}
-                  </span>
-                  <Tag tone={s.isFinal ? 'success' : 'neutral'}>{s.status}</Tag>
+                  <span className="min-w-0 text-base font-medium text-text">{s.name}</span>
+                  <StageChip tone={label ? tone : null} label={label} />
                 </div>
                 {s.plan > 0 && (
                   <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
-                    <div
-                      className={`h-full rounded-full ${s.group === 'over' ? 'bg-danger' : 'bg-accent'}`}
-                      style={{ width: `${share * 100}%` }}
-                    />
+                    <div className="h-full rounded-full" style={{ width: `${(inPlan / s.plan) * 100}%`, background: color }} />
                   </div>
                 )}
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
                   <span className="tabular font-mono text-text-secondary">
-                    {s.plan > 0 ? `${f1(s.factTotal)} из ${f1(s.plan)} ч` : `${f1(s.factPeriod)} ч`}
-                    {s.pct !== null ? ` · ${s.pct}%` : ''}
+                    {s.plan > 0 ? `${f1(inPlan)} из ${f1(s.plan)} ч` : `${f1(s.factPeriod)} ч`}
+                    {meta ? <span className="font-sans"> · {meta}</span> : null}
                   </span>
                   {s.bill && (
                     <span className="tabular font-mono text-text">
                       {f2(s.bill.hours)} ч × {formatRate(s.bill.rate, s.bill.currency)} ={' '}
-                      <b className="font-semibold">{formatMoney(s.bill.amount, s.bill.currency)}</b>
+                      <b className="font-semibold">
+                        {formatMoney(s.bill.amount + (snap.includeOvertime ? s.bill.overAmount : 0), s.bill.currency)}
+                      </b>
                     </span>
                   )}
                 </div>
-                {s.bill && s.bill.overHours > 0.004 && (
-                  <span className="text-sm text-danger-text">
-                    Сверх плана {f1(s.bill.overHours)} ч · {formatMoney(s.bill.overAmount, s.bill.currency)}
-                    {snap.includeOvertime ? ' — в итоге' : ' — не в итоге'}
-                  </span>
-                )}
               </div>
             )
           })}
         </div>
       </section>
 
+      {!!snap.journal?.length && (
+        <section className="flex flex-col gap-2">
+          <Overline className="px-0.5">Что сделано</Overline>
+          <div className="flex flex-col gap-3">
+            {snap.journal.map((day) => (
+              <Card key={day.date} className="flex flex-col gap-2 p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-base font-medium text-text first-letter:uppercase">{day.label}</span>
+                  <span className="tabular shrink-0 font-mono text-sm text-text-secondary">{hm(day.total)}</span>
+                </div>
+                {day.rows.map((row) => (
+                  <div key={row.title} className="flex flex-col gap-0.5 border-t border-divider pt-2">
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="min-w-0 text-text">{row.title}</span>
+                      <span className="tabular shrink-0 font-mono text-text-secondary">{hm(row.hours)}</span>
+                    </div>
+                    {row.notes.map((n, i) => (
+                      <span key={i} className="text-sm text-text-secondary">
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Button variant="primary" size="lg" loading={saving} onClick={onPdf} className="self-start">
         Скачать PDF
       </Button>
-      <p className="text-sm text-text-tertiary">
-        С планом к оплате — часы в пределах плана × ставка, без плана — часы за период.
-      </p>
+      <p className="text-sm text-text-tertiary">С планом к оплате — часы в пределах плана × ставка, без плана — часы за период.</p>
     </>
   )
 }

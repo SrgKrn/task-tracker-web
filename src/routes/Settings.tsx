@@ -489,7 +489,7 @@ function ExportSection() {
         to={to}
         tasks={tasks}
         initialItemId={searchParams.get('client')}
-        load={() => loadReport({ from, to, tasks, groups, items, statuses, options, withLogo: canLogo })}
+        load={(o) => loadReport({ from, to, tasks, groups, items, statuses, options: { ...options, ...o }, withLogo: canLogo })}
       />
       )}
     </div>

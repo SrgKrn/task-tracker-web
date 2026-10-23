@@ -71,3 +71,54 @@ describe('newShareToken', () => {
     expect(newShareToken()).not.toBe(a)
   })
 })
+
+describe('buildClientSnapshot — что сделано (0.42)', () => {
+  const entry = (headId: string, title: string, hours: number, note: string | null) => ({
+    start: '10:00',
+    end: '11:00',
+    title,
+    headId,
+    clientKey: 'x',
+    hours,
+    note,
+    tag: null,
+  })
+  const withJournal = {
+    ...report,
+    days: [{ date: '2026-10-05', day: 5, weekend: false, hours: 3 }],
+    journal: [
+      {
+        date: '2026-10-05',
+        label: '5 октября, понедельник',
+        entries: [entry('a', 'Баннеры', 1, 'Три варианта'), entry('a', 'Баннеры', 0.5, null), entry('b', 'Чужой клиент', 1.5, 'секрет')],
+      },
+    ],
+  } as unknown as ReportData
+  const make = (withNotes: boolean) =>
+    buildClientSnapshot({
+      report: withJournal,
+      tasks: [
+        { id: 'a', item_ids: ['client-1'] },
+        { id: 'b', item_ids: ['client-2'] },
+      ],
+      itemId: 'client-1',
+      client: 'А-Лизинг',
+      owner: 'Сергей',
+      color: 'label-2',
+      withNotes,
+    })
+
+  it('только записи этого клиента, задача за день — одной строкой, часы по дням', () => {
+    const s = make(false)
+    expect(s.v).toBe(2)
+    expect(s.color).toBe('label-2')
+    expect(s.journal).toEqual([{ date: '2026-10-05', label: '5 октября, понедельник', total: 1.5, rows: [{ title: 'Баннеры', hours: 1.5, notes: [] }] }])
+    expect(s.days?.[0].hours).toBe(1.5)
+    expect(JSON.stringify(s)).not.toContain('секрет')
+  })
+
+  it('комментарии — только с галочкой', () => {
+    expect(make(true).journal?.[0].rows[0].notes).toEqual(['Три варианта'])
+    expect(make(false).withNotes).toBe(false)
+  })
+})
