@@ -11,6 +11,8 @@ import { useActiveTimer, useStopTimer } from '../lib/queries/timer'
 import { formatClock, sessionHourPct, useTicker } from '../lib/time'
 import { formatCountdown, secondsLeft } from '../lib/focus'
 import { useFocusRun } from '../lib/queries/focus'
+import { TimerNoteButton } from './TimerNote'
+import { useTimerNotePreview } from '../lib/timerNote'
 
 /**
  * TimerDock — активная сессия всегда на виду, прикноплена к верху страницы (не к низу,
@@ -33,6 +35,7 @@ export function ActiveTimerBar() {
   const other = useOtherWorkspace(task?.workspace_id)
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const notePreview = useTimerNotePreview(activeTimer)
   const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === activeTimer?.task_id ? run : null
 
   if (!activeTimer || !task) return null
@@ -88,7 +91,10 @@ export function ActiveTimerBar() {
           )}
         </span>
         <span className="block truncate text-base font-medium text-text">{task.name}</span>
+        {notePreview && <span className="block truncate text-xs text-text-secondary">{notePreview}</span>}
       </Link>
+
+      <TimerNoteButton timer={activeTimer} />
 
       <Link
         to={focus ? '/focus' : `/tasks/${task.id}`}

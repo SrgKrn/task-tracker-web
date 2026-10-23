@@ -56,8 +56,18 @@ export const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 export async function sendTimerAction(action: TimerAction): Promise<TimerResult> {
   const { data, error } =
     action.kind === 'start'
-      ? await supabase.rpc('timer_start', { p_task_id: action.taskId, p_at: action.at, p_tz: timeZone() })
-      : await supabase.rpc('timer_stop', { p_at: action.at, p_tz: timeZone(), p_started_at: action.startedAt })
+      ? await supabase.rpc('timer_start', {
+          p_task_id: action.taskId,
+          p_at: action.at,
+          p_tz: timeZone(),
+          ...(action.note !== undefined ? { p_note: action.note } : {}),
+        })
+      : await supabase.rpc('timer_stop', {
+          p_at: action.at,
+          p_tz: timeZone(),
+          p_started_at: action.startedAt,
+          ...(action.note !== undefined ? { p_note: action.note } : {}),
+        })
   if (error) throw error
   return data as TimerResult
 }

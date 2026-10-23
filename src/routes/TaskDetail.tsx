@@ -16,6 +16,7 @@ import { PriorityField } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
+import { TimerNoteRow } from '../components/TimerNote'
 import { Button, ClientDot, Segmented, Sheet } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { formatDueDate, todayStr } from '../lib/period'
@@ -446,6 +447,7 @@ export function TaskDetail() {
               onStart={() => startTimer.mutate(task.id, { onError })}
               onStop={() => stopTimer.mutate(undefined, { onError })}
             />
+            {activeTimer?.task_id === task.id && <TimerNoteRow timer={activeTimer} />}
           </div>
         </div>
 

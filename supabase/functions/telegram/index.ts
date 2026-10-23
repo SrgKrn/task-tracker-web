@@ -269,8 +269,9 @@ Deno.serve(async (req) => {
       .delete()
       .eq('user_id', userId)
       .eq('started_at', timer.started_at)
-      .select('user_id')
+      .select('user_id, note')
     if (!taken?.length) return null
+    const note = String(taken[0].note ?? '').trim() || null
     const started = new Date(timer.started_at)
     const ended = new Date()
     // секунды: короткая сессия не пропадает в «0 мин»; минуты база посчитает сама
@@ -283,6 +284,7 @@ Deno.serve(async (req) => {
       ended_at: ended.toISOString(),
       duration_seconds: seconds,
       effective_date: localDate(started, timezone),
+      note,
     })
     return seconds / 60
   }
@@ -505,9 +507,10 @@ Deno.serve(async (req) => {
     const [{ data: entries }, { data: running }, { data: settings }] = await Promise.all([
       db
         .from('time_entries')
-        .select('task_id, duration_seconds, duration_minutes, workspace_id, entry_type, started_at')
+        .select('task_id, duration_seconds, duration_minutes, workspace_id, entry_type, started_at, note')
         .eq('user_id', userId)
-        .eq('effective_date', date),
+        .eq('effective_date', date)
+        .order('created_at'),
       db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle(),
       db.from('user_settings').select('planned_hours_per_day, show_time_block, work_days_per_week').eq('user_id', userId).maybeSingle(),
     ])
@@ -538,6 +541,15 @@ Deno.serve(async (req) => {
     }
     if (multi) {
       lines.push('', `Всего за день — ${hm(total)}`)
+    }
+    // комментарии к учёту за день — последние пять; служебную пометку старых версий не показываем
+    const spaceIds = new Set(targets.map((w) => w.id))
+    const notes = ((entries ?? []) as { task_id: string; workspace_id: string; note?: string | null }[])
+      .filter((e) => spaceIds.has(e.workspace_id) && e.note && e.note.trim() && e.note.trim() !== 'Manual correction')
+      .slice(-5)
+    if (notes.length) {
+      lines.push('', '💬 Комментарии:')
+      for (const e of notes) lines.push(`«${cut(world.title(e.task_id), 32)}» — ${cut(e.note!.trim().replace(/\s+/g, ' '), 90)}`)
     }
     const keyboard: Keyboard = { inline_keyboard: [] }
     if (running) {
@@ -670,12 +682,14 @@ Deno.serve(async (req) => {
     const world = await loadWorld(db, userId)
     const spaces = await workspacesOf(db, userId)
     const spaceName = new Map(spaces.map((w) => [w.id, w.name]))
-    const { data: running } = await db.from('active_timers').select('task_id, started_at').eq('user_id', userId).maybeSingle()
+    const { data: running } = await db.from('active_timers').select('task_id, started_at, note').eq('user_id', userId).maybeSingle()
     const keyboard: Keyboard = { inline_keyboard: [] }
     const lines: string[] = []
     if (running) {
       const mins = Math.round((Date.now() - new Date(running.started_at).getTime()) / 60_000)
       lines.push(`⏱ Идёт учёт: «${world.title(running.task_id)}» — ${hm(mins)}`)
+      const note = String(running.note ?? '').trim()
+      lines.push(note ? `💬 ${cut(note, 300)}` : 'Ответьте на это сообщение — текст станет комментарием к учёту.')
       const epoch = Math.floor(new Date(running.started_at).getTime() / 1000)
       keyboard.inline_keyboard.push([{ text: '⏹ Остановить', callback_data: `stop:${epoch}` }])
     } else {
@@ -811,8 +825,26 @@ Deno.serve(async (req) => {
 
       // текст — комментарий: к задаче идущего учёта или к выбранной
       const body = text.slice(0, 4000)
-      const { data: running } = await db.from('active_timers').select('task_id').eq('user_id', acc.user_id).maybeSingle()
+      const { data: running } = await db.from('active_timers').select('task_id, started_at, note').eq('user_id', acc.user_id).maybeSingle()
       const world = await loadWorld(db, acc.user_id)
+
+      // ответ на сообщение с кнопкой «Остановить» — комментарий к самому учёту, он уйдёт в историю
+      const stopButton = (msg.reply_to_message?.reply_markup?.inline_keyboard ?? [])
+        .flat()
+        .map((b: { callback_data?: string }) => String(b.callback_data ?? ''))
+        .find((d: string) => d.startsWith('stop:'))
+      if (stopButton) {
+        const epoch = Number(stopButton.split(':')[1])
+        if (!running || Math.floor(new Date(running.started_at).getTime() / 1000) !== epoch) {
+          await say(chatId, 'Этот учёт уже остановлен. Комментарий к прошлой записи можно поправить в приложении, в истории задачи.')
+          return
+        }
+        const note = [String(running.note ?? '').trim(), body.trim()].filter(Boolean).join('\n').slice(0, 2000)
+        await db.from('active_timers').update({ note }).eq('user_id', acc.user_id).eq('started_at', running.started_at)
+        await say(chatId, `💬 Дописал в комментарий учёта «${world.title(running.task_id)}». После остановки он останется в истории.`)
+        return
+      }
+
       if (running) {
         await db.from('comments').insert({ user_id: acc.user_id, task_id: running.task_id, body })
         await say(chatId, `💬 Добавил комментарий к «${world.title(running.task_id)}»`)

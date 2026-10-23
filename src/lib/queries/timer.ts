@@ -11,6 +11,7 @@ import {
   type TimerAction,
 } from '../timerQueue'
 import { entryNote } from '../notes'
+import { takeTimerNote } from '../timerNote'
 import { entrySeconds } from '../time'
 import type { ActiveTimer, TimeEntry } from '../types'
 
@@ -105,12 +106,18 @@ function useTimerMutation() {
 
 /** Начать учёт по задаче; идущий по другой задаче закрывается тем же запросом. */
 export function useStartTimer() {
+  const qc = useQueryClient()
   const m = useTimerMutation()
   return {
     isPending: m.isPending,
     mutate: (taskId: string, options?: MutateOptions) => {
       void currentUserId().then(
-        (userId) => m.mutate({ kind: 'start', userId, taskId, at: new Date().toISOString() }, options),
+        (userId) => {
+          // переключение на другую задачу закрывает идущий учёт — с его комментарием
+          const running = qc.getQueryData<ActiveTimer | null>(['active_timer'])
+          const note = running && running.task_id !== taskId ? takeTimerNote(running.started_at) : undefined
+          m.mutate({ kind: 'start', userId, taskId, at: new Date().toISOString(), note }, options)
+        },
         options?.onError,
       )
     },
@@ -127,7 +134,16 @@ export function useStopTimer() {
       const running = qc.getQueryData<ActiveTimer | null>(['active_timer'])
       void currentUserId().then(
         (userId) =>
-          m.mutate({ kind: 'stop', userId, at: new Date().toISOString(), startedAt: running?.started_at ?? null }, options),
+          m.mutate(
+            {
+              kind: 'stop',
+              userId,
+              at: new Date().toISOString(),
+              startedAt: running?.started_at ?? null,
+              note: takeTimerNote(running?.started_at),
+            },
+            options,
+          ),
         options?.onError,
       )
     },

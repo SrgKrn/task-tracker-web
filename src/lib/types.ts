@@ -213,6 +213,8 @@ export interface ActiveTimer {
   user_id: string
   task_id: string
   started_at: string
+  /** комментарий, пока учёт идёт; при остановке переходит в запись истории */
+  note?: string | null
 }
 
 export interface Comment {

@@ -8,8 +8,9 @@ import type { ActiveTimer, Task, TimeEntry } from './types'
  * её можно было проверить тестами.
  */
 export type TimerAction =
-  | { kind: 'start'; userId: string; taskId: string; at: string }
-  | { kind: 'stop'; userId: string; at: string; startedAt: string | null }
+  // note — последний комментарий закрываемого учёта; нет — сервер оставит сохранённый
+  | { kind: 'start'; userId: string; taskId: string; at: string; note?: string }
+  | { kind: 'stop'; userId: string; at: string; startedAt: string | null; note?: string }
 
 /** Нажатия из очереди поверх ответа сервера: без сети учёт на экране тот, что нажали. */
 export function projectTimer(timer: ActiveTimer | null, actions: TimerAction[]): ActiveTimer | null {
@@ -65,7 +66,7 @@ export function applyTimerLocally(
       ended_at: action.at,
       duration_seconds: seconds,
       duration_minutes: Math.round(seconds / 60),
-      note: null,
+      note: (action.note ?? closing.note ?? '').trim() || null,
       effective_date: day,
       created_at: action.at,
     }
