@@ -1,7 +1,7 @@
-import { buildReport, previousPeriod, type ReportData, type ReportOptions } from '../report'
+import { buildReport, previousPeriod, type FocusSessionInput, type ReportData, type ReportOptions } from '../report'
 import { supabase } from '../supabaseClient'
 import { activeWorkspaceId } from '../workspace'
-import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from '../types'
+import type { Comment, Group, GroupItem, PriorityMethod, Status, Task, TimeEntry } from '../types'
 import { normSettingsOf } from '../norm'
 
 /** местная полночь дня YYYY-MM-DD в ISO — граница для полей timestamptz */
@@ -45,7 +45,7 @@ export async function loadReport(args: {
   const start = localMidnightIso(from)
   const end = localMidnightIso(to, 1)
 
-  const [entries, comments, closed, first, settings] = await Promise.all([
+  const [entries, comments, closed, first, settings, focus, meetings] = await Promise.all([
     fetchAll<TimeEntry>((a, b) =>
       supabase
         .from('time_entries')
@@ -74,7 +74,33 @@ export async function loadReport(args: {
     ),
     supabase.from('time_entries').select('effective_date').eq('workspace_id', ws).order('effective_date').limit(1).maybeSingle(),
     // норма — пространства, а не профиля
-    supabase.from('workspaces').select('planned_hours_per_day, planned_hours_per_month, work_days_per_week, client_work').eq('id', ws).maybeSingle(),
+    supabase
+      .from('workspaces')
+      .select('planned_hours_per_day, planned_hours_per_month, work_days_per_week, client_work, priority_method')
+      .eq('id', ws)
+      .maybeSingle(),
+    // отрезки фокуса за период — у журнала нет пространства, свои задачи отберёт отчёт
+    fetchAll<FocusSessionInput>((a, b) =>
+      supabase
+        .from('focus_sessions')
+        .select('task_id, mode, started_at, ended_at, completed')
+        .gte('started_at', start)
+        .lt('started_at', end)
+        .order('id')
+        .range(a, b),
+    ),
+    // встречи, засчитанные в учёт: их записи помечаются в журнале и считаются отдельно
+    fetchAll<{ entry_id: string | null }>((a, b) =>
+      supabase
+        .from('calendar_events')
+        .select('entry_id')
+        .eq('status', 'logged')
+        .not('entry_id', 'is', null)
+        .gte('starts_at', localMidnightIso(from, -1))
+        .lt('starts_at', localMidnightIso(to, 2))
+        .order('id')
+        .range(a, b),
+    ),
   ])
   if (first.error) throw first.error
   if (settings.error) throw settings.error
@@ -104,6 +130,9 @@ export async function loadReport(args: {
     workDays: normSettingsOf(settings.data).workDays,
     generatedAt: new Date(),
     options,
+    focusSessions: focus,
+    meetingEntryIds: meetings.map((m) => m.entry_id).filter((id): id is string => !!id),
+    priorityMethod: ((settings.data as { priority_method?: PriorityMethod } | null)?.priority_method ?? 'none') as PriorityMethod,
   })
   return { ...report, logo }
 }

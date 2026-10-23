@@ -4,7 +4,10 @@ import { formatDayMonth, overlapsPeriod, toDateString } from './period'
 import { dayNormFor, DEFAULT_WORK_DAYS, isWorkday, periodNorm } from './norm'
 import { entryMinutes } from './time'
 import { billSprint, billTotals, resolveRate, type BillTotal, type SprintBill } from './rate'
-import type { Comment, Group, GroupItem, Status, Task, TimeEntry } from './types'
+import { stageTone, type StageTone } from './stage'
+import { EFFORT_LABEL, QUADRANT, effortOf, quadrantOf } from './priority'
+import { buildSegments, makeTile, type DayTile, type TileClient } from '../../supabase/functions/telegram/tile.ts'
+import type { Comment, Group, GroupItem, PriorityMethod, Status, Task, TimeEntry } from './types'
 
 /**
  * Отчёт за период: всё, что потом рисуют PDF и Excel, считается здесь — одним проходом
@@ -19,6 +22,26 @@ export interface ReportOptions {
   includeComments: boolean
   /** переработку сверх плана — в итог к оплате; по умолчанию нет: план — договорённость с клиентом */
   includeOvertime?: boolean
+  /** какие листы PDF печатать (0.42); «Сводка» — всегда. Нет поля — все */
+  sections?: ReportSections
+}
+
+export interface ReportSections {
+  clients: boolean
+  work: boolean
+  billing: boolean
+  journal: boolean
+}
+
+export const ALL_SECTIONS: ReportSections = { clients: true, work: true, billing: true, journal: true }
+
+/** отрезок фокуса из журнала focus_sessions */
+export interface FocusSessionInput {
+  task_id: string | null
+  mode: string
+  started_at: string
+  ended_at: string
+  completed: boolean
 }
 
 export interface ReportInput {
@@ -44,6 +67,12 @@ export interface ReportInput {
   /** момент сборки; его дата — «сегодня», по ней видно, что период ещё идёт */
   generatedAt: Date
   options: ReportOptions
+  /** отрезки фокуса за период (0.42); нет — блока «Фокус» нет */
+  focusSessions?: FocusSessionInput[]
+  /** id записей, засчитанных из встреч календаря */
+  meetingEntryIds?: string[]
+  /** методика приоритетов пространства — для блока «По методике» */
+  priorityMethod?: PriorityMethod
 }
 
 export interface DayPoint {
@@ -112,6 +141,13 @@ export interface SprintRow {
   group: SprintGroup
   /** сумма к оплате; null — ставка не задана ни у спринта, ни у клиента */
   bill: SprintBill | null
+  /** клиент спринта — как точка в строке задачи (ключ ClientRow) */
+  clientKey: string
+  /** цвет этапа: как чип в приложении */
+  stageTone: StageTone | null
+  /** подзадачи: закрыто / всего */
+  subDone: number
+  subTotal: number
 }
 
 export interface JournalRow {
@@ -128,6 +164,55 @@ export interface JournalDay {
   weekday: string
   total: number
   rows: JournalRow[]
+  /** записи дня по порядку — для листа «Журнал» (0.42) */
+  entries: JournalEntry[]
+}
+
+/** одна запись учёта в журнале: время, задача, комментарий и откуда она взялась */
+export interface JournalEntry {
+  start: string
+  end: string
+  title: string
+  clientKey: string
+  hours: number
+  note: string | null
+  tag: 'meeting' | 'pomodoro' | 'deep' | 'manual' | null
+}
+
+/** клиент — как точка в строке задачи и пятно на плитке дня */
+export interface ClientRow {
+  key: string
+  name: string
+  /** 'label-1'…'label-8'; null — нейтральный */
+  color: string | null
+  hours: number
+  prevHours: number
+  /** часы по дням периода — в порядке ReportData.days */
+  byDay: number[]
+  /** к оплате по валютам (по спринтам этого клиента) */
+  money: { currency: string; amount: number }[]
+  /** ставка, если у всех спринтов клиента одна */
+  rate: { value: number; currency: string } | null
+}
+
+/** из чего сложился учёт (0.42) */
+export interface WorkSummary {
+  /** таймер без фокуса и встреч */
+  timer: number
+  focus: number
+  meetings: number
+  manual: number
+  pomodoro: number
+  deep: number
+  meetingCount: number
+  /** самый длинный заход таймера, часы */
+  longest: number
+}
+
+export interface MethodSplit {
+  method: Exclude<PriorityMethod, 'none'>
+  title: string
+  rows: { key: string; label: string; hours: number; tone: 'danger' | 'accent' | 'info' | 'neutral' }[]
 }
 
 export interface EntryRecord {
@@ -208,6 +293,15 @@ export interface ReportData {
   billing: BillTotal[]
 
   composition: { timer: number; added: number; removed: number; sessions: number; manualCount: number }
+  /** 0.42: клиенты с цветами, «когда идёт работа», плитки дней, фокус и встречи, методика */
+  clients: ClientRow[]
+  /** часы таймера: [день недели пн…вс][час 0…23] */
+  heat: number[][]
+  tiles: { date: string; tile: DayTile }[]
+  work: WorkSummary
+  method: MethodSplit | null
+  /** прогноз на месяц по темпу будних дней; только пока месяц идёт */
+  forecast: { hours: number; monthNorm: number | null; pace: number } | null
   checks: ReportChecks | null
   journal: JournalDay[]
   records: EntryRecord[]
@@ -439,6 +533,20 @@ export function buildReport(input: ReportInput): ReportData {
     const t = taskById.get(taskId)
     return t?.parent_id ? (taskById.get(t.parent_id) ?? t) : t
   }
+  // клиент — как точка в строке задачи и пятно плитки дня: первое значение «в строке» с
+  // цветом; у подзадачи без своего — значение спринта (src/lib/dayTile.ts tileClientOf)
+  const NO_CLIENT: TileClient = { key: 'none', name: 'Без клиента', color: null }
+  const clientOf = (taskId: string): TileClient => {
+    const task = taskById.get(taskId)
+    if (!task) return NO_CLIENT
+    for (const t of [task, task.parent_id ? taskById.get(task.parent_id) : undefined]) {
+      if (!t) continue
+      const values = model.valuesOf(t).filter((v) => v.group.show_in_list)
+      const v = values.find((x) => x.item.color) ?? values[0]
+      if (v) return { key: v.item.id, name: v.item.name, color: v.item.color ?? null }
+    }
+    return NO_CLIENT
+  }
 
   const current = input.entries.filter((e) => e.effective_date >= from && e.effective_date <= to)
   const previous = input.entries.filter((e) => e.effective_date >= prev.from && e.effective_date <= prev.to)
@@ -599,8 +707,13 @@ export function buildReport(input: ReportInput): ReportData {
       const over = plan > 0 ? Math.max(0, factTotal - plan) : 0
       const factPeriod = toHours(headPeriodMinutes.get(t.id) ?? 0)
       const bill = billSprint(resolveRate(t, input.items, groupOrder), plan, factTotal, factPeriod)
+      const subs = children.get(t.id) ?? []
       return {
         bill,
+        clientKey: clientOf(t.id).key,
+        stageTone: status ? stageTone(status, statuses) : null,
+        subDone: subs.filter((c) => !!(c.status_id && statusById.get(c.status_id)?.is_final)).length,
+        subTotal: subs.length,
         id: t.id,
         name: t.name.trim(),
         outer: valueName(t, outerGroup),
@@ -716,6 +829,7 @@ export function buildReport(input: ReportInput): ReportData {
       weekday: WEEKDAYS_SHORT[parseDate(date).getDay()],
       total: rows.reduce((s, r) => s + r.hours, 0),
       rows: rows.sort((a, b) => b.hours - a.hours),
+      entries: [],
     }))
 
   // ── все записи плоско — для сводных таблиц в Excel
@@ -753,6 +867,188 @@ export function buildReport(input: ReportInput): ReportData {
         .sort((a, b) => b.hours - a.hours)
     : []
 
+  // ── 0.42: клиенты, часы суток, плитки, фокус и встречи, методика, прогноз
+  const dayIndex = new Map(days.map((d, i) => [d, i]))
+  const clientMap = new Map<string, ClientRow>()
+  const clientRow = (c: TileClient) => {
+    let row = clientMap.get(c.key)
+    if (!row) {
+      row = { key: c.key, name: c.name, color: c.color, hours: 0, prevHours: 0, byDay: days.map(() => 0), money: [], rate: null }
+      clientMap.set(c.key, row)
+    }
+    return row
+  }
+  for (const e of current) {
+    const row = clientRow(clientOf(e.task_id))
+    const h = toHours(entryMinutes(e))
+    row.hours += h
+    const i = dayIndex.get(e.effective_date)
+    if (i !== undefined) row.byDay[i] += h
+  }
+  for (const e of previous) clientRow(clientOf(e.task_id)).prevHours += toHours(entryMinutes(e))
+  const withOverMoney = options.includeOvertime === true
+  for (const sp of sprints) {
+    if (!sp.bill) continue
+    const row = clientMap.get(sp.clientKey)
+    if (!row) continue
+    const amount = sp.bill.amount + (withOverMoney ? sp.bill.overAmount : 0)
+    const m = row.money.find((x) => x.currency === sp.bill!.currency)
+    if (m) m.amount += amount
+    else row.money.push({ currency: sp.bill.currency, amount })
+  }
+  for (const row of clientMap.values()) {
+    const bills = sprints.filter((sp) => sp.clientKey === row.key && sp.bill).map((sp) => sp.bill!)
+    if (bills.length && bills.every((b) => b.rate === bills[0].rate && b.currency === bills[0].currency)) {
+      row.rate = { value: bills[0].rate, currency: bills[0].currency }
+    }
+  }
+  const clients = [...clientMap.values()]
+    .filter((c) => Math.abs(c.hours) > 0.004 || Math.abs(c.prevHours) > 0.004)
+    .sort((a, b) => b.hours - a.hours || b.prevHours - a.prevHours)
+
+  // когда идёт работа: часы таймера по дням недели и часам суток (у правок времени суток нет)
+  const heat = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
+  for (const e of current) {
+    if (e.entry_type !== 'timer' || !e.started_at || !e.ended_at) continue
+    let t = new Date(e.started_at).getTime()
+    const end = new Date(e.ended_at).getTime()
+    while (t < end) {
+      const d = new Date(t)
+      const next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime()
+      const stop = Math.min(next, end)
+      heat[(d.getDay() + 6) % 7][d.getHours()] += (stop - t) / 3_600_000
+      t = stop
+    }
+  }
+
+  // плитки дней — та же раскладка, что у плитки на «Сегодня» и в мозаике
+  const entriesByDay = new Map<string, TimeEntry[]>()
+  for (const e of current) entriesByDay.set(e.effective_date, [...(entriesByDay.get(e.effective_date) ?? []), e])
+  const tiles = dayPoints.map((pt) => ({
+    date: pt.date,
+    tile: makeTile(buildSegments(entriesByDay.get(pt.date) ?? [], clientOf), pt.norm * 60, pt.date === today),
+  }))
+
+  // фокус и встречи
+  const meetingIds = new Set(input.meetingEntryIds ?? [])
+  const startMs = parseDate(from).getTime()
+  const endMs = parseDate(addDays(to, 1)).getTime()
+  const sessions = (input.focusSessions ?? []).filter((f) => {
+    const t = new Date(f.started_at).getTime()
+    return t >= startMs && t < endMs && (!f.task_id || taskById.has(f.task_id))
+  })
+  const focusHours = sessions.reduce((a, f) => a + (new Date(f.ended_at).getTime() - new Date(f.started_at).getTime()) / 3_600_000, 0)
+  const meetingEntries = current.filter((e) => meetingIds.has(e.id))
+  const meetingHours = toHours(meetingEntries.reduce((a, e) => a + entryMinutes(e), 0))
+  const timerEntries = current.filter((e) => e.entry_type === 'timer')
+  const work: WorkSummary = {
+    timer: Math.max(0, composition.timer - focusHours - meetingHours),
+    focus: Math.min(focusHours, composition.timer),
+    meetings: meetingHours,
+    manual: composition.added + composition.removed,
+    pomodoro: sessions.filter((f) => f.completed && f.mode === 'pomodoro').length,
+    deep: sessions.filter((f) => f.completed && f.mode !== 'pomodoro').length,
+    meetingCount: meetingEntries.length,
+    longest: timerEntries.reduce((a, e) => Math.max(a, toHours(entryMinutes(e))), 0),
+  }
+
+  // часы по методике: отметки задачи, у подзадачи без своих — спринта
+  let method: MethodSplit | null = null
+  const pm = input.priorityMethod ?? 'none'
+  if (pm !== 'none' && total > 0) {
+    const byKey = new Map<string, number>()
+    const keyOf = (e: TimeEntry): string => {
+      const t = taskById.get(e.task_id)
+      const h = headOf(e.task_id)
+      if (!t) return 'none'
+      if (pm === 'eisenhower') {
+        const q = quadrantOf(t, today) ?? (h ? quadrantOf(h, today) : null)
+        return q ? `q${q}` : 'none'
+      }
+      if (pm === 'abcde') return t.abc_letter ?? h?.abc_letter ?? 'none'
+      if (pm === '135') return effortOf(t)
+      return t.frog_date === e.effective_date || (h && h.frog_date === e.effective_date) ? 'frog' : 'none'
+    }
+    for (const e of current) byKey.set(keyOf(e), (byKey.get(keyOf(e)) ?? 0) + toHours(entryMinutes(e)))
+    type Tone = MethodSplit['rows'][number]['tone']
+    const defs: Record<Exclude<PriorityMethod, 'none'>, [string, string, Tone][]> = {
+      eisenhower: [
+        ['q1', QUADRANT[1].hint, 'danger'],
+        ['q2', QUADRANT[2].hint, 'accent'],
+        ['q3', QUADRANT[3].hint, 'info'],
+        ['q4', QUADRANT[4].hint, 'neutral'],
+        ['none', 'Без отметки', 'neutral'],
+      ],
+      abcde: [
+        ['A', 'A — обязательно', 'danger'],
+        ['B', 'B — желательно', 'accent'],
+        ['C', 'C — приятно', 'info'],
+        ['D', 'D — поручить', 'neutral'],
+        ['E', 'E — убрать', 'neutral'],
+        ['none', 'Без буквы', 'neutral'],
+      ],
+      '135': [
+        ['big', EFFORT_LABEL.big.one, 'danger'],
+        ['medium', EFFORT_LABEL.medium.one, 'accent'],
+        ['small', EFFORT_LABEL.small.one, 'info'],
+      ],
+      frog: [
+        ['frog', 'Лягушка дня', 'accent'],
+        ['none', 'Остальное', 'neutral'],
+      ],
+    }
+    const titles: Record<Exclude<PriorityMethod, 'none'>, string> = {
+      eisenhower: 'Матрица Эйзенхауэра',
+      abcde: 'Метод ABCDE',
+      '135': 'Правило 1-3-5',
+      frog: 'Съешь лягушку',
+    }
+    method = {
+      method: pm,
+      title: titles[pm],
+      rows: defs[pm]
+        .map(([key, label, tone]) => ({ key, label, tone, hours: byKey.get(key) ?? 0 }))
+        // у матрицы все четыре клетки остаются; в остальных методиках пустые строки не нужны
+        .filter((row) => (pm === 'eisenhower' && row.key !== 'none') || Math.abs(row.hours) > 0.004),
+    }
+  }
+
+  // прогноз на месяц: только пока целый месяц ещё идёт — по темпу прошедших рабочих дней
+  let forecast: ReportData['forecast'] = null
+  if (whole && today >= from && today < to) {
+    const passed = dayPoints.filter((pt) => pt.date <= today && !pt.weekend).length
+    const ahead = dayPoints.filter((pt) => pt.date > today && !pt.weekend).length
+    const pace = passed > 0 ? total / passed : 0
+    forecast = { hours: total + pace * ahead, monthNorm: target?.hours ?? null, pace }
+  }
+
+  // журнал по записям: время, откуда запись (встреча, фокус, вручную) и комментарий
+  const focusModeAt = (e: TimeEntry): 'pomodoro' | 'deep' | null => {
+    if (!e.started_at) return null
+    const t = new Date(e.started_at).getTime()
+    const f = sessions.find((x) => x.task_id === e.task_id && Math.abs(new Date(x.started_at).getTime() - t) < 120_000)
+    return f ? (f.mode === 'pomodoro' ? 'pomodoro' : 'deep') : null
+  }
+  const journalEntries = new Map<string, JournalEntry[]>()
+  const ordered = [...current].sort((a, b) => (a.started_at ?? a.created_at).localeCompare(b.started_at ?? b.created_at))
+  for (const e of ordered) {
+    const task = taskById.get(e.task_id)
+    const head = headOf(e.task_id)
+    const title = task?.parent_id && head ? `${head.name.trim()} › ${task.name.trim()}` : (task?.name.trim() ?? 'Удалённая задача')
+    const timer = e.entry_type === 'timer'
+    const entry: JournalEntry = {
+      start: timer ? localTime(e.started_at) : '',
+      end: timer ? localTime(e.ended_at) : '',
+      title,
+      clientKey: clientOf(e.task_id).key,
+      hours: toHours(entryMinutes(e)),
+      // у встречи заметка — её название, его заменяет метка «встреча»
+      note: meetingIds.has(e.id) || !options.includeComments ? null : entryNote(e),
+      tag: meetingIds.has(e.id) ? 'meeting' : !timer ? 'manual' : focusModeAt(e),
+    }
+    journalEntries.set(e.effective_date, [...(journalEntries.get(e.effective_date) ?? []), entry])
+  }
+
   const report: ReportData = {
     from,
     to,
@@ -774,7 +1070,11 @@ export function buildReport(input: ReportInput): ReportData {
     target,
     dayNorm,
     weekdays,
-    avgPerWeekday: weekdays > 0 ? total / weekdays : null,
+    // пока период идёт — среднее по прошедшим рабочим дням, иначе оно занижено будущими
+    avgPerWeekday: (() => {
+      const n = today >= from && today <= to ? days.filter((d) => d <= today && !isWeekend(d)).length : weekdays
+      return n > 0 ? total / n : null
+    })(),
     daysWithEntries: new Set(current.filter((e) => entryMinutes(e) > 0).map((e) => e.effective_date)).size,
     closedCount: [...closedIds].filter((id) => headIds.has(id)).length,
     inWorkCount: sprints.length,
@@ -790,10 +1090,17 @@ export function buildReport(input: ReportInput): ReportData {
     sprints,
     billing: billTotals(sprints.map((s) => s.bill), input.options.includeOvertime === true),
     composition,
+    clients,
+    heat,
+    tiles,
+    work,
+    method,
+    forecast,
     checks,
     journal,
     records,
   }
+  for (const day of report.journal) day.entries = journalEntries.get(day.date) ?? []
   report.insights = buildInsights(report, projectTotals)
   return report
 }

@@ -13,7 +13,7 @@ import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, S
 import { BUILD_TIME } from '../lib/appUpdate'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
-import type { ReportOptions } from '../lib/report'
+import { ALL_SECTIONS, type ReportOptions, type ReportSections } from '../lib/report'
 import { useGroupItems, useGroups } from '../lib/queries/groups'
 import { loadReport } from '../lib/queries/report'
 import { describeError, useToast } from '../lib/Toast'
@@ -190,12 +190,13 @@ function loadExportOptions(): ReportOptions {
         includeChecks: parsed.includeChecks === true,
         includeComments: parsed.includeComments === true,
         includeOvertime: parsed.includeOvertime === true,
+        sections: { ...ALL_SECTIONS, ...(parsed.sections ?? {}) },
       }
     }
   } catch {
     // приватный режим или испорченное значение — берём значения по умолчанию
   }
-  return { includeChecks: false, includeComments: false, includeOvertime: false }
+  return { includeChecks: false, includeComments: false, includeOvertime: false, sections: ALL_SECTIONS }
 }
 
 function ExportSection() {
@@ -247,7 +248,19 @@ function ExportSection() {
   const { data: items = [] } = useGroupItems()
   const { data: statuses = [] } = useStatuses()
 
-  function setOption(key: keyof ReportOptions, value: boolean) {
+  function setSection(key: keyof ReportSections, value: boolean) {
+    setOptions((prev) => {
+      const next = { ...prev, sections: { ...ALL_SECTIONS, ...prev.sections, [key]: value } }
+      try {
+        localStorage.setItem(EXPORT_OPTIONS_KEY, JSON.stringify(next))
+      } catch {
+        // не смогли запомнить — выбор листов сбросится при следующем открытии
+      }
+      return next
+    })
+  }
+
+  function setOption(key: 'includeChecks' | 'includeComments' | 'includeOvertime', value: boolean) {
     setOptions((prev) => {
       const next = { ...prev, [key]: value }
       try {
@@ -333,8 +346,8 @@ function ExportSection() {
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs leading-[1.5] text-text-secondary">
-          Итоги и ритм, разрезы по группам, спринты против плана, журнал по дням. PDF — чтобы
-          читать и отправлять, Excel — чтобы разбирать самому.
+          Сводка с нормой и прогнозом, клиенты и спринты, как шла работа, журнал с комментариями.
+          PDF — чтобы читать и отправлять, Excel — чтобы разбирать самому.
         </span>
       </div>
       {!canExport ? (
@@ -357,6 +370,38 @@ function ExportSection() {
           value={to}
           onChange={(v) => setTo(v ?? todayStr())}
         />
+      </div>
+      {/* листы PDF (0.42): «Сводка» всегда, остальные — по выбору; выбор запоминается */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm text-text-secondary">Листы в PDF</span>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="inline-flex h-8 items-center rounded-full bg-surface-sunken px-3 text-sm text-text-secondary">Сводка</span>
+          {(
+            [
+              ['clients', 'Клиенты и спринты'],
+              ['work', 'Как шла работа'],
+              ['billing', 'К оплате'],
+              ['journal', 'Журнал'],
+            ] as const
+          )
+            .filter(([key]) => key !== 'billing' || clientWork)
+            .map(([key, title]) => {
+              const on = (options.sections ?? ALL_SECTIONS)[key]
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setSection(key, !on)}
+                  className={`hit-44 inline-flex h-8 items-center rounded-full border px-3 text-sm ${
+                    on ? 'border-accent bg-accent-soft text-accent-text' : 'border-border text-text-secondary'
+                  }`}
+                >
+                  {title}
+                </button>
+              )
+            })}
+        </div>
       </div>
       <div className="-my-1 flex flex-col">
         {/* вся строка — цель нажатия, как у «Ежедневной» в карточке задачи */}

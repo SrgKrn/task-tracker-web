@@ -205,3 +205,100 @@ describe('buildReport — сумма к оплате', () => {
     expect(r.sprints[0].bill).toBeNull()
   })
 })
+
+describe('buildReport — дашборд 0.42', () => {
+  const group = { id: 'g', name: 'Клиенты', item_name: 'Клиент', sort_order: 0, show_in_list: true } as unknown as Group
+  const north = { id: 'n', name: 'Студия Север', group_id: 'g', color: 'label-1', hourly_rate: 30, rate_currency: 'BYN' } as unknown as GroupItem
+  const cafe = { id: 'k', name: 'Кофейня', group_id: 'g', color: 'label-2', hourly_rate: null, rate_currency: null } as unknown as GroupItem
+  const task = (id: string, item: string, extra: Partial<Task> = {}) =>
+    ({
+      id,
+      name: id,
+      item_ids: [item],
+      status_id: null,
+      planned_hours: 10,
+      fact_hours: 6,
+      start_date: '2026-10-01',
+      end_date: '2026-10-31',
+      parent_id: null,
+      hourly_rate: null,
+      rate_currency: null,
+      abc_letter: null,
+      ...extra,
+    }) as unknown as Task
+  // 5 октября (пн) 10:00–12:00 у Севера, 14:00–15:00 у Кофейни; 6-го — встреча Кофейни
+  const at = (d: string, h: number) => new Date(2026, 9, Number(d.slice(8)), h).toISOString()
+  const timer = (id: string, taskId: string, d: string, h0: number, h1: number) =>
+    ({
+      id,
+      task_id: taskId,
+      entry_type: 'timer',
+      started_at: at(d, h0),
+      ended_at: at(d, h1),
+      duration_seconds: (h1 - h0) * 3600,
+      duration_minutes: (h1 - h0) * 60,
+      note: id === 'e1' ? 'Три варианта' : null,
+      effective_date: d,
+      created_at: at(d, h1),
+    }) as TimeEntry
+  const r = buildReport({
+    from: '2026-10-01',
+    to: '2026-10-31',
+    tasks: [task('s1', 'n', { abc_letter: 'A' }), task('s2', 'k')],
+    groups: [group],
+    items: [north, cafe],
+    statuses: [],
+    entries: [timer('e1', 's1', '2026-10-05', 10, 12), timer('e2', 's2', '2026-10-05', 14, 15), timer('e3', 's2', '2026-10-06', 17, 18)],
+    comments: [],
+    closedTaskIds: [],
+    firstEntryDate: '2026-01-01',
+    perDay: 8,
+    perMonth: null,
+    generatedAt: new Date(2026, 9, 7, 12, 0),
+    options: { includeChecks: false, includeComments: true },
+    focusSessions: [{ task_id: 's1', mode: 'pomodoro', started_at: at('2026-10-05', 10), ended_at: new Date(2026, 9, 5, 10, 25).toISOString(), completed: true }],
+    meetingEntryIds: ['e3'],
+    priorityMethod: 'abcde',
+  })
+
+  it('клиенты — как точка в строке задачи: цвет, часы по дням, сумма по ставке', () => {
+    expect(r.clients.map((c) => [c.name, c.color, c.hours])).toEqual([
+      ['Студия Север', 'label-1', 2],
+      ['Кофейня', 'label-2', 2],
+    ])
+    expect(r.clients[0].byDay[4]).toBe(2)
+    expect(r.clients[0].rate).toEqual({ value: 30, currency: 'BYN' })
+    expect(r.clients[1].money).toEqual([])
+  })
+
+  it('часы суток: понедельник 10 и 11, вторник 17', () => {
+    expect(r.heat[0][10]).toBeCloseTo(1)
+    expect(r.heat[0][11]).toBeCloseTo(1)
+    expect(r.heat[1][17]).toBeCloseTo(1)
+  })
+
+  it('фокус и встречи считаются отдельно от таймера, журнал помечает записи', () => {
+    expect(r.work.pomodoro).toBe(1)
+    expect(r.work.meetings).toBe(1)
+    expect(r.work.meetingCount).toBe(1)
+    expect(r.work.timer).toBeCloseTo(4 - 1 - 25 / 60)
+    const tags = r.journal.flatMap((d) => d.entries.map((e) => e.tag))
+    expect(tags).toEqual(['pomodoro', null, 'meeting'])
+    expect(r.journal[0].entries[0].note).toBe('Три варианта')
+  })
+
+  it('методика ABCDE: пустые буквы не печатаются', () => {
+    expect(r.method?.rows.map((x) => [x.key, x.hours])).toEqual([
+      ['A', 2],
+      ['none', 2],
+    ])
+  })
+
+  it('пока месяц идёт — среднее по прошедшим рабочим дням и прогноз', () => {
+    // 1–7 октября: рабочих дней 5 (чт, пт, пн, вт, ср)
+    expect(r.avgPerWeekday).toBeCloseTo(4 / 5)
+    expect(r.forecast?.pace).toBeCloseTo(4 / 5)
+    expect(r.tiles).toHaveLength(31)
+    expect(r.tiles[4].tile.total).toBeCloseTo(180)
+  })
+})
