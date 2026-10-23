@@ -41,6 +41,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
           type="button"
           onClick={onCreate}
           aria-label="Новая задача"
+          data-tip="new-task"
           className="flex h-[var(--tabbar-h)] w-[var(--tabbar-h)] shrink-0 items-center justify-center rounded-full bg-accent text-on-accent shadow-popover"
         >
           <Plus size={24} />

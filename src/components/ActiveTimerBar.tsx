@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTip } from '../lib/tips'
 import { useQueryClient } from '@tanstack/react-query'
 import { switchWorkspace, useOtherWorkspace } from '../lib/workspace'
 import { Ring, StopGlyph } from './Ring'
@@ -37,6 +38,9 @@ export function ActiveTimerBar() {
   const qc = useQueryClient()
   const notePreview = useTimerNotePreview(activeTimer)
   const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === activeTimer?.task_id ? run : null
+
+  // подсказка о комментарии — когда учёт идёт уже пару минут: человек точно занят делом
+  useTip('timer-note', !!activeTimer && !!task && Date.now() - new Date(activeTimer.started_at).getTime() >= 120_000)
 
   if (!activeTimer || !task) return null
   if (location.pathname === `/tasks/${task.id}`) return null

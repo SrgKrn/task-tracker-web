@@ -58,6 +58,7 @@ export function TimerNoteButton({ timer, className = '' }: { timer: ActiveTimer;
         type="button"
         onClick={() => setOpen(true)}
         aria-label={has ? 'Изменить комментарий к учёту' : 'Комментарий к учёту'}
+        data-tip="timer-note"
         aria-haspopup="dialog"
         className={`hit-44 relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--timer-border)] bg-surface text-[var(--timer-text)] ${className}`}
       >
@@ -80,6 +81,7 @@ export function TimerNoteRow({ timer }: { timer: ActiveTimer }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
+        data-tip="timer-note"
         className="flex min-h-11 w-full items-center gap-2.5 rounded-sm border border-[var(--timer-border)] bg-[var(--timer-bg)] px-3 py-2 text-left"
       >
         <Comment size={15} className="shrink-0 text-[var(--timer-text)]" />

@@ -79,6 +79,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
             collapsed ? 'justify-center' : 'px-2.5'
           }`}
           aria-label="Новая задача"
+          data-tip="new-task"
           title="Новая задача · C"
         >
           <Plus size={16} />

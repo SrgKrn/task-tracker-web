@@ -17,6 +17,7 @@ import { NewTaskSheet } from './NewTaskSheet'
 import { ReleaseBanner } from './ReleaseBanner'
 import { StaleTimerBanner } from './StaleTimerBanner'
 import { FocusBreakBar, FocusWatcher } from './FocusWatcher'
+import { TipHost } from './Tip'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
 function useAppEffects() {
@@ -74,6 +75,8 @@ function SignedIn() {
       <BottomTabBar onCreate={() => setSheetOpen(true)} />
       <ReleaseBanner />
       <FocusWatcher />
+      {/* подсказки рядом с функциями (0.43) */}
+      <TipHost />
       <NewTaskSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
       {/* ⌘K и горячие клавиши — для клавиатуры; на телефоне просто не срабатывают */}
       <AppCommands onCreate={openCreate} />

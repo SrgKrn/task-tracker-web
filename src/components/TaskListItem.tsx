@@ -250,6 +250,7 @@ export function TaskListItem({
           onTouchEnd={onTouchEnd}
         >
           <div className="flex items-center gap-3">
+            <span data-tip="timer" className="shrink-0 rounded-full">
             <Ring
               size={32}
               pct={done ? 100 : pct}
@@ -266,6 +267,7 @@ export function TaskListItem({
             >
               {isRunning ? <StopGlyph /> : done ? <Check size={14} className="text-success" /> : <PlayGlyph />}
             </Ring>
+            </span>
 
             <Link
               to={`/tasks/${task.id}`}

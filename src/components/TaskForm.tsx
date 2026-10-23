@@ -133,6 +133,7 @@ export function TaskForm({
     return (
       <>
       <ListGroup clip={false}>
+        <div data-tip="stage">
         <PickerField
           row
           label="Этап"
@@ -148,6 +149,7 @@ export function TaskForm({
             </Link>
           }
         />
+        </div>
         <button
           type="button"
           onClick={() => setEditingPlan(true)}

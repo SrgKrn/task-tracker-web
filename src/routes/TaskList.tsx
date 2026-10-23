@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,7 @@ import { usePriorityMethod } from '../lib/queries/userSettings'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
-import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useDragHintSeen, useTaskSort, type TaskSort } from '../lib/taskSort'
+import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
 import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
@@ -113,7 +114,11 @@ export function TaskList() {
     sort === 'due' ? 'created' : sort === 'created' ? (method !== 'none' ? 'method' : 'manual') : sort === 'method' ? 'manual' : 'due'
   // перетаскивание — в любом режиме: не в «своём порядке» режим переключится сам
   const moveTask = useMoveTask()
-  const hintSeen = useDragHintSeen()
+  // подсказки 0.43: перетаскивание — когда задач стало пять (была строкой текста над
+  // списком); группы — когда задач три, а групп ещё нет
+  const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 3
+  useTip('drag', sorted.length >= 5)
+  useTip('groups', suggestGroups)
 
   const groups = useMemo(() => {
     const withSum = (id: string, title: string, items: Task[]) => ({
@@ -294,8 +299,16 @@ export function TaskList() {
         </div>
         <Switch on={hideCompleted} onChange={setHideCompleted} label="Без готовых" />
       </div>
-      {!hintSeen && sorted.length > 1 && (
-        <p className="-mt-1 px-5 pb-2.5 text-sm text-text-tertiary">Удерживайте задачу, чтобы перетащить её на другое место</p>
+      {suggestGroups && (
+        <div className="px-5 pb-2.5">
+          <Link
+            to="/groups"
+            data-tip="groups"
+            className="flex min-h-11 items-center gap-2 rounded-md border border-dashed border-border-strong px-3.5 text-sm font-medium text-accent-text active:bg-surface-sunken lg:hover:bg-surface-hover"
+          >
+            + Разложить по проектам
+          </Link>
+        </div>
       )}
 
       <div className="flex flex-col gap-4 px-5 pb-2">
@@ -318,8 +331,8 @@ export function TaskList() {
                   </div>
                 )}
                 <SortableGroup enabled={group.items.length > 1} onDrop={(from, to) => moveTask(group.items, from, to)}>
-                {group.items.map((task) => (
-                  <div key={task.id} data-sort-row>
+                {group.items.map((task, i) => (
+                  <div key={task.id} data-sort-row data-tip={i === 0 ? 'drag' : undefined}>
                   <TaskListItem
                     task={task}
                     badge={<PriorityBadge task={task} method={method} today={today} />}
@@ -358,7 +371,7 @@ export function TaskList() {
                     </Link>
                   }
                 >
-                  Задача — это спринт или работа по клиенту с планом часов.
+                  Достаточно названия. План, срок, этап и группы можно добавить потом.
                 </EmptyState>
               ) : (
                 <EmptyState title="Ничего не нашлось">Измените запрос или сбросьте фильтры.</EmptyState>

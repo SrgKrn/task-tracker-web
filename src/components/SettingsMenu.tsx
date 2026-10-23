@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { TabFocus } from './Icon'
-import { Bell, Calendar as CalendarIcon, Check, ChevronRight, Comment as CommentIcon, Download, Drive as DriveIcon, History, Mosaic as MosaicIcon, Send, Shield, Sparkle } from './Icon'
+import { Book, Bell, Calendar as CalendarIcon, Check, ChevronRight, Comment as CommentIcon, Download, Drive as DriveIcon, History, Mosaic as MosaicIcon, Send, Shield, Sparkle } from './Icon'
 import { ClientDot, ListGroup, Overline } from './ui'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
@@ -10,7 +10,10 @@ import { usePush, type PushState } from '../lib/push'
 import { useCalendarSources } from '../lib/queries/calendar'
 import { useStatuses } from '../lib/queries/statuses'
 import { METHODS } from '../lib/priority'
-import { useActiveWorkspace } from '../lib/workspace'
+import { useActiveWorkspace, useWorkspaces } from '../lib/workspace'
+import { TIP_IDS, TIPS, TipWhen, type TipId } from '../lib/tips'
+import { useTasks } from '../lib/queries/tasks'
+import { useUseDays, useUserSettings } from '../lib/queries/userSettings'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
@@ -86,6 +89,9 @@ interface MenuItem {
   value?: string
   /** пункт подсвечен и на вложенных экранах: «Группы» — и на /groups/…, и на /items/… */
   match?: string[]
+  /** подсказка 0.43 у пункта и её условие */
+  tip?: TipId
+  tipWhen?: boolean
 }
 
 /** Пункты меню со значениями справа — одна конфигурация для телефона и для колонки десктопа. */
@@ -97,6 +103,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
   const { data: telegram } = useTelegramStatus()
   const { data: calendars = [] } = useCalendarSources()
   const { data: google } = useGoogleStatus()
+  const useDays = useUseDays()
+  const { data: workspaces = [] } = useWorkspaces()
+  const { data: tasks = [] } = useTasks()
+  const { data: settings } = useUserSettings()
+  // статьи справки, подсказку к которым человек ещё не видел, — «новое»
+  const helpIds = new Set(TIP_IDS.filter((id) => !(id in (settings?.tips ?? {}))).map((id) => TIPS[id].help))
   const { data: userPlan } = useUserPlan()
   const unreadReplies = useUnreadReplies()
   const { data: isAdmin = false } = useIsAdmin()
@@ -129,6 +141,8 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           glyph: <ClientDot color={ws?.color ?? 'label-1'} size={10} />,
           title: 'Пространства',
           value: ws?.name,
+          tip: 'workspaces',
+          tipWhen: workspaces.length === 1 && (useDays >= 14 || tasks.length >= 15),
         },
         {
           to: '/groups',
@@ -167,7 +181,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
     {
       title: 'Интеграции',
       items: [
-        { to: '/settings/telegram', glyph: <Send size={15} />, title: 'Telegram', value: tg },
+        { to: '/settings/telegram', glyph: <Send size={15} />, title: 'Telegram', value: tg, tip: 'telegram', tipWhen: useDays >= 5 && !!telegram && !telegram.linked },
         {
           to: '/settings/calendar',
           glyph: <CalendarIcon size={15} />,
@@ -198,6 +212,12 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
     {
       title: 'О приложении',
       items: [
+        {
+          to: '/settings/help',
+          glyph: <Book size={15} />,
+          title: 'Справка',
+          value: helpIds.size ? plural(helpIds.size, ['новая статья', 'новые статьи', 'новых статей']) : 'как пользоваться',
+        },
         {
           to: '/settings/tariff',
           glyph: TariffGlyph,
@@ -239,12 +259,14 @@ export function SettingsMenu() {
               <Link
                 key={item.to}
                 to={item.to}
+                data-tip={item.tip}
                 className="flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 active:bg-surface-sunken lg:hover:bg-surface-hover"
               >
                 <Glyph>{item.glyph}</Glyph>
                 <span className="min-w-0 flex-1 truncate text-base text-text">{item.title}</span>
                 {item.value && <span className="max-w-[45%] truncate text-sm text-text-secondary">{item.value}</span>}
                 <ChevronRight size={15} className="shrink-0 text-text-secondary" />
+                {item.tip && <TipWhen id={item.tip} when={!!item.tipWhen} />}
               </Link>
             ))}
           </ListGroup>

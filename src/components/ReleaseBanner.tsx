@@ -18,9 +18,12 @@ export function ReleaseBanner() {
 
   const seen = settings?.seen_release ?? null
   const unseen = isFetched && seen !== LATEST_RELEASE.version
-  // аккаунт заведён уже после выхода версии — показывать «что нового» нечему
+  // аккаунт заведён после выхода версии или меньше недели назад — показывать «что нового»
+  // нечему: новичку функции объясняют подсказки (0.43). Раньше сравнивали только даты, и
+  // аккаунт, созданный вечером накануне по UTC, видел баннер в первую же минуту
+  const created = session?.user.created_at
   const freshAccount =
-    !!session?.user.created_at && session.user.created_at.slice(0, 10) >= LATEST_RELEASE.date
+    !!created && (created.slice(0, 10) >= LATEST_RELEASE.date || Date.now() - new Date(created).getTime() < 7 * 86_400_000)
 
   useEffect(() => {
     if (unseen && freshAccount) markSeen.mutate(LATEST_RELEASE.version)

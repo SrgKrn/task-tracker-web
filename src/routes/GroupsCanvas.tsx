@@ -664,8 +664,6 @@ function PresetMergeSheet({
 }) {
   const apply = useApplyPreset()
   const { showError, showSuccess } = useToast()
-  const [settings, setSettings] = useState(false)
-  const [examples, setExamples] = useState(false)
   const preset = presetByCode(code)!
   const fresh = preset.groups.filter((g) => !existing.includes(g.name.toLowerCase()))
   return (
@@ -678,30 +676,12 @@ function PresetMergeSheet({
         ))}
       </span>
       {fresh.length ? (
-        <PresetStructure preset={preset} examples={examples} skip={existing} merge />
+        <PresetStructure preset={preset} examples={false} skip={existing} merge />
       ) : (
         <p className="text-base text-text-secondary">
           Все группы этого пресета у вас уже есть — добавятся только недостающие значения.
         </p>
       )}
-      <ListGroup>
-        <div className="flex min-h-14 items-center gap-3 px-3.5 py-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block text-base text-text">Методика, фокус и норма пресета</span>
-            <span className="block text-sm text-text-secondary">
-              {METHODS_SHORT[preset.settings.priority_method]} · {preset.settings.focus_mode === '9030' ? '90/30' : 'Pomodoro'} · {preset.normLabel}
-            </span>
-          </span>
-          <Switch on={settings} onChange={setSettings} ariaLabel="Поставить методику, фокус и норму пресета" />
-        </div>
-        <div className="flex min-h-14 items-center gap-3 px-3.5 py-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block text-base text-text">Примеры задач</span>
-            <span className="block text-sm text-text-secondary">Вместе с примерными значениями</span>
-          </span>
-          <Switch on={examples} onChange={setExamples} ariaLabel="Добавить примеры задач" />
-        </div>
-      </ListGroup>
       <p className="text-sm text-text-secondary">Ваши группы, связи и этапы останутся как есть.</p>
       <Button
         variant="primary"
@@ -709,7 +689,7 @@ function PresetMergeSheet({
         loading={apply.isPending}
         onClick={() =>
           apply.mutate(
-            { preset: presetPayload(preset, {}, { merge: true }), options: { settings, examples }, workspace: activeWorkspaceId() },
+            { preset: presetPayload(preset, {}, { merge: true }), options: { settings: false, examples: false }, workspace: activeWorkspaceId() },
             {
               onError: (e) => showError(describeError(e)),
               onSuccess: (r) => {
@@ -732,7 +712,6 @@ function PresetMergeSheet({
 
 const GROUPS: [string, string, string] = ['группа', 'группы', 'групп']
 const TASK_WORDS: [string, string, string] = ['задача', 'задачи', 'задач']
-const METHODS_SHORT: Record<string, string> = { none: 'Без методики', eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' }
 
 /** Те же связи на уровень глубже: клиенты и их проекты деревом. Нажатие — карточка значения. */
 function ValuesTree({ model }: { model: GroupModel }) {

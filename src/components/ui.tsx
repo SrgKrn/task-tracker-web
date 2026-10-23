@@ -152,6 +152,7 @@ export function Segmented<T extends string>({
   onChange,
   className = '',
   stretch = false,
+  tip,
 }: {
   value: T
   options: { value: T; label: string }[]
@@ -159,11 +160,14 @@ export function Segmented<T extends string>({
   className?: string
   /** вкладки на всю ширину: каждая — равная доля, крупная цель для пальца */
   stretch?: boolean
+  /** якорь подсказки 0.43 (data-tip) */
+  tip?: string
 }) {
   return (
     <div
       className={`flex shrink-0 gap-0.5 rounded-md bg-surface-sunken p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
       role="tablist"
+      data-tip={tip}
     >
       {options.map((o) => {
         const active = o.value === value

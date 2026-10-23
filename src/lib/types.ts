@@ -247,6 +247,12 @@ export interface UserSettings {
   onboarded_at: string | null
   /** свой логотип в отчёте — PNG data URL (0.41, «Про») */
   report_logo?: string | null
+  /** закрытые подсказки 0.43: {id: когда}; одни на все устройства */
+  tips?: Record<string, string>
+  /** «Показывать подсказки» в справке */
+  tips_enabled?: boolean
+  /** сколько разных дней человек открывал приложение — для подсказок «на 3-й день» */
+  use_days?: number
   /** последняя версия, чью историю изменений пользователь уже видел */
   seen_release: string | null
   calendar_feed_token: string | null

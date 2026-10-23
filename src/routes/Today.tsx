@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -8,6 +9,7 @@ import { DayByMethod } from '../components/DayByMethod'
 import { MethodInfoSheet, PriorityBadge } from '../components/Priority'
 import { TodayTile } from '../components/DayTile'
 import { MeetingsBlock } from '../components/MeetingsBlock'
+import { NewTaskSheet } from '../components/NewTaskSheet'
 import { Ring } from '../components/Ring'
 import { ArrowRight, History } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
@@ -29,7 +31,7 @@ import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { usePriorityMethod, useUserSettings } from '../lib/queries/userSettings'
+import { usePriorityMethod, useUseDays, useUserSettings } from '../lib/queries/userSettings'
 import { useDayTiles, useMinuteClock } from '../lib/dayTile'
 import { useActiveWorkspace } from '../lib/workspace'
 import { useMediaQuery } from '../lib/device'
@@ -42,7 +44,8 @@ import type { Task } from '../lib/types'
 
 const METHOD_SHORT = { eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' } as const
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
-const DEFAULT_DAY_NORM = 8
+/** готовые названия первой задачи: касание открывает окно, где название уже вписано */
+const FIRST_TASKS = ['Разобрать почту', 'Спланировать неделю', 'Позвонить']
 
 export function Today() {
   const today = todayStr()
@@ -97,7 +100,15 @@ export function Today() {
   // учёт по задаче другого пространства в кольцо этого дня не идёт: у пространств своя норма
   const liveHours = activeTimer && taskById.has(activeTimer.task_id) ? elapsedHours(activeTimer.started_at) : 0
   const dayFact = (factByDay.get(today) ?? 0) + liveHours
-  const dayNorm = dayNormFor(today, normSettingsOf(workspace)) ?? DEFAULT_DAY_NORM
+  /*
+   * Без нормы кольцо раньше молча считало от 8 ч («0 из 8 ч» у «Личных дел», где нормы нет).
+   * Теперь честно: кольцо копит время и делает круг за каждый час, подпись — «без нормы».
+   */
+  const normOfDay = dayNormFor(today, normSettingsOf(workspace))
+  const hasNorm = normOfDay != null && normOfDay > 0
+  const dayNorm = hasNorm ? normOfDay : 0
+  const ringPct = hasNorm ? (dayFact / dayNorm) * 100 : dayFact > 0 ? ((dayFact % 1) || 1) * 100 : 0
+  const [firstTask, setFirstTask] = useState<string | null>(null)
 
   // плитка дня: идущий учёт дорисовывается раз в минуту, а не каждую секунду
   const { data: settings, isLoading: settingsLoading } = useUserSettings()
@@ -106,6 +117,19 @@ export function Today() {
   const minute = useMinuteClock(!!activeTimer)
   const { tiles: todayTiles } = useDayTiles(today, today, today, minute)
   const todayTile = todayTiles.get(today)
+
+  /*
+   * Подсказки 0.43 — когда человек дошёл до функции: первая задача, первый учёт, кольцо
+   * после первого записанного времени (если нормы нет), плитка с первого часа; методика и
+   * хронология — с 3-го и 5-го дня пользования.
+   */
+  const useDays = useUseDays()
+  useTip('new-task', !isLoading && tasks.length === 0)
+  useTip('timer', !isLoading && tasks.length > 0 && !activeTimer)
+  useTip('ring', !hasNorm && !activeTimer && (factByDay.get(today) ?? 0) > 0)
+  useTip('tile', showTile && !!todayTile && dayFact >= 1)
+  useTip('method', method === 'none' && useDays >= 3 && tasks.length > 0)
+  useTip('history', useDays >= 5)
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
@@ -238,7 +262,7 @@ export function Today() {
     [tasks, statusById],
   )
 
-  const maxDayValue = Math.max(dayNorm, ...week.days.map((d) => factByDay.get(d) ?? 0))
+  const maxDayValue = Math.max(dayNorm, 1, ...week.days.map((d) => factByDay.get(d) ?? 0))
   const normPct = (dayNorm / maxDayValue) * 100
   const weekTotal = week.days.reduce((sum, d) => sum + (factByDay.get(d) ?? 0), 0) + liveHours
   const dayOver = dayFact - dayNorm
@@ -261,6 +285,7 @@ export function Today() {
         </div>
         <Link
           to="/history"
+          data-tip="history"
           aria-label="Хронология: учёт, правки и изменения по дням"
           className="hit-44 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:hover:bg-surface-hover"
         >
@@ -270,12 +295,14 @@ export function Today() {
         <ProfileButton />
       </div>
       <div className="flex items-start gap-[18px] px-5 pt-3 pb-[18px]">
-        <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--bg)" marker>
+        <span data-tip="ring" className="shrink-0 rounded-full">
+        <Ring size={104} pct={ringPct} state="running" centerBg="var(--bg)" marker={hasNorm}>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-xl font-medium text-text">{formatHoursRu(dayFact)}</span>
-            <span className="text-sm text-text-secondary">из {formatHoursRu(dayNorm)} ч</span>
+            <span className="text-sm text-text-secondary">{hasNorm ? `из ${formatHoursRu(dayNorm)} ч` : 'без нормы'}</span>
           </span>
         </Ring>
+        </span>
 
         <div className="flex min-h-26 min-w-0 flex-1 flex-col justify-center">
           {/* плитка дня — крупным квадратом справа от заголовка и строк дня: своей строки не занимает */}
@@ -290,12 +317,18 @@ export function Today() {
               <div className="flex flex-col gap-1.5 text-sm">
                 <span className="flex items-center gap-2 text-text">
                   <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
-                  <span>
-                    {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
-                    {dayOver >= 0.05 && (
-                      <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
-                    )}
-                  </span>
+                  {hasNorm ? (
+                    <span>
+                      {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+                      {dayOver >= 0.05 && (
+                        <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <Link to="/settings/plan" className="text-accent-text underline decoration-dotted underline-offset-4">
+                      Задать норму дня
+                    </Link>
+                  )}
                 </span>
                 <span className="flex items-center gap-2 text-text-secondary">
                   <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
@@ -304,7 +337,12 @@ export function Today() {
               </div>
             </div>
             {/* на узких телефонах (до 360 px) плитка меньше, иначе «Осталось …» ломается по буквам */}
-            {showTile && todayTile && <TodayTile tile={todayTile} day={today} size={narrow ? 64 : 80} />}
+            {/* без нормы и без учёта плитка — пустая рамка: новичку она ничего не говорит */}
+            {showTile && todayTile && (hasNorm || dayFact > 0) && (
+              <span data-tip="tile" className="shrink-0 rounded-sm">
+                <TodayTile tile={todayTile} day={today} size={narrow ? 64 : 80} />
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -322,11 +360,13 @@ export function Today() {
           <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
         </div>
         <div className="relative flex h-14 items-end gap-1.5 lg:h-24">
-          <span
-            className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
-            style={{ bottom: `${normPct}%` }}
-            aria-hidden
-          />
+          {hasNorm && (
+            <span
+              className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
+              style={{ bottom: `${normPct}%` }}
+              aria-hidden
+            />
+          )}
           {week.days.map((day) => {
             const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
             const isToday = day === today
@@ -363,7 +403,7 @@ export function Today() {
                 </span>
                 <span
                   className={`tabular font-mono text-xs ${
-                    isToday ? 'text-accent-text' : fact > dayNorm ? 'text-text' : 'text-text-secondary'
+                    isToday ? 'text-accent-text' : hasNorm && fact > dayNorm ? 'text-text' : 'text-text-secondary'
                   }`}
                 >
                   {fact > 0 ? formatHoursRu(fact) : '—'}
@@ -444,7 +484,9 @@ export function Today() {
       <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
         <div className="flex min-h-11 items-center justify-between">
           <span className="flex items-center gap-2">
-            <Overline>На сегодня</Overline>
+            <span data-tip="method" className="rounded-xs">
+              <Overline>На сегодня</Overline>
+            </span>
             {/* напоминание, как работает выбранная методика, — в одно касание */}
             {method !== 'none' && (
               <button
@@ -512,7 +554,39 @@ export function Today() {
         )}
 
         {/* день ещё не спланирован: главное действие экрана — выбрать, не листая весь список */}
-        {!isLoading && todayTasks.length === 0 && (
+        {/* самый первый заход: задач нет вовсе — не «спланируйте день», а «создайте первую» */}
+        {!isLoading && tasks.length === 0 && (
+          <div className="flex flex-col items-start gap-2.5 rounded-md border border-dashed border-border-strong px-4 py-4">
+            <span className="text-md font-semibold text-text">Что сделать первым?</span>
+            <span className="text-sm text-text-secondary">Хватит одного названия. Нажмите на пример или на «+».</span>
+            <span className="flex flex-wrap gap-1.5">
+              {FIRST_TASKS.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setFirstTask(name)}
+                  className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text active:bg-surface-sunken lg:hover:bg-surface-hover"
+                >
+                  {name}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setFirstTask('')}
+                className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text-secondary active:bg-surface-sunken lg:hover:bg-surface-hover"
+              >
+                Своё…
+              </button>
+            </span>
+          </div>
+        )}
+        <NewTaskSheet
+          open={firstTask !== null}
+          onClose={() => setFirstTask(null)}
+          preset={{ title: firstTask ?? '', planDate: today }}
+        />
+
+        {!isLoading && tasks.length > 0 && todayTasks.length === 0 && (
           <button
             type="button"
             onClick={() => setPlanning(true)}

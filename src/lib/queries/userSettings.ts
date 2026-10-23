@@ -147,3 +147,55 @@ export function useApplyPreset() {
     onSettled: () => qc.invalidateQueries(),
   })
 }
+
+/* ── подсказки (0.43) ────────────────────────────────────────────────── */
+
+/** Закрыть подсказку: отметка дописывается в профиль, экран забывает её сразу. */
+export function useMarkTipSeen() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('tip_seen', { p_id: id })
+      if (error) throw error
+    },
+    onMutate: (id) =>
+      qc.setQueryData<UserSettings | null>(['user_settings'], (s) =>
+        s ? { ...s, tips: { ...(s.tips ?? {}), [id]: new Date().toISOString() } } : s,
+      ),
+  })
+}
+
+export function useSetTipsEnabled() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (on: boolean) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, tips_enabled: on })
+      if (error) throw error
+    },
+    onMutate: (on) => qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, tips_enabled: on } : s)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}
+
+/** «Показать подсказки заново» */
+export function useResetTips() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('tips_reset')
+      if (error) throw error
+    },
+    onMutate: () => qc.setQueryData<UserSettings | null>(['user_settings'], (s) => (s ? { ...s, tips: {}, tips_enabled: true } : s)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['user_settings'] }),
+  })
+}
+
+/** Дни пользования: условия подсказок «на 3-й день». До миграции — 0. */
+export function useUseDays(): number {
+  const { data } = useUserSettings()
+  return data?.use_days ?? 0
+}

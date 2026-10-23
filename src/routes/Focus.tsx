@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTip } from '../lib/tips'
 import { Link } from 'react-router-dom'
 import { ProfileButton } from '../components/Avatar'
 import { WorkspaceTag } from '../components/Workspaces'
@@ -87,6 +88,8 @@ export function Focus() {
   }
 
   const ringColor = isWork ? 'var(--accent)' : 'var(--success)'
+  // подсказка о фокусе — пока он не запущен
+  useTip('focus', !isLoading && !run)
   const mainLabel = !run ? 'Начать' : run.state === 'running' ? 'Пауза' : run.state === 'ready' ? 'Начать работу' : 'Продолжить'
 
   return (
@@ -126,7 +129,7 @@ export function Focus() {
           <Ring size={232} pct={Math.max(0, Math.min(100, progress * 100))} color={ringColor} centerBg="var(--bg)">
             <span className="flex flex-col items-center gap-1">
               <span className="text-sm font-semibold" style={{ color: ringColor }}>
-                {run?.state === 'ready' ? 'Ждёт старта' : isWork ? (mode === 'pomodoro' ? `Помидор ${n} из ${of}` : `Глубокая работа ${n}`) : PHASE_NAME[phase.kind]}
+                {run?.state === 'ready' ? 'Ждёт старта' : isWork ? (mode === 'pomodoro' ? `Pomodoro ${n} из ${of}` : `Глубокая работа ${n}`) : PHASE_NAME[phase.kind]}
               </span>
               <span className="tabular font-mono font-medium text-text" style={{ fontSize: 44, lineHeight: 1 }}>
                 {formatCountdown(left)}
@@ -137,7 +140,7 @@ export function Focus() {
             </span>
           </Ring>
           {mode === 'pomodoro' && (
-            <span className="flex gap-1.5" aria-label={`Помидор ${n} из ${of}`}>
+            <span className="flex gap-1.5" aria-label={`Pomodoro ${n} из ${of}`}>
               {Array.from({ length: of }, (_, i) => (
                 <span
                   key={i}
@@ -162,6 +165,7 @@ export function Focus() {
             type="button"
             disabled={action.isPending}
             onClick={main}
+            data-tip="focus"
             className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-on-accent shadow-popover disabled:opacity-60"
             aria-label={mainLabel}
           >

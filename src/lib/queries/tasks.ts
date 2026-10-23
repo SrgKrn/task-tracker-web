@@ -48,6 +48,8 @@ export interface NewTaskInput {
   start_date: string | null
   end_date: string | null
   is_daily?: boolean
+  /** день в плане «Сегодня» */
+  plan_date?: string | null
   duplicated_from?: string | null
   /** спринт, в который кладётся подзадача; значения групп база возьмёт у него */
   parent_id?: string | null

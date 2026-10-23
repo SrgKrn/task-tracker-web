@@ -13,6 +13,7 @@ import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask, useTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer } from '../lib/queries/timer'
 import { formatHoursMinutes } from '../lib/time'
+import { todayStr } from '../lib/period'
 import type { Task } from '../lib/types'
 
 const LAST_ITEMS_KEY = 'semternity.lastItems'
@@ -54,6 +55,8 @@ export interface NewTaskPreset {
   endDate?: string | null
   plan?: number
   itemIds?: string[] | null
+  /** сразу в план «Сегодня» */
+  planDate?: string | null
 }
 
 /**
@@ -86,7 +89,7 @@ export function NewTaskSheet({
   const model = useGroupModel()
   const createTask = useCreateTask()
   const startTimer = useStartTimer()
-  const { data: tasks = [] } = useTasks()
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks()
   const { data: statuses = [] } = useStatuses()
   const { data: activeTimer } = useActiveTimer()
   const { data: runningTask } = useTask(activeTimer?.task_id)
@@ -131,12 +134,15 @@ export function NewTaskSheet({
 
   // пока пользователь не выбрал сам — прошлый выбор (группы могли ещё грузиться при открытии)
   const effectiveItems = itemIds ?? initialItems(model)
-  // у подзадачи групп нет — их держит спринт; зато без спринта её не создать
+  // «Подзадача» — только когда есть во что вкладывать (0.43): у новичка переключатель
+  // ничего не значит. Слово «спринт» тоже ушло из окна — подзадача кладётся в задачу
+  const canNest = sprintOptions.length > 0 || kind === 'subtask'
+  // у подзадачи групп нет — их держит задача; зато без задачи её не создать
   const missing = kind === 'subtask' ? [] : missingRequired(model, effectiveItems)
   const canCreate = !!title.trim() && missing.length === 0 && (kind === 'task' || !!parentId)
   const whyDisabled =
     kind === 'subtask' && !parentId
-      ? 'Выберите спринт'
+      ? 'Выберите задачу'
       : missing.length
         ? `Выберите: ${missing.map((g) => g.item_name.toLowerCase()).join(', ')}`
         : undefined
@@ -156,6 +162,9 @@ export function NewTaskSheet({
         planned_hours: plan,
         start_date: null,
         end_date: endDate,
+        // самая первая задача пространства — сразу в план дня: иначе новичок вернётся на
+        // «Сегодня» и не найдёт её там
+        plan_date: preset?.planDate ?? (kind === 'task' && !tasksLoading && tasks.length === 0 ? todayStr() : null),
       },
       {
         onError: (e) => showError(describeError(e)),
@@ -180,15 +189,17 @@ export function NewTaskSheet({
         </Button>
       }
     >
-        <Segmented
-          stretch
-          value={kind}
-          onChange={setKind}
-          options={[
-            { value: 'task', label: 'Задача или спринт' },
-            { value: 'subtask', label: 'Подзадача' },
-          ]}
-        />
+        {canNest && (
+          <Segmented
+            stretch
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: 'task', label: 'Задача' },
+              { value: 'subtask', label: 'Подзадача' },
+            ]}
+          />
+        )}
 
         <input
           autoFocus={focusOnOpen}
@@ -204,12 +215,12 @@ export function NewTaskSheet({
             и создание нового значения */}
         {kind === 'subtask' ? (
           <PickerField
-            label="Спринт"
+            label="Внутри задачи"
             items={sprintOptions}
             value={parentId}
             onChange={setParentId}
-            placeholder="Выберите спринт"
-            hint="Группы подзадача берёт у спринта"
+            placeholder="Выберите задачу"
+            hint="Группы подзадача берёт у своей задачи"
           />
         ) : (
           <GroupFields model={model} value={effectiveItems} onChange={setItemIds} />

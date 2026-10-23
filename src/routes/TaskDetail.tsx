@@ -16,6 +16,7 @@ import { PriorityField } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { TimerButton } from '../components/TimerButton'
+import { useTip } from '../lib/tips'
 import { TimerNoteRow } from '../components/TimerNote'
 import { Button, ClientDot, Segmented, Sheet } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
@@ -101,6 +102,11 @@ export function TaskDetail() {
   const isRunning = activeTimer?.task_id === id
   // учёт идёт по подзадаче: кольцо спринта растёт вместе с ней, хотя кнопка здесь «Начать»
   const runningInside = !!task && !isRunning && runningWithin(task, subtasks, activeTimer?.task_id)
+  // подсказки 0.43: учёт — пока ничего не идёт; этап — когда по задаче уже есть факт;
+  // состав — у большой задачи или когда задач стало много
+  useTip('timer', !!task && !activeTimer)
+  useTip('stage', !!task && task.fact_hours > 0)
+  useTip('subtasks', !!task && !task.parent_id && (task.planned_hours >= 4 || allTasks.length >= 5))
   useTicker(isRunning || runningInside)
 
   // спринт → подзадача → спринт: карточка та же, меняется только id, и без этого новая
@@ -441,12 +447,14 @@ export function TaskDetail() {
             {subtasks.length > 0 && (
               <span className="-mt-1.5 text-sm text-text-secondary">в самом спринте {formatHoursMinutes(task.fact_hours)}</span>
             )}
-            <TimerButton
-              taskId={task.id}
-              activeTimer={activeTimer}
-              onStart={() => startTimer.mutate(task.id, { onError })}
-              onStop={() => stopTimer.mutate(undefined, { onError })}
-            />
+            <div data-tip="timer" className="rounded-sm">
+              <TimerButton
+                taskId={task.id}
+                activeTimer={activeTimer}
+                onStart={() => startTimer.mutate(task.id, { onError })}
+                onStop={() => stopTimer.mutate(undefined, { onError })}
+              />
+            </div>
             {activeTimer?.task_id === task.id && <TimerNoteRow timer={activeTimer} />}
           </div>
         </div>
@@ -490,6 +498,7 @@ export function TaskDetail() {
 
       {/* вкладки: состава у подзадачи нет — база держит ровно два уровня */}
       <div className="px-5 pt-4">
+        <div data-tip={isSubtask ? undefined : 'subtasks'} className="rounded-md">
         <Segmented
           stretch
           value={tab}
@@ -500,6 +509,7 @@ export function TaskDetail() {
             { value: 'files', label: 'Файлы' },
           ]}
         />
+        </div>
       </div>
 
       <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:flex-1 lg:overflow-y-auto">

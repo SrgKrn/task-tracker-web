@@ -1,4 +1,5 @@
 import { ProfileButton } from '../components/Avatar'
+import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -126,6 +127,9 @@ export function Dashboard() {
   const budgetForPeriod = periodNorm(from, to, norm)
   const dailyTarget = dayNormFor(from, norm)
 
+  // подсказки 0.43: сама «Сводка» — при первом заходе; отчёт — когда набралось 10 ч учёта
+  useTip('summary', true)
+  useTip('export', totalFactHours >= 10)
   const sumPct = totalPlanHours > 0 ? Math.round((totalFactHours / totalPlanHours) * 100) : 0
 
   const rows = useMemo(() => {
@@ -246,6 +250,7 @@ export function Dashboard() {
           {/* отчёт — там, где смотрят цифры, а не в «Ещё» */}
           <Link
             to="/settings/export"
+            data-tip="export"
             className="-mr-2 inline-flex h-[var(--tap)] items-center gap-1.5 rounded-sm px-3 font-medium text-text-secondary hover:bg-surface-sunken hover:text-text"
           >
             <Download size={16} />
@@ -258,6 +263,7 @@ export function Dashboard() {
             короткие: на 375 px три сегмента делят ширину поровну и не уезжают за край */}
         <Segmented<PresetKey>
           stretch
+          tip="summary"
           className="lg:order-2 lg:w-96"
           value={preset}
           onChange={setPreset}
@@ -538,7 +544,9 @@ export function Dashboard() {
             })}
           </ListGroup>
           )}
-            {rows.length === 0 && <EmptyState title="Пока пусто">За этот период нет ни плана, ни учёта.</EmptyState>}
+            {rows.length === 0 && <EmptyState title="Пока пусто">
+                Здесь появятся часы по задачам за период: сколько планировали и сколько записали. Запустите учёт в любой задаче.
+              </EmptyState>}
           </div>
         </div>
       )}

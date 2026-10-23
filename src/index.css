@@ -236,6 +236,27 @@ button:disabled {
   animation: toast-pop var(--duration-base) var(--ease-out);
 }
 
+/* подсказки 0.43: карточка проявляется, рамка вокруг кнопки мягко пульсирует */
+.tip-in {
+  animation: toast-pop var(--duration-base) var(--ease-out);
+}
+
+@keyframes tip-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.97);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.tip-ring {
+  animation: tip-ring 1.8s var(--ease-out) infinite;
+}
+
 @keyframes skeleton-pulse {
   50% {
     opacity: 0.45;
@@ -255,6 +276,8 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   .toast-pop,
+  .tip-in,
+  .tip-ring,
   .sheet-in,
   .overlay-in,
   .skeleton {
