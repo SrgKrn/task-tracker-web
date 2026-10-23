@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Eye, EyeOff } from '../components/Icon'
-import { FieldLabel, Logo, Segmented } from '../components/ui'
+import { FieldLabel, Segmented } from '../components/ui'
 import { PasswordRules } from '../components/PasswordRules'
 import { MIN_PASSWORD, isStrongPassword } from '../lib/password'
 import { supabase } from '../lib/supabaseClient'
@@ -148,11 +148,9 @@ export function Login() {
   return (
     <div className="safe-top-page safe-bottom flex min-h-full flex-col items-center justify-center px-5 py-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col items-center gap-3">
-          <Logo size={44} />
-          <span className="text-lg font-semibold tracking-[.01em] text-text">Semternity</span>
-        </div>
+        <IntroBrand />
 
+        <div className="intro-rise flex flex-col gap-6">
         {isAuthMode && (
           <Segmented
             className="self-center"
@@ -289,7 +287,41 @@ export function Login() {
             Аккаунт нужен только для синхронизации — данные видны вам одному.
           </p>
         )}
+        </div>
       </div>
+    </div>
+  )
+}
+
+const APP_NAME = 'Semternity'
+
+/** Лого и название с заставкой: дуга рисуется, ядро и точка проявляются, буквы набираются. */
+function IntroBrand() {
+  const color = 'var(--accent)'
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <svg width={44} height={44} viewBox="0 0 32 32" fill="none" className="shrink-0" aria-hidden="true" focusable="false">
+        <path
+          className="intro-arc"
+          pathLength={1}
+          d="M11.4 7.9a9 9 0 1 0 9.2 0"
+          stroke={color}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+        />
+        <g opacity={0.45}>
+          <circle className="intro-core" cx="16" cy="16" r="4.1" stroke={color} strokeWidth={0.8} />
+        </g>
+        <circle className="intro-dot" cx="16" cy="7" r="1.8" fill={color} />
+      </svg>
+      <span className="text-lg font-semibold tracking-[.01em] text-text">
+        <span className="sr-only">{APP_NAME}</span>
+        {[...APP_NAME].map((ch, i) => (
+          <span key={i} className="intro-letter" aria-hidden="true" style={{ '--i': i } as CSSProperties}>
+            {ch}
+          </span>
+        ))}
+      </span>
     </div>
   )
 }

@@ -402,3 +402,63 @@ button:disabled {
     animation-duration: var(--duration-base);
   }
 }
+
+/* Заставка входа (0.57): дуга лого прорисовывается, ядро и точка проявляются,
+   название набирается по буквам, затем снизу выезжает форма. Играет один раз —
+   экран входа не перемонтируется при переключении «Вход / Регистрация». */
+.intro-arc {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: intro-draw 0.75s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+}
+.intro-core {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: intro-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.55s forwards;
+}
+.intro-dot {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: intro-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s forwards;
+}
+.intro-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(6px);
+  filter: blur(3px);
+  animation: intro-letter 0.38s ease-out forwards;
+  animation-delay: calc(0.85s + var(--i) * 0.045s);
+}
+.intro-rise {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: intro-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 1.3s forwards;
+}
+@keyframes intro-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes intro-pop {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes intro-letter {
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes intro-rise {
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-arc,
+  .intro-core,
+  .intro-dot,
+  .intro-letter,
+  .intro-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    stroke-dashoffset: 0;
+  }
+}
