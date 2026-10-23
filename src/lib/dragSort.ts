@@ -49,3 +49,27 @@ export function reorderPatch(items: OrderPatch[], from: number, to: number): Ord
 export function compareManual(a: { sort_order: number; created_at: string }, b: { sort_order: number; created_at: string }) {
   return a.sort_order - b.sort_order || b.created_at.localeCompare(a.created_at)
 }
+
+/**
+ * Переход на «свой порядок» перетаскиванием (0.42). heads — головные задачи в том порядке,
+ * что сейчас на экране (весь список, со скрытыми и отфильтрованными), children — составы
+ * спринтов тоже в текущем порядке. Всем выдаются места 1, 2, 3…: после переключения
+ * режима список выглядит ровно так же, ничего не прыгает.
+ */
+export function freezeOrder(heads: { id: string }[], children: Iterable<{ id: string }[]>): Map<string, number> {
+  const order = new Map<string, number>()
+  heads.forEach((t, i) => order.set(t.id, i + 1))
+  for (const list of children) list.forEach((t, i) => order.set(t.id, i + 1))
+  return order
+}
+
+/**
+ * Заморозить порядок и сразу переставить строку: visible — строки той группы, где тянули,
+ * в порядке экрана. Возвращает все места, которые надо записать (заморозка + перестановка).
+ */
+export function freezeAndMove(order: Map<string, number>, visible: { id: string }[], from: number, to: number): OrderPatch[] {
+  const rows = visible.map((t) => ({ id: t.id, sort_order: order.get(t.id) ?? 0 }))
+  const result = new Map(order)
+  for (const p of reorderPatch(rows, from, to)) result.set(p.id, p.sort_order)
+  return [...result].map(([id, sort_order]) => ({ id, sort_order }))
+}

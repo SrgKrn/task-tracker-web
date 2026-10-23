@@ -158,11 +158,11 @@ export function useSetPlanDate() {
 export function useReorderTasks() {
   const qc = useQueryClient()
   return useMutation({
+    // одним запросом: при переходе на «свой порядок» мест больше сотни (миграция 0038)
     mutationFn: async (patch: OrderPatch[]) => {
-      for (const p of patch) {
-        const { error } = await supabase.from('tasks').update({ sort_order: p.sort_order }).eq('id', p.id)
-        if (error) throw error
-      }
+      if (!patch.length) return
+      const { error } = await supabase.rpc('reorder_tasks', { p_items: patch })
+      if (error) throw error
     },
     onMutate: async (patch) => {
       await qc.cancelQueries({ queryKey: ['tasks'] })

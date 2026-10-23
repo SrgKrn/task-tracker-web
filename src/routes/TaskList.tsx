@@ -10,13 +10,12 @@ import { Button, Chip, EmptyState, ListGroup, Overline, Segmented, Switch, TaskR
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod, todayStr } from '../lib/period'
 import { PriorityBadge } from '../components/Priority'
-import { comparePriority } from '../lib/priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useReorderTasks, useTasks } from '../lib/queries/tasks'
-import { compareManual, reorderPatch } from '../lib/dragSort'
-import { setTaskSort, useTaskSort, type TaskSort } from '../lib/taskSort'
+import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
+import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useDragHintSeen, useTaskSort, type TaskSort } from '../lib/taskSort'
+import { useMoveTask } from '../components/useMoveTask'
 import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
@@ -64,7 +63,7 @@ export function TaskList() {
   const method = usePriorityMethod()
   const today = todayStr()
   // методику выключили — порядок «по методике» больше ничего не значит
-  const sort = sortMode === 'method' && method === 'none' ? 'due' : sortMode
+  const sort = effectiveSort(sortMode, method)
   /** выбранные значения по группам; нет ключа — в группе выбрано всё */
   const [selected, setSelected] = useState<Record<string, Set<string>>>({})
 
@@ -107,29 +106,14 @@ export function TaskList() {
       )
   }, [heads, query, matchedInside, periodFrom, periodTo, hideCompleted, statusById, model, selected])
 
-  const sorted = useMemo(() => {
-    if (sort === 'created') return filtered
-    if (sort === 'manual') return [...filtered].sort(compareManual)
-    const byDue = (a: Task, b: Task) => {
-      if (!a.end_date && !b.end_date) return 0
-      if (!a.end_date) return 1
-      if (!b.end_date) return -1
-      return a.end_date.localeCompare(b.end_date)
-    }
-    // по методике — внутри равных по приоритету задач порядок по сроку
-    const byMethod = comparePriority(method, today)
-    return [...filtered].sort(sort === 'method' ? (a, b) => byMethod(a, b) || byDue(a, b) : byDue)
-  }, [filtered, sort, method, today])
-  const SORT_LABEL: Record<TaskSort, string> = {
-    due: 'По сроку',
-    created: 'По созданию',
-    method: 'По методике',
-    manual: 'Свой порядок',
-  }
+  const sorted = useMemo(() => sortHeads(filtered, sort, method, today), [filtered, sort, method, today])
+  const SORT_LABEL = TASK_SORT_LABEL
   // по кругу: срок → создание → методика (если выбрана) → свой порядок → срок
   const nextSort: TaskSort =
     sort === 'due' ? 'created' : sort === 'created' ? (method !== 'none' ? 'method' : 'manual') : sort === 'method' ? 'manual' : 'due'
-  const reorder = useReorderTasks()
+  // перетаскивание — в любом режиме: не в «своём порядке» режим переключится сам
+  const moveTask = useMoveTask()
+  const hintSeen = useDragHintSeen()
 
   const groups = useMemo(() => {
     const withSum = (id: string, title: string, items: Task[]) => ({
@@ -310,7 +294,7 @@ export function TaskList() {
         </div>
         <Switch on={hideCompleted} onChange={setHideCompleted} label="Без готовых" />
       </div>
-      {sort === 'manual' && (
+      {!hintSeen && sorted.length > 1 && (
         <p className="-mt-1 px-5 pb-2.5 text-sm text-text-tertiary">Удерживайте задачу, чтобы перетащить её на другое место</p>
       )}
 
@@ -333,13 +317,7 @@ export function TaskList() {
                     </span>
                   </div>
                 )}
-                <SortableGroup
-                  enabled={sort === 'manual'}
-                  onDrop={(from, to) => {
-                    const patch = reorderPatch(group.items, from, to)
-                    if (patch.length) reorder.mutate(patch, { onError })
-                  }}
-                >
+                <SortableGroup enabled={group.items.length > 1} onDrop={(from, to) => moveTask(group.items, from, to)}>
                 {group.items.map((task) => (
                   <div key={task.id} data-sort-row>
                   <TaskListItem

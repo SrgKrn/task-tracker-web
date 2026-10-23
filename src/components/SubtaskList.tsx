@@ -6,9 +6,8 @@ import { Check, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { describeError, useToast } from '../lib/Toast'
 import { useStatuses } from '../lib/queries/statuses'
-import { useCreateTask, useReorderTasks, useUpdateTask } from '../lib/queries/tasks'
-import { reorderPatch } from '../lib/dragSort'
-import { useTaskSort } from '../lib/taskSort'
+import { useCreateTask, useUpdateTask } from '../lib/queries/tasks'
+import { useMoveTask } from './useMoveTask'
 import { useDragSort } from './useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
@@ -46,9 +45,9 @@ export function SubtaskList({
   const onError = (error: unknown) => showError(describeError(error))
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
-  // свой порядок — подзадачи переставляются долгим нажатием, как задачи в списке
-  const manual = useTaskSort() === 'manual'
-  const reorder = useReorderTasks()
+  // подзадачи переставляются долгим нажатием в любом режиме, как задачи в списке;
+  // не в «своём порядке» режим переключится сам (useMoveTask)
+  const moveTask = useMoveTask()
   const boxRef = useRef<HTMLDivElement>(null)
   // «закрыть» ставит первый финальный статус. Если финальных нет вовсе,
   // закрывать нечем — кнопку не показываем, а не придумываем статус за пользователя
@@ -62,11 +61,8 @@ export function SubtaskList({
     : subtasks
   const hiddenCount = subtasks.length - visible.length
   useDragSort(boxRef, {
-    enabled: manual && visible.length > 1,
-    onDrop: (from, to) => {
-      const patch = reorderPatch(visible, from, to)
-      if (patch.length) reorder.mutate(patch, { onError })
-    },
+    enabled: visible.length > 1,
+    onDrop: (from, to) => moveTask(visible, from, to),
   })
 
   function toggleDone(task: Task, isDone: boolean) {
@@ -94,7 +90,7 @@ export function SubtaskList({
     <div
       id={id}
       ref={boxRef}
-      className={`flex flex-col gap-1.5 ${manual ? 'sortable' : ''} ${nested ? 'ml-4 border-l border-divider pt-0.5 pb-3 pl-3' : ''}`}
+      className={`flex flex-col gap-1.5 ${visible.length > 1 ? 'sortable' : ''} ${nested ? 'ml-4 border-l border-divider pt-0.5 pb-3 pl-3' : ''}`}
     >
       {visible.map((task) => {
         const status = task.status_id ? statusById.get(task.status_id) : undefined
