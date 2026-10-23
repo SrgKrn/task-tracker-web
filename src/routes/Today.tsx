@@ -32,6 +32,7 @@ import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/time
 import { usePriorityMethod, useUserSettings } from '../lib/queries/userSettings'
 import { useDayTiles, useMinuteClock } from '../lib/dayTile'
 import { useActiveWorkspace } from '../lib/workspace'
+import { useMediaQuery } from '../lib/device'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
@@ -101,6 +102,7 @@ export function Today() {
   // плитка дня: идущий учёт дорисовывается раз в минуту, а не каждую секунду
   const { data: settings, isLoading: settingsLoading } = useUserSettings()
   const showTile = !settingsLoading && settings?.show_time_block !== false
+  const narrow = useMediaQuery('(max-width: 359px)')
   const minute = useMinuteClock(!!activeTimer)
   const { tiles: todayTiles } = useDayTiles(today, today, today, minute)
   const todayTile = todayTiles.get(today)
@@ -247,7 +249,27 @@ export function Today() {
           не делала — дата уже над заголовком, аккаунт в «Ещё» */}
       {/* отступ под «чёлку» — на обёртке: класс safe-top перебивает собственный отступ блока */}
       <div className="safe-top">
-      <div className="relative flex items-start gap-[18px] px-5 pt-5 pb-[18px] lg:pt-6">
+      {/*
+        Верхняя строка: дата и пространство слева, хронология и профиль справа. Раньше кнопки
+        висели поверх шапки (absolute), и при одном пространстве плитка дня поднималась под
+        кружок профиля. Теперь у них своя строка — наложиться нечему.
+      */}
+      <div className="flex min-h-11 items-center gap-2 px-5 pt-3 lg:pt-4">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <Overline className="truncate">{formatTodayLabel()}</Overline>
+          <WorkspaceTag />
+        </div>
+        <Link
+          to="/history"
+          aria-label="Хронология: учёт, правки и изменения по дням"
+          className="hit-44 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:hover:bg-surface-hover"
+        >
+          <History size={17} />
+        </Link>
+        {/* профиль — бывшее «Ещё»: аккаунт, структура, методика, интеграции */}
+        <ProfileButton />
+      </div>
+      <div className="flex items-start gap-[18px] px-5 pt-3 pb-[18px]">
         <Ring size={104} pct={(dayFact / dayNorm) * 100} state="running" centerBg="var(--bg)" marker>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-xl font-medium text-text">{formatHoursRu(dayFact)}</span>
@@ -255,10 +277,7 @@ export function Today() {
           </span>
         </Ring>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {/* справа от даты — место под кнопку хронологии */}
-          <WorkspaceTag className="self-start" />
-          <Overline className="pr-24 lg:pr-10">{formatTodayLabel()}</Overline>
+        <div className="flex min-h-26 min-w-0 flex-1 flex-col justify-center">
           {/* плитка дня — крупным квадратом справа от заголовка и строк дня: своей строки не занимает */}
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -284,20 +303,10 @@ export function Today() {
                 </span>
               </div>
             </div>
-            {showTile && todayTile && <TodayTile tile={todayTile} day={today} size={80} />}
+            {/* на узких телефонах (до 360 px) плитка меньше, иначе «Осталось …» ломается по буквам */}
+            {showTile && todayTile && <TodayTile tile={todayTile} day={today} size={narrow ? 64 : 80} />}
           </div>
         </div>
-
-        {/* вход в хронологию — в углу, вне колонки: не раздвигает строку даты */}
-        <Link
-          to="/history"
-          aria-label="Хронология: учёт, правки и изменения по дням"
-          className="hit-44 absolute top-3.5 right-16 flex h-9 w-9 lg:right-4 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:top-4.5 lg:hover:bg-surface-hover"
-        >
-          <History size={17} />
-        </Link>
-        {/* профиль — бывшее «Ещё»: аккаунт, структура, методика, интеграции */}
-        <ProfileButton className="absolute top-3.5 right-4" />
       </div>
       </div>
 

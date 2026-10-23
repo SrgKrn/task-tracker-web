@@ -71,7 +71,7 @@ export function Focus() {
 
   const completed = sessions.filter((s) => s.completed)
   const workedMin = sessions.reduce((a, s) => a + (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000, 0)
-  const unit = mode === 'pomodoro' ? ['помидор', 'помидора', 'помидоров'] : ['глубокая сессия', 'глубокие сессии', 'глубоких сессий']
+  const unit = mode === 'pomodoro' ? ['pomodoro', 'pomodoro', 'pomodoro'] : ['глубокая сессия', 'глубокие сессии', 'глубоких сессий']
   const countLabel = (k: number) => {
     const a = k % 100, l = k % 10
     return `${k} ${a > 10 && a < 20 ? unit[2] : l === 1 ? unit[0] : l > 1 && l < 5 ? unit[1] : unit[2]}`

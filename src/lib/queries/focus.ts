@@ -19,7 +19,7 @@ export function useFocusRun() {
   })
 }
 
-/** Рабочие отрезки за день — «помидоров сегодня». */
+/** Рабочие отрезки за день — «pomodoro сегодня». */
 export function useFocusSessions(day = todayStr()) {
   return useQuery({
     queryKey: ['focus_sessions', day],

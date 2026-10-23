@@ -54,7 +54,7 @@ export function FocusSettingsForm() {
           <Choice label="Короткий перерыв" value={p.short} options={[3, 5, 10]} onChange={(v) => setSettings({ ...settings, pomodoro: { ...p, short: v } })} />
           <Choice label="Длинный перерыв" value={p.long} options={[15, 20, 30]} onChange={(v) => setSettings({ ...settings, pomodoro: { ...p, long: v } })} />
           <Choice
-            label="Помидоров до длинного перерыва"
+            label="Pomodoro до длинного перерыва"
             value={p.cycles}
             options={[3, 4, 5]}
             unit=""
