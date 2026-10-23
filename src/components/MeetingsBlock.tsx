@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Check, ChevronDown, Close } from './Icon'
+import { Link, useNavigate } from 'react-router-dom'
+import { Check, ChevronDown, Close, Plus } from './Icon'
+import { NewTaskSheet, type NewTaskPreset } from './NewTaskSheet'
 import { PickerField } from './PickerField'
-import { Overline } from './ui'
+import { Overline, Switch } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { useGroupModel } from '../lib/groups'
-import { useCalendarEvents, useLogMeeting, useSetMeetingStatus } from '../lib/queries/calendar'
+import { useCalendarEvents, useLinkMeetingTask, useLogMeeting, useSetMeetingStatus } from '../lib/queries/calendar'
+import { toDateString } from '../lib/period'
 import { useStatuses } from '../lib/queries/statuses'
 import { useTasks } from '../lib/queries/tasks'
 import { useStartTimer } from '../lib/queries/timer'
 import { formatHoursMinutes } from '../lib/time'
-import type { ActiveTimer, CalendarEvent, TimeEntry } from '../lib/types'
+import type { ActiveTimer, CalendarEvent, Task, TimeEntry } from '../lib/types'
 
 function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
@@ -46,6 +48,8 @@ export function MeetingsBlock({
   const logMeeting = useLogMeeting()
   const setStatus = useSetMeetingStatus()
   const startTimer = useStartTimer()
+  const linkTask = useLinkMeetingTask()
+  const navigate = useNavigate()
   const { showError, showSuccess } = useToast()
   const onError = (e: unknown) => showError(describeError(e))
 
@@ -91,6 +95,9 @@ export function MeetingsBlock({
   }, [entries, activeTimer, now])
 
   const [expanded, setExpanded] = useState(false)
+  // задача из встречи (0.42): для какой встречи открыто окно и запоминать ли выбор
+  const [creatingFor, setCreatingFor] = useState<CalendarEvent | null>(null)
+  const [remember, setRemember] = useState(true)
 
   const visible = events.filter((e) => e.status !== 'dismissed')
   if (visible.length === 0) return null
@@ -112,11 +119,61 @@ export function MeetingsBlock({
   const shown = collapsed ? [focus] : visible
   const waitingElsewhere = visible.filter((ev) => ev !== focus && waiting(ev)).length
 
-  function log(ev: CalendarEvent, taskId: string) {
+  /** name — для только что созданной задачи: её ещё нет в загруженном списке */
+  function log(ev: CalendarEvent, taskId: string, name?: string) {
     logMeeting.mutate(
       { event: ev, taskId },
-      { onError, onSuccess: (minutes) => showSuccess(`Записано ${formatHoursMinutes(minutes / 60)} в «${titleOf(taskId)}»`) },
+      { onError, onSuccess: (minutes) => showSuccess(`Записано ${formatHoursMinutes(minutes / 60)} в «${name ?? titleOf(taskId)}»`) },
     )
+  }
+
+  /**
+   * Окно новой задачи с полями из встречи: название, срок — день встречи, план — её
+   * длительность. Встрече уже подсказана задача — по умолчанию подзадача в её спринте.
+   */
+  function presetFor(ev: CalendarEvent): NewTaskPreset {
+    const minutes = (endOf(ev) - startOf(ev)) / 60_000
+    const suggested = ev.suggested_task_id ? taskById.get(ev.suggested_task_id) : undefined
+    const head = suggested ? (suggested.parent_id ? taskById.get(suggested.parent_id) : suggested) : undefined
+    const headOpen = head && !(head.status_id && finalIds.has(head.status_id))
+    return {
+      title: ev.title.trim(),
+      kind: headOpen ? 'subtask' : 'task',
+      parentId: headOpen ? head.id : null,
+      endDate: toDateString(new Date(ev.starts_at)),
+      plan: Math.max(0.25, Math.round(minutes / 15) / 4),
+    }
+  }
+
+  /** что сделать главной кнопкой: прошедшую — засчитать, идущую — начать учёт, будущую — открыть */
+  function meetingPhase(ev: CalendarEvent): 'past' | 'ongoing' | 'future' {
+    return endOf(ev) <= now ? 'past' : startOf(ev) <= now ? 'ongoing' : 'future'
+  }
+
+  function onTaskCreated(ev: CalendarEvent, task: Task, primary: boolean) {
+    linkTask.mutate({ event: ev, taskId: task.id, remember }, { onError })
+    const phase = meetingPhase(ev)
+    const minutes = (endOf(ev) - startOf(ev)) / 60_000
+    const covered = coveredBy(ev, sessions)
+    if (primary) {
+      if (phase === 'past' && !covered) log(ev, task.id, task.name)
+      else if (phase === 'ongoing' && !covered) startTimer.mutate(task.id, { onError })
+      else navigate(`/tasks/${task.id}`)
+      return
+    }
+    if (phase === 'past' && !covered) {
+      showSuccess(`Задача «${task.name}» создана`, {
+        label: `Засчитать ${formatHoursMinutes(minutes / 60)}`,
+        onAction: () => log(ev, task.id, task.name),
+      })
+    } else if (phase === 'ongoing' && !covered) {
+      showSuccess(`Задача «${task.name}» создана`, {
+        label: 'Начать учёт',
+        onAction: () => startTimer.mutate(task.id, { onError }),
+      })
+    } else {
+      showSuccess(`Задача «${task.name}» создана`, { label: 'Открыть', onAction: () => navigate(`/tasks/${task.id}`) })
+    }
   }
 
   function dismiss(ev: CalendarEvent) {
@@ -165,6 +222,20 @@ export function MeetingsBlock({
                 >
                   {ev.title}
                 </span>
+                {ev.status === 'new' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemember(true)
+                      setCreatingFor(ev)
+                    }}
+                    aria-label={`Создать задачу из встречи «${ev.title}»`}
+                    className="hit-44 flex shrink-0 items-center gap-1 text-sm font-medium text-accent-text"
+                  >
+                    <Plus size={13} />
+                    Задача
+                  </button>
+                )}
                 {ev.status === 'new' && past && !covered && (
                   <button
                     type="button"
@@ -258,6 +329,28 @@ export function MeetingsBlock({
           </button>
         )}
       </div>
+
+      <NewTaskSheet
+        open={!!creatingFor}
+        onClose={() => setCreatingFor(null)}
+        preset={creatingFor ? presetFor(creatingFor) : undefined}
+        sheetTitle="Задача из встречи"
+        primaryLabel={
+          !creatingFor
+            ? 'Создать'
+            : meetingPhase(creatingFor) === 'past' && !coveredBy(creatingFor, sessions)
+              ? `Создать и засчитать ${formatHoursMinutes((endOf(creatingFor) - startOf(creatingFor)) / 3_600_000)}`
+              : meetingPhase(creatingFor) === 'ongoing' && !coveredBy(creatingFor, sessions)
+                ? 'Создать и начать'
+                : 'Создать и открыть'
+        }
+        onCreated={(task, primary) => creatingFor && onTaskCreated(creatingFor, task, primary)}
+        extra={
+          creatingFor && (
+            <Switch on={remember} onChange={setRemember} label={`Запомнить для встреч «${creatingFor.title.trim()}»`} />
+          )
+        }
+      />
     </div>
   )
 }

@@ -216,7 +216,11 @@ Deno.serve(async (req) => {
         task
           ? [{ text: `▶ Начать учёт: ${task.name.trim().slice(0, 30)}`, callback_data: `mt:${ev.id}` }]
           : [{ text: '▶ Выбрать задачу', callback_data: `pk:${ev.id}` }],
-        [{ text: 'Не учитывать', callback_data: `sk:${ev.id}` }],
+        // задача из встречи (0.42): бот спросит «новая задача или подзадача в …»
+        [
+          { text: '+ Задача', callback_data: `nt:${ev.id}` },
+          { text: 'Не учитывать', callback_data: `sk:${ev.id}` },
+        ],
       ],
     }
     await telegramTo(ev.user_id, `📅 Началась встреча «${ev.title}»\n${question}`, keyboard, 'notify_meetings')

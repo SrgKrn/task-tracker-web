@@ -147,6 +147,25 @@ export function useLogMeeting() {
 }
 
 /** «Не учитывать» — встреча больше не предлагается; «Вернуть» отменяет. */
+/**
+ * Задача создана из встречи (0.42): встреча сразу подсказывает её, а с remember — и все
+ * следующие встречи с тем же названием (правило в calendar_rules).
+ */
+export function useLinkMeetingTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ event, taskId, remember }: { event: CalendarEvent; taskId: string; remember: boolean }) => {
+      const { error } = await supabase.from('calendar_events').update({ suggested_task_id: taskId }).eq('id', event.id)
+      if (error) throw error
+      const key = titleKey(event.title)
+      if (remember && key) {
+        await supabase.from('calendar_rules').upsert({ title_key: key, task_id: taskId, updated_at: new Date().toISOString() })
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['calendar_events'] }),
+  })
+}
+
 export function useSetMeetingStatus() {
   const qc = useQueryClient()
   return useMutation({

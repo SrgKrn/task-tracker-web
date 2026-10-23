@@ -1,5 +1,5 @@
 import { focusOnOpen } from '../lib/device'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DatePicker } from './DatePicker'
 import { DurationSheet } from './DurationSheet'
@@ -13,6 +13,7 @@ import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask, useTask, useTasks } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer } from '../lib/queries/timer'
 import { formatHoursMinutes } from '../lib/time'
+import type { Task } from '../lib/types'
 
 const LAST_ITEMS_KEY = 'semternity.lastItems'
 
@@ -45,11 +46,42 @@ function initialItems(model: GroupModel): string[] {
   return result
 }
 
+/** Начальные значения окна — например, задача из встречи календаря (0.42). */
+export interface NewTaskPreset {
+  title?: string
+  kind?: 'task' | 'subtask'
+  parentId?: string | null
+  endDate?: string | null
+  plan?: number
+  itemIds?: string[] | null
+}
+
 /**
  * Быстрое создание задачи: название, спринт или подзадача, группы, план, срок — и либо
  * просто создать, либо создать и сразу начать учёт.
+ *
+ * С preset/onCreated окно открывают для другого сценария (задача из встречи): поля уже
+ * заполнены, а что делать после создания, решает вызвавший — onCreated(задача, нажата ли
+ * главная кнопка). Тогда учёт сам не начинается и в карточку не переходим.
  */
-export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewTaskSheet({
+  open,
+  onClose,
+  preset,
+  sheetTitle = 'Новая задача',
+  primaryLabel = 'Создать и начать',
+  onCreated,
+  extra,
+}: {
+  open: boolean
+  onClose: () => void
+  preset?: NewTaskPreset
+  sheetTitle?: string
+  primaryLabel?: string
+  onCreated?: (task: Task, primary: boolean) => void
+  /** дополнительные поля перед кнопками */
+  extra?: ReactNode
+}) {
   const navigate = useNavigate()
   const model = useGroupModel()
   const createTask = useCreateTask()
@@ -84,13 +116,15 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   // создание значения прямо отсюда обновляло бы список и тут же сбрасывало выбор
   useEffect(() => {
     if (!open) return
-    setTitle('')
-    setPlan(1)
-    setItemIds(null)
+    setTitle(preset?.title ?? '')
+    setPlan(preset?.plan ?? 1)
+    setItemIds(preset?.itemIds ?? null)
     setEditingPlan(false)
-    setKind('task')
-    setParentId(null)
-    setEndDate(null)
+    setKind(preset?.kind ?? 'task')
+    setParentId(preset?.parentId ?? null)
+    setEndDate(preset?.endDate ?? null)
+    // preset читаем только в момент открытия
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   if (!open) return null
@@ -127,6 +161,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
         onError: (e) => showError(describeError(e)),
         onSuccess: (row) => {
           onClose()
+          if (onCreated) return onCreated(row, andStart)
           if (andStart) startTimer.mutate(row.id, { onError: (e) => showError(describeError(e)) })
           navigate(`/tasks/${row.id}`)
         },
@@ -138,7 +173,7 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
     <Sheet
       open={open}
       onClose={onClose}
-      title="Новая задача"
+      title={sheetTitle}
       headerAction={
         <Button variant="ghost" className="-mr-2" onClick={onClose}>
           Отмена
@@ -215,26 +250,30 @@ export function NewTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           <DatePicker small className="w-[150px]" ariaLabel="Срок задачи" value={endDate} onChange={setEndDate} />
         </div>
 
+        {extra}
+
         {/* идущий учёт остановится — об этом надо знать до нажатия, а не после */}
-        {activeTimer && runningTask && (
+        {!onCreated && activeTimer && runningTask && (
           <p className="rounded-md bg-warning-soft px-3 py-2.5 text-sm leading-[1.45] text-warning-text">
             «Создать и начать» остановит идущий учёт по «{runningTask.name}» и запишет его.
           </p>
         )}
 
-        <div className="mt-1 flex gap-2">
-          <Button size="lg" className="flex-1" onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
+        {/* у окна «из встречи» подпись длиннее («Создать и засчитать 1 ч 30 мин») — кнопки
+            друг под другом, главная сверху во всю ширину */}
+        <div className={`mt-1 flex shrink-0 gap-2 ${onCreated ? 'flex-col-reverse' : ''}`}>
+          <Button size="lg" className={onCreated ? 'w-full' : 'flex-1'} onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
             Создать
           </Button>
           <Button
             size="lg"
             variant="primary"
-            className="flex-[1.4]"
+            className={onCreated ? 'w-full' : 'flex-[1.4]'}
             onClick={() => create(true)}
             disabled={!canCreate}
             title={whyDisabled}
           >
-            Создать и начать
+            {primaryLabel}
           </Button>
         </div>
         {whyDisabled && title.trim() && <p className="-mt-1.5 text-center text-xs text-text-secondary">{whyDisabled}</p>}

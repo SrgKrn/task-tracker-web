@@ -571,6 +571,8 @@ Deno.serve(async (req) => {
             ? { text: `✓ ${n} в «${cut(world.title(sug), 22)}»`, callback_data: `lg:${ev.id}` }
             : { text: `${n}: выбрать задачу`, callback_data: `pk:${ev.id}` },
           ...(sug ? [{ text: 'Другая', callback_data: `pk:${ev.id}` }] : []),
+          // задача из встречи (0.42)
+          { text: '➕', callback_data: `nt:${ev.id}` },
           { text: '✕', callback_data: `sk:${ev.id}` },
         ])
       })
@@ -883,7 +885,7 @@ Deno.serve(async (req) => {
     const need: keyof PlanLimits =
       action === 'stop' || action === 'keep'
         ? 'tg_reminders'
-        : ['sk', 'lg', 'lt', 'pk', 'mt'].includes(action)
+        : ['sk', 'lg', 'lt', 'pk', 'mt', 'nt', 'nn', 'ns', 'nx'].includes(action)
           ? 'gcal'
           : 'tg_digest'
     if (!(await limitsOf(db, userId))[need]) {
@@ -997,6 +999,109 @@ Deno.serve(async (req) => {
       return
     }
 
+    // ── задача из встречи (0.42): nt — спросить, куда; nn — новая задача; ns — подзадача в
+    // спринте a2; nx — передумали. Созданная задача сразу подсказана встрече и запомнена
+    // для встреч с тем же названием, дальше — засчитать или начать учёт.
+    if (['nt', 'nn', 'ns', 'nx'].includes(action) && Number.isFinite(Number(a1))) {
+      const evId = Number(a1)
+      if (action === 'nx') {
+        await answer('Не создаю')
+        await tg('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }).catch(() => {})
+        return
+      }
+      const { data: ev } = await db
+        .from('calendar_events')
+        .select('id, title, status, suggested_task_id, starts_at, ends_at, workspace_id')
+        .eq('id', evId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (!ev) {
+        await answer('Встреча не найдена')
+        return
+      }
+      const world = await loadWorld(db, userId)
+      const openHead = (id: string | null | undefined) => {
+        const t = id ? world.byId.get(id) : undefined
+        const head = t?.parent_id ? world.byId.get(t.parent_id) : t
+        return head && !head.parent_id && world.isOpen(head) ? head : undefined
+      }
+
+      if (action === 'nt') {
+        // спринт подсказки первым, дальше — спринты, по которым недавно шёл учёт
+        const heads: string[] = []
+        const first = openHead(ev.suggested_task_id)
+        if (first) heads.push(first.id)
+        for (const id of await recentTasks(userId, world, 12)) {
+          const h = openHead(id)
+          if (h && !heads.includes(h.id)) heads.push(h.id)
+          if (heads.length >= 5) break
+        }
+        await answer('')
+        await say(chatId, `Создать задачу из «${cut(ev.title, 60)}»?`, {
+          reply_markup: {
+            inline_keyboard: [
+              ...heads.map((id) => [{ text: `Подзадача в «${cut(world.title(id), 34)}»`, callback_data: `ns:${evId}:${id}` }]),
+              [{ text: 'Новая задача', callback_data: `nn:${evId}` }],
+              [{ text: 'Отмена', callback_data: `nx:${evId}` }],
+            ],
+          },
+        })
+        return
+      }
+
+      // nn / ns — создать
+      const parent = action === 'ns' ? openHead(a2) : undefined
+      if (action === 'ns' && !parent) {
+        await answer('Спринт не найден или уже закрыт')
+        return
+      }
+      const minutes = Math.max(0, (new Date(ev.ends_at).getTime() - new Date(ev.starts_at).getTime()) / 60_000)
+      const plan = Math.max(0.25, Math.round(minutes / 15) / 4)
+      // новая головная задача — с группами спринта подсказки (тот же клиент), если он есть
+      const sameClient = parent ? undefined : openHead(ev.suggested_task_id)
+      const { data: created, error } = await db
+        .from('tasks')
+        .insert({
+          user_id: userId,
+          name: ev.title.trim() || 'Встреча',
+          parent_id: parent?.id ?? null,
+          workspace_id: parent ? parent.workspace_id : ev.workspace_id,
+          item_ids: parent ? [] : (sameClient?.item_ids ?? []),
+          planned_hours: plan,
+          end_date: localDate(new Date(ev.starts_at), timezone),
+          status_id: null,
+        })
+        .select('id, name')
+        .single()
+      if (error || !created) {
+        console.error('nn/ns', error?.message)
+        await answer('Не получилось создать задачу')
+        return
+      }
+      await db.from('calendar_events').update({ suggested_task_id: created.id }).eq('id', evId)
+      const key = titleKey(ev.title)
+      if (key) {
+        await db.from('calendar_rules').upsert({ user_id: userId, title_key: key, task_id: created.id, updated_at: new Date().toISOString() })
+      }
+      await answer('Задача создана')
+      const now = Date.now()
+      const past = new Date(ev.ends_at).getTime() <= now
+      const ongoing = !past && new Date(ev.starts_at).getTime() <= now
+      const next: Keyboard['inline_keyboard'][number] = []
+      if (ev.status === 'new' && past) next.push({ text: `✓ Засчитать ${hm(minutes)}`, callback_data: `lg:${evId}` })
+      if (ev.status === 'new' && ongoing) next.push({ text: '▶ Начать учёт', callback_data: `mt:${evId}` })
+      if (appUrl) next.push({ text: 'Открыть', url: `${appUrl}/tasks/${created.id}` })
+      await tg('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text: parent
+          ? `✓ Создана подзадача «${created.name}» в «${parent.name.trim()}»`
+          : `✓ Создана задача «${created.name}»`,
+        reply_markup: { inline_keyboard: next.length ? [next] : [] },
+      }).catch(() => {})
+      return
+    }
+
     // ── встречи: засчитать в предложенную или выбранную задачу, пропустить, начать учёт
     const eventId = Number(a1)
     if (['lg', 'lt', 'pk', 'sk', 'mt'].includes(action) && Number.isFinite(eventId)) {
@@ -1053,7 +1158,10 @@ Deno.serve(async (req) => {
           reply_markup: {
             inline_keyboard: [
               ...ids.slice(0, 6).map((id) => [{ text: cut(world.title(id), 48), callback_data: `lt:${eventId}:${id}` }]),
-              [{ text: 'Не учитывать', callback_data: `sk:${eventId}` }],
+              [
+                { text: '+ Новая задача', callback_data: `nt:${eventId}` },
+                { text: 'Не учитывать', callback_data: `sk:${eventId}` },
+              ],
             ],
           },
         })
