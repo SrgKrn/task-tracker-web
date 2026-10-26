@@ -15,7 +15,8 @@ import { entryNote } from '../lib/notes'
 import { entrySeconds, formatDuration, plural } from '../lib/time'
 import { formatShortDate, toDateString, todayStr, addDays } from '../lib/period'
 import type { Comment, TimeEntry } from '../lib/types'
-import { ArrowUp, Comment as CommentIcon, MoreDots } from './Icon'
+import { ArrowUp, Comment as CommentIcon, MoreDots, Paperclip } from './Icon'
+import { PlayGlyph, StopGlyph } from './Ring'
 import { UpgradeNote, useGate } from './Upgrade'
 
 const ADJUSTMENTS: [string, string, string] = ['правка', 'правки', 'правок']
@@ -280,10 +281,27 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
 }
 
 /** Поле комментария, закреплённое внизу карточки. */
-export function CommentBar({ taskId }: { taskId: string }) {
+/**
+ * Поле внизу карточки (0.57): комментарий; пока поле пустое — кнопка справа запускает
+ * или останавливает учёт, как «микрофон» в мессенджере. Скрепка ведёт к файлам.
+ */
+export function CommentBar({
+  taskId,
+  running,
+  onStart,
+  onStop,
+  onAttach,
+}: {
+  taskId: string
+  running?: boolean
+  onStart?: () => void
+  onStop?: () => void
+  onAttach?: () => void
+}) {
   const addComment = useAddComment()
   const { showError } = useToast()
   const [draft, setDraft] = useState('')
+  const empty = !draft.trim()
 
   function submit() {
     const body = draft.trim()
@@ -294,10 +312,20 @@ export function CommentBar({ taskId }: { taskId: string }) {
     )
   }
 
+  const timerAction = empty && (running ? onStop : onStart)
+
   return (
-    <div
-      className="safe-bottom flex items-center gap-2 border-t border-border bg-surface px-4 pt-3 pb-2"
-    >
+    <div className="flex items-center gap-2 border-t border-border bg-surface px-3 pt-2.5 pb-2.5 lg:border-t">
+      {onAttach && (
+        <button
+          type="button"
+          onClick={onAttach}
+          aria-label="Файлы задачи"
+          className="flex h-11 w-9 shrink-0 items-center justify-center text-text-secondary"
+        >
+          <Paperclip size={18} />
+        </button>
+      )}
       <input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
@@ -306,14 +334,25 @@ export function CommentBar({ taskId }: { taskId: string }) {
         aria-label="Комментарий к задаче"
         className="h-11 min-w-0 flex-1 rounded-full border border-border bg-surface-sunken px-4 text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
       />
-      <button
-        type="button"
-        onClick={submit}
-        aria-label="Добавить комментарий"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
-      >
-        <ArrowUp size={16} className="mx-auto" />
-      </button>
+      {timerAction ? (
+        <button
+          type="button"
+          onClick={timerAction}
+          aria-label={running ? 'Остановить учёт' : 'Начать учёт'}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+        >
+          {running ? <StopGlyph size={11} color="var(--on-accent)" /> : <PlayGlyph size={9} color="var(--on-accent)" />}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={submit}
+          aria-label="Добавить комментарий"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+        >
+          <ArrowUp size={16} className="mx-auto" />
+        </button>
+      )}
     </div>
   )
 }

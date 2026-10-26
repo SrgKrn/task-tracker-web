@@ -11,9 +11,9 @@ import { TodayTile } from '../components/DayTile'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { NewTaskSheet } from '../components/NewTaskSheet'
 import { Ring } from '../components/Ring'
-import { ArrowRight, History } from '../components/Icon'
+import { ArrowRight, ChevronDown, ChevronUp, History, Settings2 } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
-import { Button, ClientDot, ListGroup, Overline, Sheet, TaskRowSkeleton } from '../components/ui'
+import { Button, ClientDot, EmptyState, ListGroup, Overline, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { PlayGlyph } from '../components/Ring'
@@ -38,6 +38,7 @@ import { useMediaQuery } from '../lib/device'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, plural, useTicker } from '../lib/time'
 import { isInDay, planSections } from '../lib/dayPlan'
+import { usePref } from '../lib/prefs'
 import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
@@ -46,6 +47,20 @@ const METHOD_SHORT = { eisenhower: 'Эйзенхауэр', frog: 'Лягушка
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 /** готовые названия первой задачи: касание открывает окно, где название уже вписано */
 const FIRST_TASKS = ['Разобрать почту', 'Спланировать неделю', 'Позвонить']
+
+/** виджеты «Сегодня» (0.57): что на экране и в каком порядке — на устройстве */
+type TodayWidget = 'day' | 'tile' | 'week' | 'overdue' | 'meetings' | 'plan' | 'recent'
+const WIDGET_LABEL: Record<TodayWidget, { title: string; hint: string }> = {
+  day: { title: 'День', hint: 'кольцо нормы, сколько осталось' },
+  tile: { title: 'Плитка дня', hint: 'в карточке дня, справа' },
+  week: { title: 'Неделя', hint: 'столбики по дням' },
+  overdue: { title: 'Просрочено', hint: 'перенести срок в одно касание' },
+  meetings: { title: 'Встречи', hint: 'из Google Календаря' },
+  plan: { title: 'План дня', hint: 'задачи на сегодня' },
+  recent: { title: 'Недавние', hint: 'продолжить начатое' },
+}
+const ALL_WIDGETS: TodayWidget[] = ['day', 'tile', 'overdue', 'meetings', 'plan', 'week', 'recent']
+const DEFAULT_WIDGETS = { order: ALL_WIDGETS, on: ALL_WIDGETS }
 
 export function Today() {
   const today = todayStr()
@@ -109,6 +124,13 @@ export function Today() {
   const dayNorm = hasNorm ? normOfDay : 0
   const ringPct = hasNorm ? (dayFact / dayNorm) * 100 : dayFact > 0 ? ((dayFact % 1) || 1) * 100 : 0
   const [firstTask, setFirstTask] = useState<string | null>(null)
+  const [widgetsOpen, setWidgetsOpen] = useState(false)
+  const [storedWidgets, setWidgets] = usePref<{ order: TodayWidget[]; on: TodayWidget[] }>('semternity.todayWidgets', DEFAULT_WIDGETS)
+  // новые виджеты из будущих версий дописываются в конец, неизвестные отбрасываются
+  const widgets = {
+    order: [...storedWidgets.order.filter((w) => ALL_WIDGETS.includes(w)), ...ALL_WIDGETS.filter((w) => !storedWidgets.order.includes(w))],
+    on: storedWidgets.on.filter((w) => ALL_WIDGETS.includes(w)),
+  }
 
   // плитка дня: идущий учёт дорисовывается раз в минуту, а не каждую секунду
   const { data: settings, isLoading: settingsLoading } = useUserSettings()
@@ -175,6 +197,7 @@ export function Today() {
         // значок в строке их повторял бы
         badge={flat && (method === 'eisenhower' || method === 'frog') ? undefined : <PriorityBadge task={task} method={method} today={today} />}
         status={task.status_id ? statusById.get(task.status_id) : undefined}
+        showStage
         label={model.listLabel(task)}
         color={model.colorOf(task)}
         activeTimer={activeTimer}
@@ -267,385 +290,418 @@ export function Today() {
   const weekTotal = week.days.reduce((sum, d) => sum + (factByDay.get(d) ?? 0), 0) + liveHours
   const dayOver = dayFact - dayNorm
 
-  return (
-    <div className="page page-wide mx-auto flex max-w-lg flex-col">
-      {/* кольцо суток. Строки бренда с пустым аватаром больше нет: она занимала 48 px и ничего
-          не делала — дата уже над заголовком, аккаунт в «Ещё» */}
-      {/* отступ под «чёлку» — на обёртке: класс safe-top перебивает собственный отступ блока */}
-      <div className="safe-top">
-      {/*
-        Верхняя строка: дата и пространство слева, хронология и профиль справа. Раньше кнопки
-        висели поверх шапки (absolute), и при одном пространстве плитка дня поднималась под
-        кружок профиля. Теперь у них своя строка — наложиться нечему.
-      */}
-      <div className="flex min-h-11 items-center gap-2 px-5 pt-3 lg:pt-4">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <Overline className="truncate">{formatTodayLabel()}</Overline>
-          <WorkspaceTag />
-        </div>
-        <Link
-          to="/history"
-          data-tip="history"
-          aria-label="Хронология: учёт, правки и изменения по дням"
-          className="hit-44 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:hover:bg-surface-hover"
-        >
-          <History size={17} />
-        </Link>
-        {/* профиль — бывшее «Ещё»: аккаунт, структура, методика, интеграции */}
-        <ProfileButton />
-      </div>
-      <div className="flex items-start gap-[18px] px-5 pt-3 pb-[18px]">
-        <span data-tip="ring" className="shrink-0 rounded-full">
-        <Ring size={104} pct={ringPct} state="running" centerBg="var(--bg)" marker={hasNorm}>
+  const tileOn = widgets.on.includes('tile') && showTile && !!todayTile && (hasNorm || dayFact > 0)
+
+  /* ── виджеты экрана (0.57): включаются и переставляются в «Виджетах» ── */
+  const dayWidget = (
+    <div className="mx-5 mt-1 flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
+      <span data-tip="ring" className="shrink-0 rounded-full">
+        <Ring size={88} pct={ringPct} state="running" centerBg="var(--surface)" marker={hasNorm}>
           <span className="flex flex-col items-center gap-0.5">
-            <span className="tabular font-mono text-xl font-medium text-text">{formatHoursRu(dayFact)}</span>
-            <span className="text-sm text-text-secondary">{hasNorm ? `из ${formatHoursRu(dayNorm)} ч` : 'без нормы'}</span>
+            <span className="tabular font-mono text-lg font-medium text-text">{formatHoursRu(dayFact)}</span>
+            <span className="text-xs text-text-secondary">{hasNorm ? `из ${formatHoursRu(dayNorm)} ч` : 'без нормы'}</span>
           </span>
         </Ring>
-        </span>
-
-        <div className="flex min-h-26 min-w-0 flex-1 flex-col justify-center">
-          {/* плитка дня — крупным квадратом справа от заголовка и строк дня: своей строки не занимает */}
-          <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сегодня</h1>
-              {/*
-                Раньше здесь стояли «факт» (дублировал цифру в кольце) и «план» — сумма
-                полных планов всех задач дня. Показываем то, что относится к сегодняшнему дню.
-                Фразы — обычным шрифтом: моноширинный остаётся только у чисел.
-              */}
-              <div className="flex flex-col gap-1.5 text-sm">
-                <span className="flex items-center gap-2 text-text">
-                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
-                  {hasNorm ? (
-                    <span>
-                      {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
-                      {dayOver >= 0.05 && (
-                        <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>
-                      )}
-                    </span>
-                  ) : (
-                    <Link to="/settings/plan" className="text-accent-text underline decoration-dotted underline-offset-4">
-                      Задать норму дня
-                    </Link>
-                  )}
-                </span>
-                <span className="flex items-center gap-2 text-text-secondary">
-                  <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
-                  <span className="first-letter:uppercase">{todayCountLabel}</span>
-                </span>
-              </div>
-            </div>
-            {/* на узких телефонах (до 360 px) плитка меньше, иначе «Осталось …» ломается по буквам */}
-            {/* без нормы и без учёта плитка — пустая рамка: новичку она ничего не говорит */}
-            {showTile && todayTile && (hasNorm || dayFact > 0) && (
-              <span data-tip="tile" className="shrink-0 rounded-sm">
-                <TodayTile tile={todayTile} day={today} size={narrow ? 64 : 80} />
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      </div>
-
-      {/*
-        Недельный ритм: тонкие столбики и пунктир нормы дня — сразу видно, какой день был
-        выше нормы, а какой ниже. Значения подписаны: иначе «сколько было во вторник» не узнать.
-      */}
-      {/* десктоп: неделя — справа и остаётся на месте при прокрутке, списки дня — слева */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-10">
-      <div className="px-5 lg:sticky lg:top-6 lg:order-2 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4">
-        <div className="mb-3 hidden items-baseline justify-between lg:flex">
-          <Overline>Неделя</Overline>
-          <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
-        </div>
-        <div className="relative flex h-14 items-end gap-1.5 lg:h-24">
-          {hasNorm && (
-            <span
-              className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
-              style={{ bottom: `${normPct}%` }}
-              aria-hidden
-            />
-          )}
-          {week.days.map((day) => {
-            const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
-            const isToday = day === today
-            const isFuture = day > today
-            const height = fact > 0 ? Math.max(8, Math.min(100, (fact / maxDayValue) * 100)) : 3
-            return (
-              <span key={day} className="flex h-full flex-1 items-end justify-center">
-                <span
-                  className="w-3/5 max-w-7 rounded-t-xs"
-                  title={`${formatHoursRu(fact)} ч`}
-                  style={{
-                    height: `${height}%`,
-                    background: isToday
-                      ? 'var(--accent)'
-                      : fact > 0
-                        ? 'var(--bar-past)'
-                        : isFuture
-                          ? 'var(--bar-future)'
-                          : 'var(--bar-empty)',
-                  }}
-                />
-              </span>
-            )
-          })}
-        </div>
-        <div className="flex gap-1.5 pt-1.5">
-          {week.days.map((day, i) => {
-            const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
-            const isToday = day === today
-            return (
-              <span key={day} className="flex flex-1 flex-col items-center gap-px">
-                <span className={`text-xs ${isToday ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>
-                  {WEEKDAYS[i]}
-                </span>
-                <span
-                  className={`tabular font-mono text-xs ${
-                    isToday ? 'text-accent-text' : hasNorm && fact > dayNorm ? 'text-text' : 'text-text-secondary'
-                  }`}
-                >
-                  {fact > 0 ? formatHoursRu(fact) : '—'}
-                </span>
-              </span>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="min-w-0 lg:order-1">
-      {/* просроченное — сразу под днём: самое срочное должно быть видно без прокрутки,
-          а не под девятью задачами в самом низу */}
-      {overdueTasks.length > 0 && (
-        <div className="flex flex-col gap-2 px-5 pt-5">
-          <Overline className="text-danger-text">Просрочено · {overdueTasks.length}</Overline>
-          <ListGroup className="border-[var(--danger-line)]">
-            {overdueTasks.map((task) => {
-              const fact = rollupFact(task, childrenOf.get(task.id))
-              const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
-              // у подзадачи важнее спринт, чем группы: «Созвон» без спринта ни о чём не говорит
-              const category = task.parent_id ? (taskById.get(task.parent_id)?.name ?? '') : model.listLabel(task)
-              return (
-                <div key={task.id} className="flex min-h-[var(--row-task)] items-center gap-3 px-3 py-2.5">
-                  <Ring
-                    size={32}
-                    pct={pct}
-                    state="over"
-                    track="var(--ring-track-danger)"
-                    onClick={() => {
-                      tap()
-                      startTimer.mutate(task.id, { onError })
-                    }}
-                    ariaLabel={`Начать учёт: ${task.name}`}
-                  >
-                    <PlayGlyph />
-                  </Ring>
-
-                  <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
-                    <p title={task.name} className="truncate text-base font-medium text-text">
-                      {task.name}
-                    </p>
-                    {/* срок первым: именно он объясняет, почему задача здесь, и при обрезке
-                        должен уцелеть, а не название клиента */}
-                    <span className="flex min-w-0 items-center gap-1.5 text-sm whitespace-nowrap text-text-secondary">
-                      <span className="shrink-0 font-medium text-danger-text">
-                        срок {task.end_date ? formatDueDate(task.end_date, today).toLowerCase() : ''}
-                      </span>
-                      {category && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <ClientDot color={task.parent_id ? null : model.colorOf(task)} />
-                          <span className="min-w-0 truncate">{category}</span>
-                        </>
-                      )}
-                    </span>
-                  </Link>
-
-                  <Button variant="ghost" className="-mr-1 shrink-0 text-danger-text" onClick={() => setPostponing(task)}>
-                    Перенести
-                  </Button>
-                </div>
-              )
-            })}
-          </ListGroup>
-        </div>
-      )}
-
-      {/* встречи из календаря: прошедшие — засчитать, идущая — начать учёт */}
-      {/* встречи — того календаря, что привязан к этому пространству (Профиль → Google Календарь) */}
-      <MeetingsBlock
-        date={today}
-        entries={weekEntries.filter((e) => e.effective_date === today)}
-        activeTimer={activeTimer}
-      />
-
-      {/* задачи дня */}
-      <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
-        <div className="flex min-h-11 items-center justify-between">
-          <span className="flex items-center gap-2">
-            <span data-tip="method" className="rounded-xs">
-              <Overline>На сегодня</Overline>
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+        <span className="flex items-center gap-2 text-text">
+          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
+          {hasNorm ? (
+            <span>
+              {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
+              {dayOver >= 0.05 && <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>}
             </span>
-            {/* напоминание, как работает выбранная методика, — в одно касание */}
-            {method !== 'none' && (
-              <button
-                type="button"
-                onClick={() => setMethodInfo(true)}
-                className="hit-44 flex h-6 items-center rounded-full bg-surface-sunken px-2 text-xs font-medium text-text-secondary"
-                aria-label="Как работает методика"
-              >
-                {METHOD_SHORT[method]} · ?
-              </button>
-            )}
-          </span>
-          {/* одна ссылка вместо двух: «Все задачи» и так во вкладке внизу */}
-          {todayTasks.length > 0 && (
-            <Button variant="ghost" className="-mr-2 text-accent-text" onClick={() => setPlanning(true)}>
-              Изменить план
-            </Button>
+          ) : (
+            <Link to="/settings/plan" className="text-accent-text underline decoration-dotted underline-offset-4">
+              Задать норму дня
+            </Link>
           )}
-        </div>
+        </span>
+        <span className="flex items-center gap-2 text-text-secondary">
+          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
+          <span className="first-letter:uppercase">{todayCountLabel}</span>
+        </span>
+        <span className="flex items-center gap-2 text-text-secondary">
+          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--bar-past)]" />
+          <span>
+            за неделю <span className="tabular font-mono text-xs">{formatHoursRu(weekTotal)} ч</span>
+          </span>
+        </span>
+      </div>
+      {/* плитка дня — квадратом справа; на узких телефонах (до 360 px) меньше */}
+      {tileOn && todayTile && (
+        <span data-tip="tile" className="shrink-0 rounded-sm">
+          <TodayTile tile={todayTile} day={today} size={narrow ? 56 : 72} />
+        </span>
+      )}
+    </div>
+  )
 
-        {isLoading && (
-          <div className="flex flex-col gap-2">
-            {[0, 1, 2].map((i) => (
-              <TaskRowSkeleton key={i} />
-            ))}
-          </div>
-        )}
-
-        {!isLoading && method !== 'none' && (todayTasks.length > 0 || method === 'frog') && (
-          <DayByMethod
-            method={method}
-            today={today}
-            tasks={todayRows}
-            allTasks={tasks}
-            isDone={isDone}
-            started={(t) => trackedTodayTaskIds.has(t.id) || activeTimer?.task_id === t.id}
-            lockedIds={lockedIds}
-            candidates={sections.filter((sec) => sec.key !== 'planned').flatMap((sec) => sec.tasks)}
-            metaOf={planMeta}
-            renderRow={(t) => renderRow(t, false, true)}
-            onPlan={() => setPlanning(true)}
+  const weekWidget = (
+    <div className="px-5 pt-5 lg:sticky lg:top-6 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <Overline>Неделя</Overline>
+        <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
+      </div>
+      <div className="relative flex h-14 items-end gap-1.5 lg:h-24">
+        {hasNorm && (
+          <span
+            className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border-strong"
+            style={{ bottom: `${normPct}%` }}
+            aria-hidden
           />
         )}
-
-        {!isLoading && method === 'none' && topRows.length > 0 && (
-          <ListGroup>
-            {topRows.map((task) => {
-              const below = nestedOf(task.id)
-              return (
-                <div key={task.id} className="flex flex-col">
-                  {renderRow(task, below.length > 0)}
-                  {/* подзадачи спринта — под ним, с линией вложенности: рядом с ним на равных
-                      они читались как отдельные задачи с тем же учётом */}
-                  {below.length > 0 && (
-                    <div className="ml-7 flex flex-col divide-y divide-divider border-l border-divider">
-                      {below.map((sub) => (
-                        <div key={sub.id}>{renderRow(sub, false)}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </ListGroup>
-        )}
-
-        {/* день ещё не спланирован: главное действие экрана — выбрать, не листая весь список */}
-        {/* самый первый заход: задач нет вовсе — не «спланируйте день», а «создайте первую» */}
-        {!isLoading && tasks.length === 0 && (
-          <div className="flex flex-col items-start gap-2.5 rounded-md border border-dashed border-border-strong px-4 py-4">
-            <span className="text-md font-semibold text-text">Что сделать первым?</span>
-            <span className="text-sm text-text-secondary">Хватит одного названия. Нажмите на пример или на «+».</span>
-            <span className="flex flex-wrap gap-1.5">
-              {FIRST_TASKS.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setFirstTask(name)}
-                  className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text active:bg-surface-sunken lg:hover:bg-surface-hover"
-                >
-                  {name}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setFirstTask('')}
-                className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text-secondary active:bg-surface-sunken lg:hover:bg-surface-hover"
-              >
-                Своё…
-              </button>
+        {week.days.map((day) => {
+          const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
+          const isFuture = day > today
+          const height = fact > 0 ? Math.max(8, Math.min(100, (fact / maxDayValue) * 100)) : 3
+          return (
+            <span key={day} className="flex h-full flex-1 items-end justify-center">
+              <span
+                className="w-3/5 max-w-7 rounded-t-xs"
+                title={`${formatHoursRu(fact)} ч`}
+                style={{
+                  height: `${height}%`,
+                  background:
+                    day === today ? 'var(--accent)' : fact > 0 ? 'var(--bar-past)' : isFuture ? 'var(--bar-future)' : 'var(--bar-empty)',
+                }}
+              />
             </span>
-          </div>
-        )}
-        <NewTaskSheet
-          open={firstTask !== null}
-          onClose={() => setFirstTask(null)}
-          preset={{ title: firstTask ?? '', planDate: today }}
-        />
-
-        {!isLoading && tasks.length > 0 && todayTasks.length === 0 && (
-          <button
-            type="button"
-            onClick={() => setPlanning(true)}
-            className="flex min-h-[72px] items-center gap-3.5 rounded-md border border-[var(--selected-border)] bg-surface-selected px-4 py-3 text-left"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block text-md font-semibold text-text">Что делаем сегодня?</span>
-              <span className="block text-sm text-text-secondary">
-                {suggestedCount > 0
-                  ? `Отметьте задачи на день — ${suggestedCount} уже предложено`
-                  : 'Отметьте задачи на день — это займёт полминуты'}
+          )
+        })}
+      </div>
+      <div className="flex gap-1.5 pt-1.5">
+        {week.days.map((day, i) => {
+          const fact = (factByDay.get(day) ?? 0) + (day === today ? liveHours : 0)
+          const isToday = day === today
+          return (
+            <span key={day} className="flex flex-1 flex-col items-center gap-px">
+              <span className={`text-xs ${isToday ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>{WEEKDAYS[i]}</span>
+              <span
+                className={`tabular font-mono text-xs ${
+                  isToday ? 'text-accent-text' : hasNorm && fact > dayNorm ? 'text-text' : 'text-text-secondary'
+                }`}
+              >
+                {fact > 0 ? formatHoursRu(fact) : '—'}
               </span>
             </span>
-            <ArrowRight size={18} className="text-accent-text" />
-          </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const overdueWidget = overdueTasks.length > 0 && (
+    <div className="flex flex-col gap-2 px-5 pt-5">
+      <Overline className="text-danger-text">Просрочено · {overdueTasks.length}</Overline>
+      <ListGroup className="border-[var(--danger-line)]">
+        {overdueTasks.map((task) => {
+          const fact = rollupFact(task, childrenOf.get(task.id))
+          const pct = task.planned_hours > 0 ? Math.round((fact / task.planned_hours) * 100) : 0
+          // у подзадачи важнее спринт, чем группы: «Созвон» без спринта ни о чём не говорит
+          const category = task.parent_id ? (taskById.get(task.parent_id)?.name ?? '') : model.listLabel(task)
+          return (
+            <div key={task.id} className="flex min-h-[var(--row-task)] items-center gap-3 px-3 py-2.5">
+              <Ring
+                size={32}
+                pct={pct}
+                state="over"
+                track="var(--ring-track-danger)"
+                onClick={() => {
+                  tap()
+                  startTimer.mutate(task.id, { onError })
+                }}
+                ariaLabel={`Начать учёт: ${task.name}`}
+              >
+                <PlayGlyph />
+              </Ring>
+              <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
+                <p title={task.name} className="truncate text-base font-medium text-text">
+                  {task.name}
+                </p>
+                <span className="flex min-w-0 items-center gap-1.5 text-sm whitespace-nowrap text-text-secondary">
+                  <span className="shrink-0 font-medium text-danger-text">
+                    срок {task.end_date ? formatDueDate(task.end_date, today).toLowerCase() : ''}
+                  </span>
+                  {category && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <ClientDot color={task.parent_id ? null : model.colorOf(task)} />
+                      <span className="min-w-0 truncate">{category}</span>
+                    </>
+                  )}
+                </span>
+              </Link>
+              <Button variant="ghost" className="-mr-1 shrink-0 text-danger-text" onClick={() => setPostponing(task)}>
+                Перенести
+              </Button>
+            </div>
+          )
+        })}
+      </ListGroup>
+    </div>
+  )
+
+  // встречи — того календаря, что привязан к этому пространству (Профиль → Google Календарь)
+  const meetingsWidget = (
+    <MeetingsBlock date={today} entries={weekEntries.filter((e) => e.effective_date === today)} activeTimer={activeTimer} />
+  )
+
+  const planWidget = (
+    <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
+      <div className="flex min-h-11 items-center justify-between">
+        <span className="flex items-center gap-2">
+          <span data-tip="method" className="rounded-xs">
+            <span className="text-md font-semibold text-text">План дня</span>
+          </span>
+          {method !== 'none' && (
+            <button
+              type="button"
+              onClick={() => setMethodInfo(true)}
+              className="hit-44 flex h-6 items-center rounded-full bg-surface-sunken px-2 text-xs font-medium text-text-secondary"
+              aria-label="Как работает методика"
+            >
+              {METHOD_SHORT[method]} · ?
+            </button>
+          )}
+        </span>
+        {todayTasks.length > 0 && (
+          <Button variant="ghost" className="-mr-2 text-accent-text" onClick={() => setPlanning(true)}>
+            Изменить
+          </Button>
         )}
       </div>
 
-      {/* недавние: продолжить то, чем занимались, одним касанием кольца */}
-      {!isLoading && recentTasks.length > 0 && (
-        <div className="flex flex-col gap-2 px-5 pt-3 pb-2">
-          <Overline>Недавние</Overline>
-          <ListGroup>
-            {recentTasks.map((task) => {
-              const parent = task.parent_id ? taskById.get(task.parent_id) : undefined
-              const client = model.listLabel(parent ?? task)
-              return (
-                <div key={task.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
-                  <Ring
-                    size={30}
-                    pct={0}
-                    state="idle"
-                    onClick={() => {
-                      tap()
-                      startTimer.mutate(task.id, { onError })
-                    }}
-                    ariaLabel={`Начать учёт: ${task.name}`}
-                  >
-                    <PlayGlyph />
-                  </Ring>
-                  <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 py-1">
-                    <span className="block truncate text-base text-text">{task.name}</span>
-                    {(parent || client) && (
-                      <span className="flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
-                        {parent && <span className="min-w-0 truncate">{parent.name}</span>}
-                        {parent && client && <span aria-hidden>·</span>}
-                        {client && <ClientDot color={model.colorOf(parent ?? task)} />}
-                        {client && <span className="min-w-0 truncate">{client}</span>}
-                      </span>
-                    )}
-                  </Link>
-                </div>
-              )
-            })}
-          </ListGroup>
+      {isLoading && (
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map((i) => (
+            <TaskRowSkeleton key={i} />
+          ))}
         </div>
       )}
+
+      {!isLoading && method !== 'none' && (todayTasks.length > 0 || method === 'frog') && (
+        <DayByMethod
+          method={method}
+          today={today}
+          tasks={todayRows}
+          allTasks={tasks}
+          isDone={isDone}
+          started={(t) => trackedTodayTaskIds.has(t.id) || activeTimer?.task_id === t.id}
+          lockedIds={lockedIds}
+          candidates={sections.filter((sec) => sec.key !== 'planned').flatMap((sec) => sec.tasks)}
+          metaOf={planMeta}
+          renderRow={(t) => renderRow(t, false, true)}
+          onPlan={() => setPlanning(true)}
+        />
+      )}
+
+      {!isLoading && method === 'none' && topRows.length > 0 && (
+        <ListGroup>
+          {topRows.map((task) => {
+            const below = nestedOf(task.id)
+            return (
+              <div key={task.id} className="flex flex-col">
+                {renderRow(task, below.length > 0)}
+                {below.length > 0 && (
+                  <div className="ml-7 flex flex-col divide-y divide-divider border-l border-divider">
+                    {below.map((sub) => (
+                      <div key={sub.id}>{renderRow(sub, false)}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </ListGroup>
+      )}
+
+      {/* самый первый заход: задач нет вовсе — не «спланируйте день», а «создайте первую» */}
+      {!isLoading && tasks.length === 0 && (
+        <div className="flex flex-col items-start gap-2.5 rounded-md border border-dashed border-border-strong px-4 py-4">
+          <span className="text-md font-semibold text-text">Что сделать первым?</span>
+          <span className="text-sm text-text-secondary">Хватит одного названия. Нажмите на пример или на «+».</span>
+          <span className="flex flex-wrap gap-1.5">
+            {FIRST_TASKS.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setFirstTask(name)}
+                className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text active:bg-surface-sunken lg:hover:bg-surface-hover"
+              >
+                {name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFirstTask('')}
+              className="h-9 rounded-full border border-border bg-surface px-3 text-sm text-text-secondary active:bg-surface-sunken lg:hover:bg-surface-hover"
+            >
+              Своё…
+            </button>
+          </span>
+        </div>
+      )}
+
+      {!isLoading && tasks.length > 0 && todayTasks.length === 0 && (
+        <button
+          type="button"
+          onClick={() => setPlanning(true)}
+          className="flex min-h-[72px] items-center gap-3.5 rounded-md border border-[var(--selected-border)] bg-surface-selected px-4 py-3 text-left"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-md font-semibold text-text">Что делаем сегодня?</span>
+            <span className="block text-sm text-text-secondary">
+              {suggestedCount > 0
+                ? `Отметьте задачи на день — ${suggestedCount} уже предложено`
+                : 'Отметьте задачи на день — это займёт полминуты'}
+            </span>
+          </span>
+          <ArrowRight size={18} className="text-accent-text" />
+        </button>
+      )}
+    </div>
+  )
+
+  const recentWidget = !isLoading && recentTasks.length > 0 && (
+    <div className="flex flex-col gap-2 px-5 pt-3 pb-2">
+      <Overline>Недавние</Overline>
+      <ListGroup>
+        {recentTasks.map((task) => {
+          const parent = task.parent_id ? taskById.get(task.parent_id) : undefined
+          const client = model.listLabel(parent ?? task)
+          return (
+            <div key={task.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
+              <Ring
+                size={30}
+                pct={0}
+                state="idle"
+                onClick={() => {
+                  tap()
+                  startTimer.mutate(task.id, { onError })
+                }}
+                ariaLabel={`Начать учёт: ${task.name}`}
+              >
+                <PlayGlyph />
+              </Ring>
+              <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 py-1">
+                <span className="block truncate text-base text-text">{task.name}</span>
+                {(parent || client) && (
+                  <span className="flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
+                    {parent && <span className="min-w-0 truncate">{parent.name}</span>}
+                    {parent && client && <span aria-hidden>·</span>}
+                    {client && <ClientDot color={model.colorOf(parent ?? task)} />}
+                    {client && <span className="min-w-0 truncate">{client}</span>}
+                  </span>
+                )}
+              </Link>
+            </div>
+          )
+        })}
+      </ListGroup>
+    </div>
+  )
+
+  const blocks: Record<TodayWidget, React.ReactNode> = {
+    day: dayWidget,
+    tile: null,
+    week: weekWidget,
+    overdue: overdueWidget,
+    meetings: meetingsWidget,
+    plan: planWidget,
+    recent: recentWidget,
+  }
+  const shown = widgets.order.filter((id) => widgets.on.includes(id) && id !== 'tile')
+
+  return (
+    <div className="page page-wide mx-auto flex max-w-lg flex-col">
+      <div className="safe-top">
+        {/* верхняя строка: дата и пространство слева, хронология и профиль справа */}
+        <div className="flex min-h-11 items-center gap-2 px-5 pt-3 lg:pt-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+            <Overline className="truncate">{formatTodayLabel()}</Overline>
+            <WorkspaceTag />
+          </div>
+          <Link
+            to="/history"
+            data-tip="history"
+            aria-label="Хронология: учёт, правки и изменения по дням"
+            className="hit-44 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-secondary lg:hover:bg-surface-hover"
+          >
+            <History size={17} />
+          </Link>
+          <ProfileButton />
+        </div>
+        {/* крупный заголовок, как в Asana; «Виджеты» — что и в каком порядке на экране */}
+        <div className="flex items-end justify-between gap-3 px-5 pt-1 pb-3">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">Сегодня</h1>
+          <button
+            type="button"
+            onClick={() => setWidgetsOpen(true)}
+            className="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-text-secondary"
+          >
+            <Settings2 size={14} />
+            Виджеты
+          </button>
+        </div>
       </div>
+
+      {/* десктоп: неделя — справа и остаётся на месте при прокрутке, остальное — слева */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-10">
+        <div className="min-w-0">
+          {shown.map((id) => (
+            <div key={id} className={id === 'week' ? 'lg:hidden' : undefined}>
+              {blocks[id]}
+            </div>
+          ))}
+          {shown.length === 0 && (
+            <div className="px-5 pt-4">
+              <EmptyState title="Все виджеты выключены">Включите нужные в «Виджетах» — день, план, встречи.</EmptyState>
+            </div>
+          )}
+        </div>
+        {shown.includes('week') && <div className="hidden lg:block">{weekWidget}</div>}
       </div>
+      <NewTaskSheet open={firstTask !== null} onClose={() => setFirstTask(null)} preset={{ title: firstTask ?? '', planDate: today }} />
+
+      <Sheet open={widgetsOpen} onClose={() => setWidgetsOpen(false)} title="Виджеты">
+        <span className="-mt-2 text-sm text-text-secondary">Что показывать на «Сегодня» и в каком порядке. Запоминается на этом устройстве.</span>
+        <ListGroup>
+          {widgets.order.map((id, i) => {
+            const on = widgets.on.includes(id)
+            const move = (dir: -1 | 1) => {
+              const next = [...widgets.order]
+              const j = i + dir
+              if (j < 0 || j >= next.length) return
+              ;[next[i], next[j]] = [next[j], next[i]]
+              setWidgets({ ...widgets, order: next })
+            }
+            return (
+              <div key={id} className="flex min-h-13 items-center gap-2 px-3.5">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-base text-text">{WIDGET_LABEL[id].title}</span>
+                  <span className="truncate text-sm text-text-secondary">{WIDGET_LABEL[id].hint}</span>
+                </span>
+                {id !== 'tile' && (
+                  <>
+                    <button type="button" onClick={() => move(-1)} disabled={i === 0} aria-label="Выше" className="hit-44 flex h-8 w-7 items-center justify-center text-text-secondary disabled:opacity-30">
+                      <ChevronUp size={16} />
+                    </button>
+                    <button type="button" onClick={() => move(1)} disabled={i === widgets.order.length - 1} aria-label="Ниже" className="hit-44 flex h-8 w-7 items-center justify-center text-text-secondary disabled:opacity-30">
+                      <ChevronDown size={16} />
+                    </button>
+                  </>
+                )}
+                <Switch
+                  on={on}
+                  ariaLabel={WIDGET_LABEL[id].title}
+                  onChange={(v) => setWidgets({ ...widgets, on: v ? [...widgets.on, id] : widgets.on.filter((x) => x !== id) })}
+                />
+              </div>
+            )
+          })}
+        </ListGroup>
+      </Sheet>
 
       {planning && (
         <DayPlanSheet

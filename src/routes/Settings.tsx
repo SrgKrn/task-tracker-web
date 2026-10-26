@@ -9,8 +9,10 @@ import { Avatar } from '../components/Avatar'
 import { WorkspaceList } from '../components/Workspaces'
 import { useAvatarUpload, useProfile } from '../lib/profile'
 import { useActiveWorkspace, useClientWork, useDeleteWorkspace, useUpdateActiveWorkspace, useUpdateWorkspace, useWorkspaces } from '../lib/workspace'
-import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, Switch, Tag, fieldClass } from '../components/ui'
+import { Button, ClientDot, FieldLabel, ListGroup, Overline, Segmented, Sheet, Switch, fieldClass } from '../components/ui'
 import { BUILD_TIME } from '../lib/appUpdate'
+import { setTheme, useTheme, type ThemeChoice } from '../lib/theme'
+import { usePush } from '../lib/push'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { pickFromDrive, uploadToDrive, useGoogleStatus } from '../lib/google'
 import { ALL_SECTIONS, type ReportOptions, type ReportSections } from '../lib/report'
@@ -42,6 +44,8 @@ import { isStrongPassword } from '../lib/password'
 import { supabase } from '../lib/supabaseClient'
 import { todayStr } from '../lib/period'
 import { DEFAULT_WORK_DAYS, normSettingsOf } from '../lib/norm'
+
+const THEME_SHORT: Record<ThemeChoice, string> = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' }
 
 function firstOfMonthStr(): string {
   const d = new Date()
@@ -504,42 +508,59 @@ export function Settings() {
   const profile = useProfile()
   const { data: plan } = useUserPlan()
   const [deleting, setDeleting] = useState(false)
+  const theme = useTheme()
+  const push = usePush()
 
   return (
     <SettingsShell>
       <div className="safe-top-page page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4">
-        <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Профиль</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">Профиль</h1>
 
+        {/* человек — по центру, как в Telegram: фото, имя, почта и тариф */}
         <Link
           to="/settings/profile"
-          className="mt-4 flex items-center gap-3.5 rounded-md border border-border bg-surface px-3.5 py-3 active:bg-surface-sunken lg:hover:bg-surface-hover"
+          className="mt-4 flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-4 pt-5 pb-4 text-center active:bg-surface-sunken lg:hover:bg-surface-hover"
         >
-          <span className="relative">
-            <Avatar size={60} />
-            <span className="absolute -right-0.5 -bottom-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-text-secondary">
-              <Camera size={13} />
+          <span className="relative mb-1.5">
+            <Avatar size={76} />
+            <span className="absolute -right-0.5 -bottom-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-text-secondary">
+              <Camera size={14} />
             </span>
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-md font-semibold text-text">{profile.name}</span>
-            <span className="block truncate text-sm text-text-secondary">{profile.email}</span>
-            {!profile.hasName && <span className="block text-sm text-accent-text">Добавьте имя и фото</span>}
-          </span>
-          <ChevronRight size={15} className="shrink-0 text-text-secondary" />
+          <span className="block max-w-full truncate text-lg font-semibold text-text">{profile.name}</span>
+          <span className="block max-w-full truncate text-sm text-text-secondary">{profile.email}</span>
+          {!profile.hasName && <span className="block text-sm text-accent-text">Добавьте имя и фото</span>}
         </Link>
 
-        <Link
-          to="/settings/tariff"
-          className="mt-2 flex min-h-13 items-center gap-3 rounded-md border border-border bg-surface px-3.5 py-2.5 active:bg-surface-sunken lg:hover:bg-surface-hover"
-        >
-          <span className="min-w-0 flex-1 text-base text-text">Тариф</span>
-          {plan && (
-            <Tag tone={plan.effective === 'free' ? 'neutral' : 'accent'}>
-              {plan.plan === 'lifetime' ? 'Пожизненный безлимит' : PLAN_NAME[plan.effective]}
-            </Tag>
-          )}
-          <ChevronRight size={15} className="shrink-0 text-text-secondary" />
-        </Link>
+        {/* быстрые плитки: то, что переключают чаще всего, — без захода в разделы */}
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')}
+            className="flex min-h-16 flex-col items-start justify-center gap-0.5 rounded-md border border-border bg-surface px-3 py-2 text-left active:bg-surface-sunken"
+          >
+            <span className="text-xs text-text-secondary">Тема</span>
+            <span className="text-sm font-medium text-text">{THEME_SHORT[theme]}</span>
+          </button>
+          <Link
+            to="/settings/notifications"
+            className="flex min-h-16 flex-col items-start justify-center gap-0.5 rounded-md border border-border bg-surface px-3 py-2 active:bg-surface-sunken"
+          >
+            <span className="text-xs text-text-secondary">Напоминания</span>
+            <span className={`text-sm font-medium ${push.state === 'on' ? 'text-success-text' : 'text-text'}`}>
+              {push.state === 'on' ? 'Включены' : push.state === null ? '…' : 'Выключены'}
+            </span>
+          </Link>
+          <Link
+            to="/settings/tariff"
+            className="flex min-h-16 flex-col items-start justify-center gap-0.5 rounded-md border border-border bg-surface px-3 py-2 active:bg-surface-sunken"
+          >
+            <span className="text-xs text-text-secondary">Тариф</span>
+            <span className={`max-w-full truncate text-sm font-medium ${plan && plan.effective !== 'free' ? 'text-accent-text' : 'text-text'}`}>
+              {plan ? (plan.plan === 'lifetime' ? 'Безлимит' : PLAN_NAME[plan.effective]) : '…'}
+            </span>
+          </Link>
+        </div>
 
         <section className="mt-5 flex flex-col gap-2">
           <span className="flex items-baseline justify-between px-0.5">

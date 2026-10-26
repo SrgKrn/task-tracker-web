@@ -2,13 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
-import { ClientDot, StageChip } from './ui'
+import { ClientDot } from './ui'
 import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
-import { formatDueDate } from '../lib/period'
-import { stageTone } from '../lib/stage'
+import { addDays, formatDueDate, todayStr } from '../lib/period'
 import type { ActiveTimer, LabelColor, Status, Task } from '../lib/types'
 import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time'
 import { isOverdue, rollupFact, runningWithin } from '../lib/tree'
@@ -46,6 +45,8 @@ interface TaskListItemProps {
   subtasksBelow?: boolean
   /** отметка методики приоритизации (квадрант, «A-1»…) — первой в строке под названием */
   badge?: ReactNode
+  /** этап в подписи: там, где список не разложен по этапам («Сегодня») */
+  showStage?: boolean
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -72,6 +73,7 @@ export function TaskListItem({
   parentName,
   subtasksBelow = false,
   badge,
+  showStage = false,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -130,17 +132,14 @@ export function TaskListItem({
   // открытая справа задача (десктоп) подсвечена, как выбранная строка в дизайн-системе (9.5)
   const selected = useMatch('/tasks/:id')?.params.id === task.id
   const cardBg = isRunning ? 'var(--timer-bg)' : selected ? 'var(--surface-selected)' : 'var(--surface)'
-  const { data: statuses = [] } = useStatuses()
-  const tone = status ? stageTone(status, statuses) : null
-
   // «1,8 / 0 ч» выглядело как ошибка: у задачи без плана нет знаменателя
-  const hours = hasPlan
-    ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
-    : `${formatHoursRu(fact)} ч · без плана`
-  // просрочка — датой и словом, а не красными часами: красные часы читались как переработка
-  const overdueLabel =
-    overdue && !done && task.end_date ? `просрочено, ${formatDueDate(task.end_date).toLowerCase()}` : ''
-  const meta = [overdueLabel, hours, label].filter(Boolean).join(' · ')
+  const hours = hasPlan ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч` : `${formatHoursRu(fact)} ч`
+  // справа одна мета (0.57): срок пилюлей, если он горит, иначе часы. Красный — просрочено,
+  // жёлтый — сегодня-послезавтра
+  const today = todayStr()
+  const soon = !done && !!task.end_date && !overdue && task.end_date <= addDays(today, 2)
+  const duePill = !done && task.end_date && (overdue || soon) ? formatDueDate(task.end_date, today) : ''
+  const meta = [showStage ? status?.label : '', label].filter(Boolean).join(' · ')
 
   // часы справа: у раскрытого спринта они уже тикают в строке подзадачи — второй раз не нужны
   const showClock = isRunning && !!activeTimer && (isRunningSelf || (!open && !subtasksBelow))
@@ -302,32 +301,37 @@ export function TaskListItem({
               >
                 {task.name}
               </p>
-              {/* мета в одну строку: просрочка первой — её нельзя обрезать, часы моноширинным,
-                  клиент обычным шрифтом с цветной точкой */}
-              <span
-                title={meta}
-                className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm leading-[1.35] whitespace-nowrap text-text-secondary"
-              >
-                {badge}
-                {overdueLabel && <span className="shrink-0 font-medium text-danger-text">{overdueLabel}</span>}
-                {overdueLabel && <span aria-hidden>·</span>}
-                <span className="tabular shrink-0 font-mono text-xs">{hours}</span>
-                {label && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <ClientDot color={color} />
-                    <span className="min-w-0 truncate">{label}</span>
-                  </>
-                )}
-              </span>
+              {/* подпись серым: идущий учёт — терракотой с часами, иначе отметка методики,
+                  этап (где нужен) и группы с цветной точкой */}
+              {showClock && activeTimer ? (
+                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm leading-[1.35] font-medium text-accent-text">
+                  идёт учёт ·<span className="tabular font-mono text-xs">{formatClock(activeTimer.started_at)}</span>
+                </span>
+              ) : (
+                (meta || badge) && (
+                  <span
+                    title={meta}
+                    className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm leading-[1.35] whitespace-nowrap text-text-secondary"
+                  >
+                    {badge}
+                    {label && <ClientDot color={color} />}
+                    <span className="min-w-0 truncate">{meta}</span>
+                  </span>
+                )
+              )}
             </Link>
 
-            {showClock && activeTimer ? (
-              <span className="tabular shrink-0 font-mono text-base font-medium text-accent-text">
-                {formatClock(activeTimer.started_at)}
+            {duePill ? (
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  overdue ? 'bg-danger-soft text-danger-text' : 'bg-warning-soft text-warning-text'
+                }`}
+                aria-label={overdue ? `Просрочено: ${duePill}` : `Срок: ${duePill}`}
+              >
+                {duePill}
               </span>
             ) : (
-              <StageChip tone={tone} label={status?.label} />
+              <span className={`tabular shrink-0 font-mono text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hours}</span>
             )}
           </div>
 

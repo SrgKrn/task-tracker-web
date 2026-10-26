@@ -96,6 +96,81 @@ input[type="number"] {
   --tabbar-space: calc(var(--tabbar-bottom) + var(--tabbar-h));
 }
 
+/* плашка учёта над таб-баром: --mini-space — сколько она добавляет снизу (0.57) */
+:root:has([data-mini-bar]) {
+  --mini-space: 64px;
+}
+
+.mini-bar {
+  bottom: calc(var(--tabbar-space) + 8px);
+  transition: bottom var(--duration-base, 200ms) var(--ease-out, ease-out);
+}
+
+/* таб-бар уехал под клавиатуру — плашка опускается на его место */
+.tabbar[data-hidden] ~ .mini-bar,
+:root:has(.tabbar[data-hidden]) .mini-bar {
+  bottom: var(--tabbar-bottom);
+}
+
+.mini-bar-pill {
+  background: color-mix(in srgb, var(--surface) 70%, var(--timer-bg));
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* «идёт учёт»: дышащая точка — видно, что время капает */
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--accent);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* поле комментария внизу карточки — над таб-баром, прилипает при прокрутке */
+.compose-bar {
+  bottom: 0;
+}
+@media (max-width: 1023.98px) {
+  .compose-bar {
+    bottom: calc(var(--tabbar-space) + 8px);
+    margin: 0 12px;
+    border-radius: var(--radius-lg, 14px);
+    overflow: hidden;
+    box-shadow: var(--shadow-popover);
+  }
+  .compose-bar > div {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 14px);
+  }
+  :root:has(.tabbar[data-hidden]) .compose-bar {
+    bottom: 8px;
+  }
+}
+
+/* плавающая панель «Фильтр · Порядок» в «Задачах» — над таб-баром и плашкой учёта */
+@media (max-width: 1023.98px) {
+  .task-float {
+    bottom: calc(var(--tabbar-space) + var(--mini-space, 0px) + 12px);
+  }
+  :root:has(.task-float) .app-content {
+    padding-bottom: calc(var(--tabbar-space) + var(--mini-space, 0px) + 76px);
+  }
+  :root:has(.tabbar[data-hidden]) .task-float {
+    display: none;
+  }
+}
+
 .tabbar {
   bottom: var(--tabbar-bottom);
   transition:
@@ -145,7 +220,7 @@ input[type="number"] {
 
 @media (max-width: 1023.98px) {
   .app-content {
-    padding-bottom: calc(var(--tabbar-space) + 24px);
+    padding-bottom: calc(var(--tabbar-space) + var(--mini-space, 0px) + 24px);
   }
 }
 

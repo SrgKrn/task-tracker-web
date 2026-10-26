@@ -51,6 +51,9 @@ interface TaskFormProps {
    * «Вернуть» из уведомления и правки с другого устройства видны сразу.
    */
   onFieldChange?: (patch: Partial<TaskFormValues>) => void
+  /** карточка 0.57: этап — кнопкой в шапке, срок — крупным полем над свойствами */
+  hideStage?: boolean
+  hideDue?: boolean
 }
 
 export function TaskForm({
@@ -61,6 +64,8 @@ export function TaskForm({
   sprints,
   onSubmit,
   onFieldChange,
+  hideStage = false,
+  hideDue = false,
 }: TaskFormProps) {
   const [draft, setValues] = useState<TaskFormValues>(initial)
   const values = onFieldChange ? initial : draft
@@ -133,6 +138,7 @@ export function TaskForm({
     return (
       <>
       <ListGroup clip={false}>
+        {!hideStage && (
         <div data-tip="stage">
         <PickerField
           row
@@ -150,6 +156,7 @@ export function TaskForm({
           }
         />
         </div>
+        )}
         <button
           type="button"
           onClick={() => setEditingPlan(true)}
@@ -180,10 +187,12 @@ export function TaskForm({
           <span className="shrink-0 text-base text-text-secondary">Начало</span>
           <DatePicker row className="flex-1" value={values.start_date} onChange={(v) => set('start_date', v)} ariaLabel="Начало" />
         </div>
+        {!hideDue && (
         <div className="flex items-center gap-3 px-3">
           <span className="shrink-0 text-base text-text-secondary">Срок</span>
           <DatePicker row className="flex-1" value={values.end_date} onChange={(v) => set('end_date', v)} ariaLabel="Срок" />
         </div>
+        )}
         {sprints ? (
           <PickerField
             row

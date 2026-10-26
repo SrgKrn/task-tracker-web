@@ -8,17 +8,19 @@ import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
 import { SubtractSheet, type SubtractSource } from '../components/SubtractSheet'
 import { NextSprintSheet } from '../components/NextSprintSheet'
 import { SprintComposition } from '../components/SprintComposition'
-import { ArrowLeft, Minus, MoreDots, Plus } from '../components/Icon'
-import { Ring, type RingState } from '../components/Ring'
+import { ArrowLeft, Check, ChevronDown, Comment as CommentIcon, MoreDots, Plus } from '../components/Icon'
+import { Ring, StopGlyph, type RingState } from '../components/Ring'
+import { QuickNoteSheet } from '../components/ActiveTimerBar'
+import { isOverdue } from '../components/TaskListItem'
+import { stageTone } from '../lib/stage'
+import { useTimerNotePreview } from '../lib/timerNote'
 import { TaskForm, type TaskFormValues } from '../components/TaskForm'
 import { formatRate, type RateCurrency } from '../lib/rate'
 import { PriorityField } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
-import { TimerButton } from '../components/TimerButton'
 import { useTip } from '../lib/tips'
-import { TimerNoteRow } from '../components/TimerNote'
-import { Button, ClientDot, Segmented, Sheet } from '../components/ui'
+import { Button, ClientDot, ListGroup, Sheet } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { formatDueDate, todayStr } from '../lib/period'
 import { useGroupModel } from '../lib/groups'
@@ -97,8 +99,10 @@ export function TaskDetail() {
    * кольцом и кнопкой учёта всегда сверху.
    */
   // свойства теперь над вкладками — вкладки только для истории, состава и файлов
-  const [tab, setTab] = useState<'composition' | 'files' | 'history'>('history')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [stageOpen, setStageOpen] = useState(false)
+  const [factOpen, setFactOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
   const isRunning = activeTimer?.task_id === id
   // учёт идёт по подзадаче: кольцо спринта растёт вместе с ней, хотя кнопка здесь «Начать»
   const runningInside = !!task && !isRunning && runningWithin(task, subtasks, activeTimer?.task_id)
@@ -108,6 +112,7 @@ export function TaskDetail() {
   useTip('stage', !!task && task.fact_hours > 0)
   useTip('subtasks', !!task && !task.parent_id && (task.planned_hours >= 4 || allTasks.length >= 5))
   useTicker(isRunning || runningInside)
+  const notePreview = useTimerNotePreview(isRunning ? activeTimer : null)
 
   // спринт → подзадача → спринт: карточка та же, меняется только id, и без этого новая
   // открывалась прокрученной туда, где остановились в предыдущей
@@ -316,25 +321,69 @@ export function TaskDetail() {
     )
   }
 
+  const sortedStatuses = [...statuses].sort((a, b) => a.sort_order - b.sort_order)
+  const quickAdd = (minutes: number) => setFact(task.fact_hours + minutes / 60)
+  const toFiles = () => document.getElementById('task-files')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const overdue = isOverdue(task, status)
+
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:h-full lg:w-full lg:max-w-[var(--detail-max)]">
-      {/* отступ под «чёлку» — на обёртке: safe-top перебивает собственный отступ блока */}
-      <div className="safe-top">
-        <div className="flex items-center justify-between gap-2 px-3 pt-2">
+      {/* шапка: назад, этап пилюлей (меняется чаще всего) и меню */}
+      <div className="safe-top sticky top-0 z-20 bg-bg">
+        <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
           <Button variant="ghost" className="min-w-0" onClick={() => navigate(backTo)}>
             <ArrowLeft size={16} />
             <span className="truncate">{parent ? parent.name : 'Назад'}</span>
           </Button>
-          {/* «Дублировать» и «Удалить» — в меню: красное «Удалить» прямо у «Назад»
-              было опасным действием на виду, под пальцем */}
-          <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" onClick={() => setMenuOpen(true)}>
-            <MoreDots size={18} />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              data-tip="stage"
+              onClick={() => setStageOpen(true)}
+              aria-haspopup="dialog"
+              className="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-text"
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: status ? `var(--status-${stageTone(status, statuses)})` : 'var(--border-strong)' }}
+                aria-hidden
+              />
+              {status?.label ?? 'Без этапа'}
+              <ChevronDown size={13} className="text-text-tertiary" />
+            </button>
+            <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" onClick={() => setMenuOpen(true)}>
+              <MoreDots size={18} />
+            </Button>
+          </div>
         </div>
+        {/* закреп учёта: в карточке идущей задачи нижней плашки нет — она здесь */}
+        {isRunning && activeTimer && (
+          <div className="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] py-1.5 pr-1.5 pl-3">
+            <span className="live-dot shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--timer-text)]">{notePreview || 'Идёт учёт'}</span>
+            <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]">{formatClock(activeTimer.started_at)}</span>
+            <button
+              type="button"
+              onClick={() => setNoteOpen(true)}
+              aria-label="Комментарий"
+              data-tip="timer-note"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-[var(--timer-text)]"
+            >
+              <CommentIcon size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => stopTimer.mutate(undefined, { onError })}
+              aria-label="Остановить учёт"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent"
+            >
+              <StopGlyph size={11} color="var(--on-accent)" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* шапка задачи */}
-      <div className="flex flex-col gap-3 px-5 pt-1 pb-4">
+      <div className="flex flex-col gap-3 px-5 pt-2 pb-4">
         {values.length > 0 && (
           <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-text-secondary">
             {/* каждое значение — ссылка на свою карточку: там вся история и файлы по нему */}
@@ -369,7 +418,7 @@ export function TaskDetail() {
               }
             }}
             aria-label="Название задачи"
-            className="resize-none rounded-sm border border-accent bg-surface px-2.5 py-2 text-xl font-semibold tracking-[-0.01em] text-text"
+            className="resize-none rounded-sm border border-accent bg-surface px-2.5 py-2 text-2xl font-semibold tracking-[-0.02em] text-text"
           />
         ) : (
           <h1
@@ -378,91 +427,188 @@ export function TaskDetail() {
               setDraftName(task.name)
               setRenaming(true)
             }}
-            className="cursor-text text-xl font-semibold tracking-[-0.01em] text-text"
+            className="cursor-text text-2xl font-semibold tracking-[-0.02em] text-text"
             style={{ textWrap: 'pretty' }}
           >
             {task.name}
           </h1>
         )}
 
-        {/* связь с прошлым периодом — только если название другое: «На основе «Спринт Wclass»»
-            у «Спринт Wclass» ничего не сообщало */}
         {original && original.name !== task.name && (
           <Link to={`/tasks/${original.id}`} className="-mt-1.5 truncate text-sm text-text-secondary">
             Продолжение: <span className="text-accent-text">{original.name}</span>
           </Link>
         )}
 
-        <div className="flex items-center gap-4 pt-1">
-          <Ring size={104} pct={done ? 100 : pct} state={ringState} centerBg="var(--bg)" marker={isRunning}>
-            <span className="flex flex-col items-center gap-px">
-              <span className="tabular whitespace-nowrap font-mono text-lg font-medium text-text">
-                {isRunning && activeTimer
-                  ? formatClock(activeTimer.started_at)
-                  : task.planned_hours > 0
-                    ? `${Math.round(pct)}%`
-                    : '—'}
+        {/* два главных поля: факт (нажать — правка времени) и срок */}
+        <div className="grid grid-cols-2 gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={() => setFactOpen(true)}
+            aria-label={`Факт ${formatHoursMinutes(fact)}, изменить`}
+            className="flex min-h-18 items-center gap-3 rounded-md border border-border bg-surface px-3 py-2.5 text-left active:bg-surface-sunken"
+          >
+            <Ring size={40} pct={done ? 100 : pct} state={ringState} />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-xs text-text-secondary">Факт</span>
+              <span className="tabular truncate font-mono text-md font-medium text-text">{formatHoursMinutes(fact)}</span>
+              <span className="truncate text-xs text-text-secondary">
+                {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)}` : 'без плана'}
               </span>
-              <span className="text-xs text-text-secondary">{isRunning ? 'идёт учёт' : 'плана'}</span>
             </span>
-          </Ring>
-
-          {/* факт один раз и с одной точностью: раньше он стоял трижды — «18 ч» в кольце,
-              «18 / 24 ч» рядом и «17 ч 58 мин» в блоке правки */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            {/* число и кнопки правки — в одной строке: правят именно его */}
-            <div className="flex items-start gap-2">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <button
-                  type="button"
-                  onClick={() => setEditingFact(true)}
-                  className="tabular self-start whitespace-nowrap text-left font-mono text-md font-medium text-text underline decoration-dotted decoration-[var(--border-strong)] underline-offset-4"
-                  aria-label={`Факт ${formatHoursMinutes(fact)}, изменить`}
-                >
-                  {formatHoursMinutes(fact)}
-                </button>
-                <span className="text-sm text-text-secondary">
-                  {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)}` : 'без плана'}
-                </span>
-              </div>
-              {/* минус — окно: сколько отнять и откуда (отдельной правкой или из сессии);
-                  плюс — сколько добавить и комментарий */}
-              <Button
-                className="w-10 shrink-0 px-0"
-                aria-label="Отнять время"
-                onClick={() => setSubtracting(15)}
-                disabled={adjustFactHours.isPending || (task.fact_hours <= 0 && !isRunning)}
-              >
-                <Minus size={16} />
-              </Button>
-              <Button
-                className="w-10 shrink-0 px-0"
-                aria-label="Добавить время"
-                onClick={() => setAdding(true)}
-                disabled={adjustFactHours.isPending}
-              >
-                <Plus size={16} />
-              </Button>
-            </div>
-            {subtasks.length > 0 && (
-              <span className="-mt-1.5 text-sm text-text-secondary">в самом спринте {formatHoursMinutes(task.fact_hours)}</span>
-            )}
-            <div data-tip="timer" className="rounded-sm">
-              <TimerButton
-                taskId={task.id}
-                activeTimer={activeTimer}
-                onStart={() => startTimer.mutate(task.id, { onError })}
-                onStop={() => stopTimer.mutate(undefined, { onError })}
-              />
-            </div>
-            {activeTimer?.task_id === task.id && <TimerNoteRow timer={activeTimer} />}
+          </button>
+          <div className="flex min-h-18 flex-col justify-center gap-1 rounded-md border border-border bg-surface px-3 py-2">
+            <span className={`text-xs ${overdue ? 'font-medium text-danger-text' : 'text-text-secondary'}`}>
+              {overdue ? 'Срок прошёл' : 'Срок'}
+            </span>
+            <DatePicker small value={task.end_date} onChange={(v) => saveField({ end_date: v })} ariaLabel="Срок" />
           </div>
         </div>
+        {subtasks.length > 0 && <span className="-mt-1 text-sm text-text-secondary">в самом спринте {formatHoursMinutes(task.fact_hours)}</span>}
+      </div>
 
-        {/* за какой день засчитать правку: без этого исправление старых часов
-            вычиталось из сегодняшнего дня и роняло кольцо «Сегодня» */}
+      {method !== 'none' && (
+        <div className="px-5 pb-4">
+          <PriorityField task={task} method={method} tasks={allTasks} />
+        </div>
+      )}
+
+      {/* свойства — строками, как в Asana: группы, план, начало, ставка, «ежедневная» */}
+      <div className="px-5">
+        <TaskForm initial={formValues} statuses={statuses} compact hideStage hideDue sprints={sprintOptions} onFieldChange={saveField} />
+      </div>
+
+      {/* разделы друг под другом вместо вкладок: всё видно одной прокруткой */}
+      <div className="sc flex flex-col gap-6 px-5 pt-6 pb-4 lg:min-h-0 lg:w-full lg:flex-1 lg:overflow-y-auto">
+        {!isSubtask && (
+          <section data-tip="subtasks" className="flex flex-col gap-2.5">
+            <h2 className="flex items-baseline gap-2 text-md font-semibold text-text">
+              Подзадачи
+              {subtasks.length > 0 && <span className="tabular font-mono text-xs font-normal text-text-secondary">{subtasks.length}</span>}
+            </h2>
+            <SprintComposition
+              task={task}
+              subtasks={subtasks}
+              statuses={statuses}
+              onApplyStatus={(statusId) => saveField({ status_id: statusId })}
+              onNextSprint={() => setNextSprint(true)}
+            />
+          </section>
+        )}
+
+        <section id="task-files" className="flex scroll-mt-24 flex-col gap-2.5">
+          <h2 className="text-md font-semibold text-text">Файлы</h2>
+          <AttachmentsBlock
+            taskId={task.id}
+            driveFolderId={values.find((v) => v.item.drive_folder_id)?.item.drive_folder_id ?? null}
+            taskIds={[task.id, ...subtasks.map((c) => c.id)]}
+            taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
+            emptyText="Договор, ТЗ, скриншоты — откроются прямо отсюда"
+          />
+        </section>
+
+        <section className="flex flex-col gap-2.5">
+          <h2 className="text-md font-semibold text-text">История</h2>
+          <TaskTimeline taskId={task.id} isRunning={isRunning} />
+        </section>
+      </div>
+
+      {/* внизу — комментарий; пока поле пустое, кнопка справа — старт/стоп учёта */}
+      <div data-tip="timer" className="compose-bar sticky z-30 lg:bottom-0">
+        <CommentBar
+          taskId={task.id}
+          running={isRunning}
+          onStart={() => startTimer.mutate(task.id, { onError })}
+          onStop={() => stopTimer.mutate(undefined, { onError })}
+          onAttach={toFiles}
+        />
+      </div>
+
+      <Sheet open={stageOpen} onClose={() => setStageOpen(false)} title="Этап">
+        <ListGroup>
+          {[{ id: null as string | null, label: 'Без этапа' }, ...sortedStatuses.map((s) => ({ id: s.id as string | null, label: s.label }))].map((s) => {
+            const st = s.id ? sortedStatuses.find((x) => x.id === s.id) : undefined
+            return (
+              <button
+                key={s.id ?? 'none'}
+                type="button"
+                onClick={() => {
+                  setStageOpen(false)
+                  if (s.id !== task.status_id) saveField({ status_id: s.id })
+                }}
+                className="flex min-h-12 items-center gap-3 px-3.5 text-left text-base text-text"
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: st ? `var(--status-${stageTone(st, statuses)})` : 'var(--border-strong)' }}
+                  aria-hidden
+                />
+                <span className="flex-1">{s.label}</span>
+                {task.status_id === s.id && <Check size={16} className="text-accent" />}
+              </button>
+            )
+          })}
+        </ListGroup>
+        <Link to="/statuses" className="min-h-11 self-start py-2 text-sm font-medium text-accent-text">
+          Настроить этапы
+        </Link>
+      </Sheet>
+
+      <Sheet open={factOpen} onClose={() => setFactOpen(false)} title="Факт">
+        <div className="flex items-center gap-4">
+          <Ring size={72} pct={done ? 100 : pct} state={ringState} centerBg="var(--surface)">
+            <span className="tabular font-mono text-sm font-medium text-text">{task.planned_hours > 0 ? `${Math.round(pct)}%` : '—'}</span>
+          </Ring>
+          <span className="flex flex-col">
+            <span className="tabular font-mono text-xl font-medium text-text">{formatHoursMinutes(fact)}</span>
+            <span className="text-sm text-text-secondary">
+              {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)} по плану` : 'план не задан'}
+            </span>
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <Button
+            onClick={() => {
+              setFactOpen(false)
+              setSubtracting(15)
+            }}
+            disabled={adjustFactHours.isPending || (task.fact_hours <= 0 && !isRunning)}
+          >
+            −15м
+          </Button>
+          <Button onClick={() => quickAdd(15)} disabled={adjustFactHours.isPending}>
+            +15м
+          </Button>
+          <Button onClick={() => quickAdd(30)} disabled={adjustFactHours.isPending}>
+            +30м
+          </Button>
+          <Button onClick={() => quickAdd(60)} disabled={adjustFactHours.isPending}>
+            +1ч
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1"
+            onClick={() => {
+              setFactOpen(false)
+              setAdding(true)
+            }}
+          >
+            <Plus size={15} /> С комментарием
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={() => {
+              setFactOpen(false)
+              setEditingFact(true)
+            }}
+          >
+            Ввести точно
+          </Button>
+        </div>
+        {/* за какой день засчитать правку: исправление старых часов не бьёт по сегодняшнему дню */}
         <div className="flex items-center gap-2 text-sm text-text-secondary">
-          <span className="shrink-0">Правки — в день</span>
+          <span className="shrink-0">Правки — к дню</span>
           <DatePicker
             small
             className="w-[132px]"
@@ -476,66 +622,11 @@ export function TaskDetail() {
             </button>
           )}
         </div>
-      </div>
+      </Sheet>
 
-      {/* отметка по выбранной методике приоритизации — над свойствами: её меняют чаще сроков */}
-      {method !== 'none' && (
-        <div className="px-5 pb-4">
-          <PriorityField task={task} method={method} tasks={allTasks} />
-        </div>
+      {isRunning && activeTimer && (
+        <QuickNoteSheet open={noteOpen} onClose={() => setNoteOpen(false)} timer={activeTimer} taskId={task.id} taskName={task.name} />
       )}
-
-      {/* свойства — списком над вкладками: этап, план, сроки, группы, «ежедневная» */}
-      <div className="px-5">
-        <TaskForm
-          initial={formValues}
-          statuses={statuses}
-          compact
-          sprints={sprintOptions}
-          onFieldChange={saveField}
-        />
-      </div>
-
-      {/* вкладки: состава у подзадачи нет — база держит ровно два уровня */}
-      <div className="px-5 pt-4">
-        <div data-tip={isSubtask ? undefined : 'subtasks'} className="rounded-md">
-        <Segmented
-          stretch
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: 'history', label: 'История' },
-            ...(isSubtask ? [] : [{ value: 'composition' as const, label: subtasks.length ? `Состав · ${subtasks.length}` : 'Состав' }]),
-            { value: 'files', label: 'Файлы' },
-          ]}
-        />
-        </div>
-      </div>
-
-      <div className="sc flex flex-col gap-3 px-5 pt-4 pb-2 lg:min-h-0 lg:w-full lg:flex-1 lg:overflow-y-auto">
-        {tab === 'composition' && !isSubtask && (
-          <SprintComposition
-            task={task}
-            subtasks={subtasks}
-            statuses={statuses}
-            onApplyStatus={(statusId) => saveField({ status_id: statusId })}
-            onNextSprint={() => setNextSprint(true)}
-          />
-        )}
-
-        {tab === 'files' && (
-          <AttachmentsBlock
-            taskId={task.id}
-            // окно выбора Диска открывается в папке проекта задачи, если она привязана
-            driveFolderId={values.find((v) => v.item.drive_folder_id)?.item.drive_folder_id ?? null}
-            taskIds={[task.id, ...subtasks.map((c) => c.id)]}
-            taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
-            emptyText="Прикрепить файл: договор, ТЗ, скриншоты — откроются прямо отсюда"
-          />
-        )}
-
-        {tab === 'history' && <TaskTimeline taskId={task.id} isRunning={isRunning} />}
-      </div>
 
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Задача">
         <div className="flex flex-col gap-2 pb-1">
@@ -574,9 +665,6 @@ export function TaskDetail() {
           </Button>
         </div>
       </Sheet>
-
-      {/* комментарий пишется в историю — поле ввода там, где её видно */}
-      {tab === 'history' && <CommentBar taskId={task.id} />}
 
       <DuplicateTaskSheet
         open={duplicating}

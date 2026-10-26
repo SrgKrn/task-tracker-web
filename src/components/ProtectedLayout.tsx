@@ -60,10 +60,10 @@ function SignedIn() {
         <div className="app-top sticky top-0 z-40">
           <NetworkBanner />
           <StaleTimerBanner />
-          {!onTaskCard && <ActiveTimerBar />}
+          {!onTaskCard && <ActiveTimerBar placement="top" />}
           <FocusBreakBar />
         </div>
-        {onTaskCard && <ActiveTimerBar />}
+        {onTaskCard && <ActiveTimerBar placement="top" />}
         <div className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <Suspense fallback={null}>
@@ -72,6 +72,8 @@ function SignedIn() {
         </div>
       </div>
 
+      {/* на телефоне учёт — плашкой над таб-баром на любом экране (0.57) */}
+      <ActiveTimerBar placement="bottom" />
       <BottomTabBar onCreate={() => setSheetOpen(true)} />
       <ReleaseBanner />
       <FocusWatcher />
