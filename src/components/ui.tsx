@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
 import { Close } from './Icon'
@@ -247,6 +247,45 @@ export function Sheet({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const onDialogKey = useDialogFocus(ref, open)
+  /*
+   * Закрытие с анимацией (0.57): лист уезжает вниз, подложка гаснет — и только потом
+   * окно убирается из разметки. Раньше оно пропадало мгновенно.
+   */
+  const [present, setPresent] = useState(open)
+  const [closing, setClosing] = useState(false)
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setPresent(true)
+      setClosing(false)
+    } else if (present) setClosing(true)
+  }
+  useEffect(() => {
+    if (!closing) return
+    const t = window.setTimeout(() => {
+      setPresent(false)
+      setClosing(false)
+    }, 220)
+    return () => window.clearTimeout(t)
+  }, [closing])
+
+  // лист можно смахнуть вниз за «ручку» и шапку — как в iOS
+  const [drag, setDrag] = useState(0)
+  const dragStart = useRef<number | null>(null)
+  const onDragStart = (e: React.TouchEvent) => {
+    dragStart.current = e.touches[0].clientY
+  }
+  const onDragMove = (e: React.TouchEvent) => {
+    if (dragStart.current === null) return
+    setDrag(Math.max(0, e.touches[0].clientY - dragStart.current))
+  }
+  const onDragEnd = () => {
+    if (dragStart.current === null) return
+    dragStart.current = null
+    if (drag > 90) onClose()
+    setDrag(0)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -257,11 +296,12 @@ export function Sheet({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!present) return null
 
   return (
     <div
       className="overlay-in fixed inset-0 z-[var(--z-modal)] flex items-end bg-overlay lg:items-center lg:justify-center"
+      data-closing={closing || undefined}
       onClick={onClose}
     >
       <div
@@ -271,23 +311,27 @@ export function Sheet({
         aria-label={title}
         tabIndex={-1}
         onKeyDown={onDialogKey}
+        data-closing={closing || undefined}
         className="sheet-in safe-bottom flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 pb-6 shadow-modal outline-none lg:max-h-[85vh] lg:max-w-120 lg:rounded-lg lg:p-6"
+        style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="mx-auto h-1 w-9 shrink-0 rounded-full bg-border-strong lg:hidden" aria-hidden />
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
-          {headerAction ?? (
-            // на десктопе окно закрывают и крестиком (дизайн-система 9.8); на телефоне — свайп/подложка
-            <button
-              type="button"
-              onClick={onClose}
-              className="-mr-2 hidden h-8 w-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text lg:flex"
-              aria-label="Закрыть"
-            >
-              <Close size={16} />
-            </button>
-          )}
+        <div className="-mx-5 -mt-3 flex flex-col gap-3.5 px-5 pt-3 lg:contents" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}>
+          <span className="mx-auto h-1 w-9 shrink-0 rounded-full bg-border-strong lg:hidden" aria-hidden />
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
+            {headerAction ?? (
+              // на десктопе окно закрывают и крестиком (дизайн-система 9.8); на телефоне — свайп/подложка
+              <button
+                type="button"
+                onClick={onClose}
+                className="-mr-2 hidden h-8 w-8 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text lg:flex"
+                aria-label="Закрыть"
+              >
+                <Close size={16} />
+              </button>
+            )}
+          </div>
         </div>
         {children}
       </div>

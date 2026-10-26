@@ -2,7 +2,9 @@ import { ProfileButton } from '../components/Avatar'
 import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { useMediaQuery } from '../lib/device'
+import { Link, useLocation } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
@@ -18,6 +20,7 @@ import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
+import { useToggleDone } from '../components/useToggleDone'
 import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
@@ -69,6 +72,9 @@ export function TaskList() {
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const workspaceId = useActiveWorkspaceId()
+  const desktop = useMediaQuery('(min-width: 1024px)')
+  // список на телефоне скрыт, пока открыта карточка, — панель в корне страницы прячем сами
+  const onList = useLocation().pathname === '/tasks'
 
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [search, setSearch] = useState('')
@@ -148,6 +154,7 @@ export function TaskList() {
   const filtered = useMemo(() => (folder ? base.filter(folder.match) : base), [base, folder])
   const sorted = useMemo(() => sortHeads(filtered, sort, method, today), [filtered, sort, method, today])
   const moveTask = useMoveTask()
+  const toggleDone = useToggleDone()
   // подсказки 0.43: перетаскивание — когда задач стало пять; группы — когда задач три, а групп ещё нет
   const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 3
   useTip('drag', sorted.length >= 5)
@@ -202,6 +209,28 @@ export function TaskList() {
   // количество и часы — по одному набору: открытым головным задачам
   const activeHeads = heads.filter((t) => !isDone(t))
   const totalPlan = activeHeads.reduce((a, t) => a + t.planned_hours, 0)
+  // на телефоне панель — в корне страницы: анимация перехода экранов сдвигает их
+  // трансформацией, и закреплённое внутри на это время уезжало бы вместе с экраном
+  const floatPanel = (
+      <div className="task-float pointer-events-none fixed inset-x-0 z-30 flex justify-center px-5 lg:sticky lg:bottom-4 lg:mt-4">
+        <div className="tabbar-pill pointer-events-auto flex items-center rounded-full border border-border p-1 shadow-popover">
+          <button
+            type="button"
+            onClick={() => setSheet('filter')}
+            className={`relative flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ${filtersActive ? 'text-accent-text' : 'text-text'}`}
+          >
+            Фильтр
+            {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="есть фильтры" />}
+          </button>
+          <span className="h-5 w-px bg-divider" aria-hidden />
+          <button type="button" onClick={() => setSheet('sort')} className="flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-text">
+            <SortArrows size={15} />
+            {TASK_SORT_LABEL[sort]}
+          </button>
+        </div>
+      </div>
+  )
+
   const toggleSection = (id: string, collapsed: boolean) =>
     setView({ ...view, collapsed: { ...view.collapsed, [id]: !collapsed } })
 
@@ -311,6 +340,7 @@ export function TaskList() {
                     </button>
                   )}
                   {!collapsed && (
+                    <div className="section-in">
                     <SortableGroup enabled={section.items.length > 1} onDrop={(from, to) => moveTask(section.items, from, to)}>
                       {section.items.map((task, i) => (
                         <div key={task.id} data-sort-row data-tip={i === 0 ? 'drag' : undefined}>
@@ -334,6 +364,7 @@ export function TaskList() {
                               )
                             }
                             onDelete={() => setDeletingTask(task)}
+                            onToggleDone={() => toggleDone(task)}
                             subtasks={childrenOf.get(task.id)}
                             forceExpanded={matchedInside.has(task.id)}
                             hideDoneSubtasks={!view.showDone}
@@ -341,6 +372,7 @@ export function TaskList() {
                         </div>
                       ))}
                     </SortableGroup>
+                    </div>
                   )}
                 </div>
               )
@@ -367,24 +399,7 @@ export function TaskList() {
         )}
       </div>
 
-      {/* плавающая панель: фильтр и порядок под большим пальцем (как в Asana) */}
-      <div className="task-float pointer-events-none fixed inset-x-0 z-30 flex justify-center px-5 lg:sticky lg:bottom-4 lg:mt-4">
-        <div className="tabbar-pill pointer-events-auto flex items-center rounded-full border border-border p-1 shadow-popover">
-          <button
-            type="button"
-            onClick={() => setSheet('filter')}
-            className={`relative flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ${filtersActive ? 'text-accent-text' : 'text-text'}`}
-          >
-            Фильтр
-            {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="есть фильтры" />}
-          </button>
-          <span className="h-5 w-px bg-divider" aria-hidden />
-          <button type="button" onClick={() => setSheet('sort')} className="flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-text">
-            <SortArrows size={15} />
-            {TASK_SORT_LABEL[sort]}
-          </button>
-        </div>
-      </div>
+      {desktop ? floatPanel : onList && createPortal(floatPanel, document.body)}
 
       <Sheet open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
         <ListGroup>

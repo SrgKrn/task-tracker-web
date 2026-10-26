@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTip } from '../lib/tips'
@@ -16,9 +16,9 @@ import { useActiveTimer, useStopTimer } from '../lib/queries/timer'
 import { formatClock, sessionHourPct, useTicker } from '../lib/time'
 import { formatCountdown, secondsLeft } from '../lib/focus'
 import { useFocusRun } from '../lib/queries/focus'
-import { focusOnOpen } from '../lib/device'
+import { focusOnOpen, useMediaQuery } from '../lib/device'
 import { TIMER_NOTE_MAX, useTimerNote, useTimerNotePreview, type NoteStatus } from '../lib/timerNote'
-import type { ActiveTimer } from '../lib/types'
+import type { ActiveTimer, Task } from '../lib/types'
 
 const NOTE_STATUS: Record<NoteStatus, string> = {
   idle: '',
@@ -33,33 +33,63 @@ const NOTE_STATUS: Record<NoteStatus, string> = {
  * как раньше: там внизу ничего нет и тянуться туда мышью дольше.
  */
 export function ActiveTimerBar({ placement }: { placement: 'top' | 'bottom' }) {
-  const { data: activeTimer } = useActiveTimer()
-  const { data: task } = useTask(activeTimer?.task_id)
-  const { data: parent } = useTask(task?.parent_id ?? undefined)
+  // верхняя плашка — только на широком экране. Раньше она была скрыта стилем, но оставалась
+  // в разметке, и правила «под плашкой отступ от чёлки не нужен» срабатывали на телефоне:
+  // шапка уезжала под часы и батарею
+  const desktop = useMediaQuery('(min-width: 1024px)')
+  if (placement === 'top' && !desktop) return null
+  return <TimerBar placement={placement} />
+}
+
+/** сколько длится выход плашки — обратно в кружок «+» */
+const LEAVE_MS = 320
+
+function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
+  const { data: liveTimer } = useActiveTimer()
+  const { data: liveTask } = useTask(liveTimer?.task_id)
+  const { data: parent } = useTask(liveTask?.parent_id ?? undefined)
   const model = useGroupModel()
   const location = useLocation()
   const stopTimer = useStopTimer()
   const { showError } = useToast()
   const { data: run } = useFocusRun()
   const [noteOpen, setNoteOpen] = useState(false)
-  useTicker(!!activeTimer)
+  useTicker(!!liveTimer)
   // учёт один на профиль: задача может быть из другого пространства — тогда подпись и
   // переход туда по нажатию
-  const other = useOtherWorkspace(task?.workspace_id)
+  const other = useOtherWorkspace(liveTask?.workspace_id)
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const notePreview = useTimerNotePreview(activeTimer)
-  const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === activeTimer?.task_id ? run : null
+  const notePreview = useTimerNotePreview(liveTimer)
+  const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === liveTimer?.task_id ? run : null
 
   // подсказка о комментарии — когда учёт идёт уже пару минут: человек точно занят делом
   useTip(
     'timer-note',
-    placement === 'bottom' && !!activeTimer && !!task && Date.now() - new Date(activeTimer.started_at).getTime() >= 120_000,
+    placement === 'bottom' && !!liveTimer && !!liveTask && Date.now() - new Date(liveTimer.started_at).getTime() >= 120_000,
   )
 
-  if (!activeTimer || !task) return null
   // в карточке идущей задачи свой закреп под шапкой — вторая плашка не нужна
-  if (location.pathname === `/tasks/${task.id}`) return null
+  const visible = !!liveTimer && !!liveTask && location.pathname !== `/tasks/${liveTask.id}`
+  // остановили учёт — плашка ещё доигрывает уход в кружок «+» с последними данными
+  const [last, setLast] = useState<{ timer: ActiveTimer; task: Task } | null>(null)
+  if (visible && (last?.timer !== liveTimer || last?.task !== liveTask)) setLast({ timer: liveTimer!, task: liveTask! })
+  const [wasVisible, setWasVisible] = useState(visible)
+  const [leaving, setLeaving] = useState(false)
+  if (visible !== wasVisible) {
+    setWasVisible(visible)
+    setLeaving(!visible && placement === 'bottom')
+  }
+  useEffect(() => {
+    if (!leaving) return
+    const t = window.setTimeout(() => setLeaving(false), LEAVE_MS)
+    return () => window.clearTimeout(t)
+  }, [leaving])
+
+  const shown = visible ? { timer: liveTimer!, task: liveTask! } : leaving ? last : null
+  if (!shown) return null
+  const activeTimer = shown.timer
+  const task = shown.task
 
   const label = model.listLabel(task)
   const stop = () => {
@@ -107,8 +137,14 @@ export function ActiveTimerBar({ placement }: { placement: 'top' | 'bottom' }) {
 
   if (placement === 'bottom') {
     return (
-      <div data-mini-bar className="mini-bar fixed inset-x-0 z-40 px-3 lg:hidden">
-        <div className="mini-bar-pill mx-auto flex max-w-lg items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-1.5 pl-3.5 shadow-popover">
+      <div
+        data-mini-bar={visible || undefined}
+        data-leaving={leaving || undefined}
+        className="mini-bar pointer-events-none fixed inset-x-0 z-40 px-3 lg:hidden"
+        aria-hidden={leaving || undefined}
+      >
+        {/* плашка растёт из терракотового кружка «+» и держится за него «перешейком» */}
+        <div className="mini-bar-pill pointer-events-auto relative mx-auto flex max-w-lg items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-2.5 pl-3.5 shadow-popover">
           <span className="live-dot shrink-0" aria-hidden />
           <Link to={focus ? '/focus' : `/tasks/${task.id}`} onClick={open} className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
             <span className="truncate text-sm font-medium text-text">{task.name}</span>
@@ -122,10 +158,13 @@ export function ActiveTimerBar({ placement }: { placement: 'top' | 'bottom' }) {
             type="button"
             onClick={stop}
             aria-label="Остановить учёт"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+            className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
           >
             <StopGlyph size={11} color="var(--on-accent)" />
           </button>
+          <svg className="mini-neck" width="40" height="27" viewBox="0 0 40 27" aria-hidden>
+            <path d="M5 0H35C30 6 28 10 28 13.5C28 17 32 22 38.5 27H1.5C8 22 12 17 12 13.5C12 10 10 6 5 0Z" fill="var(--accent)" />
+          </svg>
         </div>
         {createPortal(sheet, document.body)}
       </div>

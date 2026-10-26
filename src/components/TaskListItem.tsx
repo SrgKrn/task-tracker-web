@@ -47,11 +47,15 @@ interface TaskListItemProps {
   badge?: ReactNode
   /** этап в подписи: там, где список не разложен по этапам («Сегодня») */
   showStage?: boolean
+  /** свайп вправо — «Готово» (или «Вернуть в работу» у закрытой), не открывая карточку */
+  onToggleDone?: () => void
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
 const ACTION_WIDTH = 74
 const OPEN_THRESHOLD = 56
+/** свайп вправо дальше этого — отметка «Готово» */
+const DONE_THRESHOLD = 92
 /** дальше квадратики сливаются в полосу и перестают считываться поштучно */
 const MAX_PIPS = 12
 
@@ -74,6 +78,7 @@ export function TaskListItem({
   subtasksBelow = false,
   badge,
   showStage = false,
+  onToggleDone,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -99,8 +104,13 @@ export function TaskListItem({
   const addSubtaskAction = expandable && !task.parent_id && !done && (!!onDuplicate || !!onDelete)
   const actionCount = [onUnplan, onDuplicate, onDelete, addSubtaskAction].filter(Boolean).length
   const actionsWidth = actionCount * ACTION_WIDTH
-  const swipeable = actionCount > 0
+  const swipeable = actionCount > 0 || !!onToggleDone
   const [offset, setOffset] = useState(0)
+  /** строка улетает вправо после отметки «Готово» */
+  const [flying, setFlying] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const startY = useRef(0)
+  const passedDone = useRef(false)
   // флаг жеста живёт в ref, а не в state: touchmove может прийти в том же кадре, что и
   // touchstart, когда состояние ещё не перерисовалось — и жест бы просто не начался
   const draggingRef = useRef(false)
@@ -128,6 +138,14 @@ export function TaskListItem({
   const overdue = isOverdue(task, status)
 
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
+  // отклик кольца — только на смену (старт, стоп, «готово»), не при каждом открытии списка
+  const ringKey = isRunning ? 'run' : done ? 'done' : 'idle'
+  const [prevRingKey, setPrevRingKey] = useState(ringKey)
+  const [ringChanged, setRingChanged] = useState(false)
+  if (ringKey !== prevRingKey) {
+    setPrevRingKey(ringKey)
+    setRingChanged(true)
+  }
   // под учётом — мягкая заливка и полоска акцента слева; рамку строки даёт общий список
   // открытая справа задача (десктоп) подсвечена, как выбранная строка в дизайн-системе (9.5)
   const selected = useMatch('/tasks/:id')?.params.id === task.id
@@ -145,10 +163,12 @@ export function TaskListItem({
   const showClock = isRunning && !!activeTimer && (isRunningSelf || (!open && !subtasksBelow))
 
   function onTouchStart(e: React.TouchEvent) {
-    if (!swipeable) return
+    if (!swipeable || flying) return
     startX.current = e.touches[0].clientX
+    startY.current = e.touches[0].clientY
     startOffset.current = offset
     axisLocked.current = null
+    passedDone.current = false
     draggingRef.current = true
     setAnimating(false)
   }
@@ -156,19 +176,44 @@ export function TaskListItem({
   function onTouchMove(e: React.TouchEvent) {
     if (!swipeable || !draggingRef.current) return
     const dx = e.touches[0].clientX - startX.current
+    const dy = e.touches[0].clientY - startY.current
     // до первого заметного сдвига не решаем, свайп это или прокрутка списка
     if (axisLocked.current === null) {
-      if (Math.abs(dx) < 8) return
-      axisLocked.current = 'x'
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      axisLocked.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
     }
-    const next = Math.min(0, Math.max(-actionsWidth, startOffset.current + dx))
-    setOffset(next)
+    if (axisLocked.current === 'y') return
+    const min = actionCount > 0 ? -actionsWidth : 0
+    // вправо — только к «Готово», с сопротивлением после порога
+    const raw = startOffset.current + dx
+    const max = onToggleDone ? Infinity : 0
+    const next = raw > DONE_THRESHOLD ? DONE_THRESHOLD + (raw - DONE_THRESHOLD) * 0.35 : raw
+    const clamped = Math.min(max, Math.max(min, next))
+    // порог пройден — лёгкий отклик, как у переключателя
+    const past = clamped >= DONE_THRESHOLD
+    if (past !== passedDone.current) {
+      passedDone.current = past
+      tap()
+    }
+    setOffset(clamped)
   }
 
   function onTouchEnd() {
     if (!swipeable || !draggingRef.current) return
     draggingRef.current = false
     setAnimating(true)
+    if (onToggleDone && offset >= DONE_THRESHOLD) {
+      // строка уезжает вправо, затем меняется этап; там, где строка остаётся, — возвращается
+      setFlying(true)
+      setOffset((rowRef.current?.offsetWidth ?? 400) + 24)
+      window.setTimeout(() => {
+        onToggleDone()
+        setFlying(false)
+        setAnimating(false)
+        setOffset(0)
+      }, 240)
+      return
+    }
     setOffset((current) => (current < -OPEN_THRESHOLD ? -actionsWidth : 0))
   }
 
@@ -177,8 +222,24 @@ export function TaskListItem({
 
   return (
     <div className="flex flex-col">
-      <div className="relative overflow-hidden">
-        {swipeable && (
+      <div className="relative overflow-hidden" ref={rowRef}>
+        {onToggleDone && (
+          <div
+            className={`absolute inset-0 flex items-center gap-2 pl-5 text-sm font-medium ${
+              done ? 'bg-surface-sunken text-text' : 'bg-success-soft text-success-text'
+            }`}
+            aria-hidden
+          >
+            <span
+              className="done-check flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-current"
+              data-armed={offset >= DONE_THRESHOLD || undefined}
+            >
+              <Check size={14} />
+            </span>
+            <span className="whitespace-nowrap">{done ? 'Вернуть в работу' : 'Готово'}</span>
+          </div>
+        )}
+        {actionCount > 0 && (
           <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
             {addSubtaskAction && (
               <button
@@ -249,7 +310,7 @@ export function TaskListItem({
           onTouchEnd={onTouchEnd}
         >
           <div className="flex items-center gap-3">
-            <span data-tip="timer" className="shrink-0 rounded-full">
+            <span key={ringKey} data-tip="timer" className={`shrink-0 rounded-full ${ringChanged ? 'ring-pop' : ''}`}>
             <Ring
               size={32}
               pct={done ? 100 : pct}

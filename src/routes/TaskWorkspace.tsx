@@ -9,6 +9,7 @@ import { useActiveWorkspace } from '../lib/workspace'
 import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
+import { useNavDirection } from '../lib/navMotion'
 
 const DEFAULT_DAY_NORM = 8
 
@@ -72,11 +73,13 @@ function TaskWorkspaceEmpty() {
 export function TaskWorkspace() {
   const location = useLocation()
   const hasDetail = location.pathname !== '/tasks'
+  const dir = useNavDirection(location.pathname)
 
   return (
     <div className="lg:flex lg:items-start">
       <div
-        className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane sc lg:sc-fade`}
+        className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane pane-return sc lg:sc-fade`}
+        data-dir={dir}
       >
         <TaskList />
       </div>
@@ -84,7 +87,14 @@ export function TaskWorkspace() {
         className={`${hasDetail ? 'block' : 'hidden lg:flex lg:items-center lg:justify-center'} task-detail-pane min-w-0 flex-1`}
         style={{ borderLeft: '1px solid var(--divider)' }}
       >
-        {hasDetail ? <Outlet /> : <TaskWorkspaceEmpty />}
+        {hasDetail ? (
+          // карточка въезжает справа, как экран в iOS; соседняя — тоже, «назад» — слева
+          <div key={location.pathname} className="route-enter lg:h-full" data-dir={dir}>
+            <Outlet />
+          </div>
+        ) : (
+          <TaskWorkspaceEmpty />
+        )}
       </div>
     </div>
   )

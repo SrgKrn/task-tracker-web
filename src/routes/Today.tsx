@@ -13,6 +13,7 @@ import { NewTaskSheet } from '../components/NewTaskSheet'
 import { Ring } from '../components/Ring'
 import { ArrowRight, ChevronDown, ChevronUp, History, Settings2 } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
+import { useToggleDone } from '../components/useToggleDone'
 import { Button, ClientDot, EmptyState, ListGroup, Overline, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
@@ -81,6 +82,7 @@ export function Today() {
   const setPlanDate = useSetPlanDate()
   const duplicateTask = useDuplicateTask()
   const deleteTask = useDeleteTask()
+  const toggleDone = useToggleDone()
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   useTicker(!!activeTimer)
@@ -205,6 +207,7 @@ export function Today() {
         onStopTimer={() => stopTimer.mutate(undefined, { onError })}
         onDuplicate={() => duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })}
         onDelete={() => setDeletingTask(task)}
+        onToggleDone={() => toggleDone(task)}
         // снять можно только то, что выбрано: учёт и ежедневные задачи держат её в дне сами
         onUnplan={
           task.plan_date === today && !lockedIds.has(task.id)

@@ -18,6 +18,7 @@ import { ReleaseBanner } from './ReleaseBanner'
 import { StaleTimerBanner } from './StaleTimerBanner'
 import { FocusBreakBar, FocusWatcher } from './FocusWatcher'
 import { TipHost } from './Tip'
+import { useNavDirection } from '../lib/navMotion'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
 function useAppEffects() {
@@ -50,6 +51,9 @@ function SignedIn() {
   const onTaskCard = /^\/(tasks|items)\/[^/]+/.test(pathname)
   // «Задачи» — рабочее место во всю высоту экрана, поля держат сами панели
   const fullBleed = pathname === '/tasks' || pathname.startsWith('/tasks/')
+  // анимация перехода (0.57): «Задачи» целиком — один экран, список ↔ карточку анимирует сама вкладка
+  const screenKey = fullBleed ? '/tasks' : pathname
+  const dir = useNavDirection(screenKey)
 
   return (
     <div className="min-h-full lg:flex">
@@ -66,9 +70,11 @@ function SignedIn() {
         {onTaskCard && <ActiveTimerBar placement="top" />}
         <div className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
-          <Suspense fallback={null}>
-            <Outlet />
-          </Suspense>
+          <div key={screenKey} className="route-enter" data-dir={dir}>
+            <Suspense fallback={null}>
+              <Outlet />
+            </Suspense>
+          </div>
         </div>
       </div>
 
