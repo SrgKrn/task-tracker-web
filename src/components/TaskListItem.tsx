@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
-import { ClientDot } from './ui'
+import { ClientDot, Collapse } from './ui'
 import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
 import { tap } from '../lib/haptics'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
@@ -422,7 +422,7 @@ export function TaskListItem({
         </div>
       </div>
 
-      {open && (
+      <Collapse open={open}>
         <div className="bg-surface px-3">
           <SubtaskList
             id={`subtasks-${task.id}`}
@@ -432,7 +432,7 @@ export function TaskListItem({
             nested
           />
         </div>
-      )}
+      </Collapse>
     </div>
   )
 }

@@ -557,3 +557,41 @@ export function Kbd({ children, className = '' }: { children: ReactNode; classNa
 
 /** ⌘ на маке, Ctrl — на остальных: подпись к сочетаниям */
 export const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+
+/** сколько длится схлопывание — потом содержимое снимается с разметки */
+const COLLAPSE_MS = 260
+
+/**
+ * Раскрытие и схлопывание по высоте (0.59), как секции в Asana: строки ниже плавно
+ * подтягиваются, а не прыгают. Закрытое содержимое не держится в разметке — снимается,
+ * когда доиграло схлопывание. Первое появление на экране без анимации.
+ */
+export function Collapse({ open, children, className = '' }: { open: boolean; children: ReactNode; className?: string }) {
+  const [shown, setShown] = useState(open)
+  const [phase, setPhase] = useState<'static' | 'opening' | 'closing'>('static')
+  if (open && (!shown || phase === 'closing')) {
+    setShown(true)
+    setPhase('opening')
+  } else if (!open && shown && phase !== 'closing') {
+    setPhase('closing')
+  }
+  useEffect(() => {
+    if (phase !== 'closing') return
+    const t = window.setTimeout(() => {
+      setShown(false)
+      setPhase('static')
+    }, COLLAPSE_MS)
+    return () => window.clearTimeout(t)
+  }, [phase])
+
+  if (!shown) return null
+  return (
+    <div
+      className={`collapse-box ${className}`}
+      data-phase={phase === 'static' ? undefined : phase}
+      onAnimationEnd={(e) => e.target === e.currentTarget && phase === 'opening' && setPhase('static')}
+    >
+      <div className="collapse-inner">{children}</div>
+    </div>
+  )
+}

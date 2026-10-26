@@ -8,9 +8,12 @@ import './index.css'
 import { startUpdateWatcher } from './lib/appUpdate'
 import { AuthProvider } from './lib/AuthContext'
 import { ToastProvider } from './lib/Toast'
+import { installScreenSnapshots } from './lib/screenMotion'
 
 const queryClient = new QueryClient()
 startUpdateWatcher()
+// слепок экрана перед переходом — до роутера, чтобы «назад» застал ещё старый экран
+installScreenSnapshots()
 
 // Safari на iPhone приближает страницу щипком, даже когда масштаб запрещён в viewport.
 // Приложению это не нужно: всё и так подогнано под экран, а вернуть масштаб назад неудобно

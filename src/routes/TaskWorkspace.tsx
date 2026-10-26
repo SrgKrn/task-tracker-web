@@ -78,8 +78,7 @@ export function TaskWorkspace() {
   return (
     <div className="lg:flex lg:items-start">
       <div
-        className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane pane-return sc lg:sc-fade`}
-        data-dir={dir}
+        className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane sc lg:sc-fade`}
       >
         <TaskList />
       </div>

@@ -42,7 +42,7 @@ export function ActiveTimerBar({ placement }: { placement: 'top' | 'bottom' }) {
 }
 
 /** сколько длится выход плашки — обратно в кружок «+» */
-const LEAVE_MS = 320
+const LEAVE_MS = 560
 
 function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
   const { data: liveTimer } = useActiveTimer()
@@ -76,9 +76,12 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
   if (visible && (last?.timer !== liveTimer || last?.task !== liveTask)) setLast({ timer: liveTimer!, task: liveTask! })
   const [wasVisible, setWasVisible] = useState(visible)
   const [leaving, setLeaving] = useState(false)
+  // «жидкий» слой живёт только пока плашка вытекает из «+» или стекает обратно
+  const [pouring, setPouring] = useState(visible)
   if (visible !== wasVisible) {
     setWasVisible(visible)
     setLeaving(!visible && placement === 'bottom')
+    setPouring(placement === 'bottom')
   }
   useEffect(() => {
     if (!leaving) return
@@ -143,29 +146,45 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
         className="mini-bar pointer-events-none fixed inset-x-0 z-40 px-3 lg:hidden"
         aria-hidden={leaving || undefined}
       >
-        {/* плашка растёт из терракотового кружка «+» и держится за него «перешейком» */}
-        <div className="mini-bar-pill pointer-events-auto relative mx-auto flex max-w-lg items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-2.5 pl-3.5 shadow-popover">
-          <span className="live-dot shrink-0" aria-hidden />
-          <Link to={focus ? '/focus' : `/tasks/${task.id}`} onClick={open} className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
-            <span className="truncate text-sm font-medium text-text">{task.name}</span>
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">{sub}</span>
-          </Link>
-          <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]" aria-label={focus ? 'До конца отрезка' : 'Идёт учёт'}>
-            {clock}
-          </span>
-          {noteButton}
-          <button
-            type="button"
-            onClick={stop}
-            aria-label="Остановить учёт"
-            className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
-          >
-            <StopGlyph size={11} color="var(--on-accent)" />
-          </button>
-          <svg className="mini-neck" width="40" height="27" viewBox="0 0 40 27" aria-hidden>
-            <path d="M5 0H35C30 6 28 10 28 13.5C28 17 32 22 38.5 27H1.5C8 22 12 17 12 13.5C12 10 10 6 5 0Z" fill="var(--accent)" />
-          </svg>
+        <div className="relative mx-auto max-w-lg">
+          {/* терракота вытекает из кружка «+»: капля тянется вверх, растекается в полосу и
+              «остывает» в плашку. Фильтр склеивает пятна в одну жидкость с перешейком */}
+          {pouring && (
+            <div className="mini-goo" aria-hidden onAnimationEnd={(e) => e.target === e.currentTarget && !leaving && setPouring(false)}>
+              <i className="goo-src" />
+              <i className="goo-drop" />
+              <i className="goo-blob" />
+            </div>
+          )}
+          <div className="mini-bar-pill pointer-events-auto relative flex items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-2.5 pl-3.5 shadow-popover">
+            <span className="live-dot shrink-0" aria-hidden />
+            <Link to={focus ? '/focus' : `/tasks/${task.id}`} onClick={open} className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
+              <span className="truncate text-sm font-medium text-text">{task.name}</span>
+              <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">{sub}</span>
+            </Link>
+            <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]" aria-label={focus ? 'До конца отрезка' : 'Идёт учёт'}>
+              {clock}
+            </span>
+            {noteButton}
+            <button
+              type="button"
+              onClick={stop}
+              aria-label="Остановить учёт"
+              className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+            >
+              <StopGlyph size={11} color="var(--on-accent)" />
+            </button>
+            <svg className="mini-neck" width="40" height="27" viewBox="0 0 40 27" aria-hidden>
+              <path d="M5 0H35C30 6 28 10 28 13.5C28 17 32 22 38.5 27H1.5C8 22 12 17 12 13.5C12 10 10 6 5 0Z" fill="var(--accent)" />
+            </svg>
+          </div>
         </div>
+        <svg width="0" height="0" className="absolute" aria-hidden>
+          <filter id="mini-goo" x="-20%" y="-40%" width="140%" height="180%" colorInterpolationFilters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="9" />
+            <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" />
+          </filter>
+        </svg>
         {createPortal(sheet, document.body)}
       </div>
     )

@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { useLiveTimerNotification } from '../lib/push'
@@ -19,6 +19,7 @@ import { StaleTimerBanner } from './StaleTimerBanner'
 import { FocusBreakBar, FocusWatcher } from './FocusWatcher'
 import { TipHost } from './Tip'
 import { useNavDirection } from '../lib/navMotion'
+import { useScreenMotion } from '../lib/screenMotion'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
 function useAppEffects() {
@@ -54,6 +55,9 @@ function SignedIn() {
   // анимация перехода (0.57): «Задачи» целиком — один экран, список ↔ карточку анимирует сама вкладка
   const screenKey = fullBleed ? '/tasks' : pathname
   const dir = useNavDirection(screenKey)
+  // на телефоне двигаются оба экрана, включая список → карточку внутри «Задач» (0.59)
+  const contentRef = useRef<HTMLDivElement>(null)
+  useScreenMotion(contentRef, pathname, useNavDirection(pathname))
 
   return (
     <div className="min-h-full lg:flex">
@@ -68,7 +72,7 @@ function SignedIn() {
           <FocusBreakBar />
         </div>
         {onTaskCard && <ActiveTimerBar placement="top" />}
-        <div className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
+        <div ref={contentRef} className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <div key={screenKey} className="route-enter" data-dir={dir}>
             <Suspense fallback={null}>

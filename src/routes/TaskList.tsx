@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
 import { Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
-import { Button, Chip, ClientDot, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton, fieldClass } from '../components/ui'
+import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton, fieldClass } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod, todayStr } from '../lib/period'
 import { PriorityBadge } from '../components/Priority'
@@ -339,8 +339,7 @@ export function TaskList() {
                       </span>
                     </button>
                   )}
-                  {!collapsed && (
-                    <div className="section-in">
+                  <Collapse open={!collapsed}>
                     <SortableGroup enabled={section.items.length > 1} onDrop={(from, to) => moveTask(section.items, from, to)}>
                       {section.items.map((task, i) => (
                         <div key={task.id} data-sort-row data-tip={i === 0 ? 'drag' : undefined}>
@@ -372,8 +371,7 @@ export function TaskList() {
                         </div>
                       ))}
                     </SortableGroup>
-                    </div>
-                  )}
+                  </Collapse>
                 </div>
               )
             })}

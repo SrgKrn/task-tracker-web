@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useKeyboardOpen } from '../lib/viewport'
 import { Plus } from './Icon'
@@ -12,6 +13,13 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
   const keyboard = useKeyboardOpen()
   const activeIndex = NAV_TABS.findIndex((t) => t.match(location.pathname))
+  // каждый переезд подложки — новая «капля»: анимация растяжения начинается заново
+  const [prevIndex, setPrevIndex] = useState(activeIndex)
+  const [moves, setMoves] = useState(0)
+  if (prevIndex !== activeIndex) {
+    setPrevIndex(activeIndex)
+    if (prevIndex >= 0 && activeIndex >= 0) setMoves(moves + 1)
+  }
 
   const item = (tab: NavTab) => {
     const active = tab.match(location.pathname)
@@ -38,14 +46,16 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         <div className="tabbar-pill relative flex h-[var(--tabbar-h)] min-w-0 flex-1 items-stretch rounded-full border border-border p-1 shadow-popover">
           {/* подложка активной вкладки переезжает к выбранной, а не появляется на месте */}
           <span
-            className="tab-indicator absolute top-1 bottom-1 rounded-full bg-surface-selected"
+            className="tab-indicator absolute top-1 bottom-1"
             style={{
               width: `calc((100% - 8px) / ${NAV_TABS.length})`,
               left: `calc(4px + ${Math.max(activeIndex, 0)} * (100% - 8px) / ${NAV_TABS.length})`,
               opacity: activeIndex < 0 ? 0 : 1,
             }}
             aria-hidden
-          />
+          >
+            <span key={moves} className="tab-blob rounded-full bg-surface-selected" data-moved={moves > 0 || undefined} />
+          </span>
           {NAV_TABS.map(item)}
         </div>
         <button
