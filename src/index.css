@@ -283,6 +283,35 @@ button:disabled {
     transform: translateY(8px) scale(0.98);
   }
 }
+/* уведомление (0.60): всплывает из 96% с пружиной, уходит вниз и гаснет */
+@keyframes toast-spring {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+}
+@keyframes toast-leave {
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+@keyframes toast-time {
+  to {
+    transform: scaleX(0);
+  }
+}
+.toast-time {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0.55;
+  transform-origin: left;
+  animation: toast-time linear forwards;
+}
 
 /* лист снизу и окно: выезд листа и проявление подложки — по токенам движения пакета */
 @keyframes sheet-in {
@@ -331,14 +360,22 @@ button:disabled {
   animation: tip-ring 1.8s var(--ease-out) infinite;
 }
 
-@keyframes skeleton-pulse {
-  50% {
-    opacity: 0.45;
-  }
-}
-
+/* заготовки строк: по ним пробегает мягкий блик слева направо (0.60). Блик привязан к окну,
+   поэтому идёт одной волной сразу по всем заготовкам, а не по каждой отдельно */
 .skeleton {
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  background-image: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--surface) 70%, transparent) 50%, transparent 65%);
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100vw 0;
+  }
+  to {
+    background-position: -100vw 0;
+  }
 }
 
 /* края внутренней прокрутки не должны обрубать контент — растворяем их.
@@ -393,19 +430,45 @@ button:disabled {
   .task-list-pane {
     position: sticky;
     top: 0;
-    width: var(--list-w);
+    /* карточке оставляем не меньше 440 px: на 1024 px список сам сужается до 320 */
+    width: min(var(--list-w), max(320px, 100% - 440px));
     flex-shrink: 0;
     max-height: 100vh;
     overflow-y: auto;
     padding-top: calc(var(--page-top) - 16px);
   }
 
+  /* карточка прокручивается целиком; шапка и поле комментария липнут внутри (0.60) */
   .task-detail-pane {
     position: sticky;
     top: 0;
     height: 100vh;
-    overflow: hidden;
-    padding: calc(var(--page-top) - 24px) calc(var(--page-gutter) - 20px) 0;
+    overflow-y: auto;
+    padding: 0 calc(var(--page-gutter) - 20px);
+  }
+
+  /* граница между списком и карточкой — тянется, как в Telegram Desktop (0.60) */
+  .task-split {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    flex-shrink: 0;
+    width: 9px;
+    height: 100vh;
+    margin: 0 -4px;
+    cursor: col-resize;
+    touch-action: none;
+    background: linear-gradient(var(--divider), var(--divider)) center / 1px 100% no-repeat;
+  }
+  .task-split:hover,
+  .task-split[data-dragging],
+  .task-split:focus-visible {
+    background-image: linear-gradient(var(--accent), var(--accent));
+    background-size: 2px 100%;
+  }
+  :root:has(.task-split[data-dragging]) {
+    cursor: col-resize;
+    user-select: none;
   }
 
   .page {
@@ -551,46 +614,53 @@ button:disabled {
     }
   }
 
-  /* плашка учёта вытекает из кружка «+» (0.59): жидкость тянется каплей вверх,
-     растекается в полосу и «остывает» в настоящую плашку; стоп — стекает обратно */
-  .mini-bar .mini-goo {
-    display: block;
-    animation: goo-fade 900ms linear forwards;
-  }
-  .mini-goo > .goo-blob {
-    animation: goo-blob 900ms linear forwards;
-  }
-  .mini-goo > .goo-drop {
-    animation: goo-drop 900ms cubic-bezier(0.4, 0, 0.2, 1) 50ms both;
-  }
-  .mini-goo > .goo-src {
-    animation: fab-kick 900ms linear;
-  }
-  .mini-bar[data-mini-bar] .mini-bar-pill {
-    animation: mini-settle 900ms linear backwards;
-  }
-  .mini-bar[data-mini-bar] .mini-bar-pill > :not(.mini-neck) {
+  /* плашка учёта вытекает из «+» (TimerPour.tsx): содержимое проявляется, когда жидкость
+     уже растеклась */
+  .mini-bar[data-mini-bar] .mini-bar-pill > * {
     animation: mini-content 360ms var(--ease-out) 640ms backwards;
   }
   .mini-bar[data-mini-bar] .mini-bar-pill > :nth-child(3),
   .mini-bar[data-mini-bar] .mini-bar-pill > :nth-child(4) {
     animation-delay: 700ms;
   }
-  .mini-bar[data-leaving] .mini-goo,
-  .mini-bar[data-leaving] .mini-goo > * {
-    animation-duration: 560ms;
-    animation-direction: reverse;
-    animation-delay: 0ms;
+
+  .toast-pop {
+    animation: toast-spring 380ms var(--ease-pop);
   }
-  .mini-bar[data-leaving] .mini-bar-pill {
-    animation: mini-out 560ms linear forwards;
+  .toast-pop[data-leaving] {
+    animation: toast-leave 220ms var(--ease-in-out) forwards;
   }
-  /* кружок «+» упруго «выдавливает» каплю и потом «проглатывает» её обратно */
-  :root:has(.mini-bar[data-mini-bar]) .fab {
-    animation: fab-kick 900ms linear;
-  }
-  :root:has(.mini-bar[data-leaving]) .fab {
-    animation: fab-gulp 560ms linear;
+
+  /* экран под листом — в стопку: 94%, скругление, чуть ниже; тянут лист — разжимается к 97% */
+  @media (max-width: 1023.98px) {
+    .app-content {
+      /* середина окна — запоминается при открытии листа и остаётся на время возврата */
+      transform-origin: 50% var(--stack-origin, 50vh);
+      transition: transform 420ms var(--ease-ios);
+    }
+    :root[data-sheets] body {
+      background: #000;
+    }
+    /* экран длиннее окна: сжимаем вокруг середины окна и скругляем видимую часть, а не
+       верх всей страницы, который сейчас за краем (поля — из Sheet) */
+    :root[data-sheets] .app-content {
+      transform: translateY(10px) scale(calc(0.94 + 0.03 * var(--stack-pull, 0)));
+      clip-path: inset(var(--stack-clip-top, 0px) 0 var(--stack-clip-bottom, 0px) 0 round 14px);
+      background: var(--bg);
+    }
+    :root[data-sheet-drag] .app-content {
+      transition: none;
+    }
+    /* поля листа проявляются лесенкой, пока он поднимается */
+    .sheet-in:not([data-closing]) > :nth-child(n + 2) {
+      animation: sheet-field 300ms var(--ease-out) 160ms backwards;
+    }
+    .sheet-in:not([data-closing]) > :nth-child(3) {
+      animation-delay: 200ms;
+    }
+    .sheet-in:not([data-closing]) > :nth-child(n + 4) {
+      animation-delay: 240ms;
+    }
   }
 
   /* лист снизу: въезд на всю высоту и уход вниз */
@@ -616,6 +686,138 @@ button:disabled {
   /* кольцо в строке: старт учёта и «готово» — короткий упругий отклик */
   .ring-pop {
     animation: ring-pop 420ms var(--ease-pop);
+  }
+
+  /* меню строки: фон размывается, строка «отрывается», меню раскрывается из угла с
+     пружиной, пункты проявляются лесенкой */
+  .row-menu-dim {
+    animation: overlay-in 200ms var(--ease-out);
+  }
+  .row-menu-row {
+    animation: row-lift 280ms var(--ease-pop) backwards;
+  }
+  .row-menu-list {
+    animation: menu-pop 320ms var(--ease-pop) 40ms backwards;
+  }
+  .row-menu-list > * {
+    animation: menu-item 220ms var(--ease-out) backwards;
+  }
+  .row-menu-list > :nth-child(1) {
+    animation-delay: 120ms;
+  }
+  .row-menu-list > :nth-child(2) {
+    animation-delay: 150ms;
+  }
+  .row-menu-list > :nth-child(3) {
+    animation-delay: 180ms;
+  }
+  .row-menu-list > :nth-child(4) {
+    animation-delay: 210ms;
+  }
+  .row-menu-list > :nth-child(5) {
+    animation-delay: 240ms;
+  }
+  .row-menu-list > :nth-child(6) {
+    animation-delay: 270ms;
+  }
+  .row-menu-list > :nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .row-menu-list > :nth-child(8) {
+    animation-delay: 330ms;
+  }
+  .row-menu[data-closing] {
+    animation: overlay-out 160ms var(--ease-in-out) forwards;
+  }
+
+  /* часы-барабан (RollingClock): старая цифра уезжает вверх, новая приходит снизу */
+  .roll-out {
+    display: inline;
+    animation: roll-out 300ms var(--ease-ios) both;
+  }
+  .roll-in {
+    display: inline-block;
+    animation: roll-in 360ms var(--ease-pop) both;
+  }
+
+  /* кольцо в строке (0.60): старт учёта — центр заливается терракотой, ■ входит с
+     поворотом; стоп — ▶ возвращается; «Готово» — зелёная вспышка из центра, галочка
+     прорисовывается штрихом, искры разлетаются, название зачёркивается слева направо */
+  .ring-to-run .ring-center {
+    animation: ring-fill 320ms var(--ease-pop) 60ms backwards;
+  }
+  .ring-to-run .ring-center > *,
+  .ring-to-idle .ring-center > * {
+    animation: glyph-in 260ms var(--ease-pop) 140ms backwards;
+  }
+  .ring-to-done .ring-center {
+    animation: ring-done-flash 620ms var(--ease-out);
+  }
+  .ring-to-done .ring-center svg {
+    stroke-dasharray: 24;
+    animation: check-draw 280ms var(--ease-out) 220ms backwards;
+  }
+  .ring-sparks > i {
+    animation: spark 440ms var(--ease-out) 240ms both;
+  }
+  .strike-in {
+    animation: strike-in 280ms var(--ease-in-out) 300ms backwards;
+  }
+  /* удержание кольца: зелёный диск наливается от центра, кольцо чуть проседает. Первые
+     120 мс ничего не происходит — обычное касание остаётся касанием */
+  .ring-hold[data-holding] > .ring-charge {
+    animation: ring-charge 430ms linear 120ms both;
+  }
+  .ring-hold > button {
+    transition: transform 300ms var(--ease-out);
+  }
+  .ring-hold[data-holding] > button {
+    transform: scale(0.9);
+    transition-delay: 120ms;
+  }
+
+  /* новая задача: место раздвигается, строка проявляется из 96%, подсветка медленно гаснет */
+  .row-new .task-row {
+    animation:
+      row-new-in 320ms var(--ease-ios) 220ms backwards,
+      row-glow 1300ms var(--ease-out) 300ms backwards;
+  }
+  /* свайп влево за «ящик»: «Удалить» забирает всю ширину — отпустите, и строка удалится */
+  .swipe-delete {
+    transition: flex-grow 220ms var(--ease-out);
+  }
+  .swipe-delete[data-armed] {
+    flex-grow: 30;
+  }
+  /* секция раскрывается: строки проявляются лесенкой сверху вниз */
+  .collapse-box[data-phase="opening"] [data-sort-row] {
+    animation: row-stagger 260ms var(--ease-ios) backwards;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(2) {
+    animation-delay: 30ms;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(3) {
+    animation-delay: 60ms;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(4) {
+    animation-delay: 90ms;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(5) {
+    animation-delay: 120ms;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(6) {
+    animation-delay: 150ms;
+  }
+  .collapse-box[data-phase="opening"] [data-sort-row]:nth-child(7) {
+    animation-delay: 180ms;
+  }
+
+  /* отправка комментария: кнопка проминается и чуть поворачивается */
+  .send-btn {
+    transition: transform 200ms var(--ease-pop);
+  }
+  .send-btn:active {
+    transform: scale(0.88) rotate(-12deg);
   }
 
   /* свайп «Готово»: галочка оживает, когда порог пройден */
@@ -654,6 +856,15 @@ button:disabled {
   .tab-indicator > .tab-blob[data-moved] {
     animation: tab-stretch 460ms linear;
   }
+  /* сегменты: ползунок едет с перелётом и тянется каплей (как подложка таб-бара) */
+  .seg-thumb[data-ready] {
+    transition:
+      left 460ms cubic-bezier(0.3, 1.25, 0.4, 1),
+      width 460ms cubic-bezier(0.3, 1.25, 0.4, 1);
+  }
+  .seg-thumb > .seg-blob[data-moved] {
+    animation: seg-stretch 460ms linear;
+  }
   .tab-icon[data-active] {
     animation: tab-bounce 420ms var(--ease-pop);
   }
@@ -669,6 +880,154 @@ button:disabled {
   }
 }
 
+/* шапка с названием экрана, когда крупный заголовок ушёл вверх (CompactTitle) */
+.compact-title {
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid var(--divider);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-out);
+}
+.compact-title[data-shown] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.compact-title > span {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 300ms var(--ease-ios);
+}
+.compact-title[data-shown] > span {
+  opacity: 1;
+  transform: none;
+  transition-delay: 60ms;
+}
+/* открыто окно или клавиатура — шапке не место */
+:root:has(.tabbar[data-hidden]) .compact-title {
+  display: none;
+}
+
+/* меню строки долгим нажатием (RowMenu) */
+.row-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.row-menu-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.28);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.row-menu-row {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-popover);
+  transform: scale(1.03);
+  pointer-events: none;
+}
+.row-menu-list {
+  position: absolute;
+}
+
+/* «потянуть, чтобы обновить» (PullToRefresh): капля и кольцо загрузки под верхним краем */
+.ptr-liquid {
+  top: env(safe-area-inset-top, 0px);
+}
+.ptr-spin {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 35px);
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 9999px;
+  border: 2.5px solid var(--accent);
+  border-right-color: transparent;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 260ms var(--ease-pop);
+}
+.ptr-spin[data-on] {
+  opacity: 1;
+  transform: scale(1);
+  animation: ptr-spin 700ms linear infinite;
+}
+.ptr-spin[data-done] {
+  opacity: 0;
+  transform: scale(0.3);
+  animation: none;
+}
+@keyframes ptr-spin {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* часы-барабан: у каждой цифры своё окошко */
+.roll-digit {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+}
+.roll-out {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+
+/* кольцо в строке: зажать — «Готово» (TaskListItem) */
+.ring-hold {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ring-charge {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--success);
+  opacity: 0;
+  pointer-events: none;
+}
+.ring-hold[data-holding] > .ring-charge {
+  opacity: 0.85;
+}
+.ring-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ring-sparks > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  border-radius: 9999px;
+  background: var(--success);
+  opacity: 0;
+}
+.strike {
+  background: linear-gradient(currentColor, currentColor) 0 62% / 100% 1px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
 /* раскрывающийся блок: высота через сетку 0fr ↔ 1fr — анимируется и в Safari */
 .collapse-box {
   display: grid;
@@ -678,6 +1037,10 @@ button:disabled {
   min-height: 0;
 }
 .tab-blob {
+  position: absolute;
+  inset: 0;
+}
+.seg-blob {
   position: absolute;
   inset: 0;
 }
@@ -714,172 +1077,16 @@ button:disabled {
   pointer-events: none;
 }
 
-/* жидкий слой плашки учёта: от верха плашки до низа кружка «+» (зазор 8 + кружок 64) */
-.mini-goo {
-  display: none;
-  position: absolute;
-  inset: 0 0 -72px 0;
-  filter: url(#mini-goo);
-  pointer-events: none;
-}
-.mini-goo > i {
-  position: absolute;
-  background: var(--accent);
-  border-radius: 9999px;
-}
-.mini-goo > .goo-src {
-  right: 0;
-  bottom: 0;
-  width: 64px;
-  height: 64px;
-}
-.mini-goo > .goo-blob {
-  right: 0;
-  bottom: 72px;
-  width: 100%;
-  height: 58px;
-  border-radius: 14px;
-}
-:root:has(.tabbar[data-hidden]) .mini-goo {
-  display: none !important;
-}
-
-/* перешеек между стоп-кнопкой плашки и кружком «+»: одна «капля» терракоты */
-.mini-neck {
-  position: absolute;
-  right: 12px;
-  top: calc(100% - 13px);
-  pointer-events: none;
-}
 .mini-bar[data-leaving] {
   pointer-events: none;
 }
 /* клавиатура открыта — таб-бара нет, и держаться не за что */
-:root:has(.tabbar[data-hidden]) .mini-neck {
+:root:has(.tabbar[data-hidden]) .mini-bridge {
   display: none;
 }
 
 @keyframes route-fade {
   from {
-    opacity: 0;
-  }
-}
-@keyframes goo-fade {
-  0%,
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-/* капля: из центра «+» — вверх, к стоп-кнопке, потом влево на всю ширину с перехлёстом
-   и неровными краями, к концу — ровно форма плашки */
-@keyframes goo-blob {
-  0% {
-    right: 16px;
-    bottom: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    animation-timing-function: cubic-bezier(0.55, 0, 0.6, 1);
-  }
-  24% {
-    right: 12px;
-    bottom: 60px;
-    width: 40px;
-    height: 50px;
-    border-radius: 50% 50% 44% 56% / 64% 60% 40% 36%;
-    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
-  }
-  40% {
-    right: 2px;
-    bottom: 74px;
-    width: 62px;
-    height: 56px;
-    border-radius: 42% 58% 50% 50% / 54% 44% 56% 46%;
-    animation-timing-function: cubic-bezier(0.25, 0.6, 0.3, 1);
-  }
-  58% {
-    right: -2px;
-    bottom: 69px;
-    width: 62%;
-    height: 64px;
-    border-radius: 36px 22px 30px 42px / 38px 26px 34px 28px;
-    animation-timing-function: cubic-bezier(0.3, 0.5, 0.4, 1);
-  }
-  74% {
-    right: -3px;
-    bottom: 73px;
-    width: calc(100% + 6px);
-    height: 54px;
-    border-radius: 22px 16px 24px 12px;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
-  }
-  88% {
-    right: 0;
-    bottom: 71px;
-    width: 100%;
-    height: 60px;
-    border-radius: 14px;
-  }
-  100% {
-    right: 0;
-    bottom: 72px;
-    width: 100%;
-    height: 58px;
-    border-radius: 14px;
-  }
-}
-/* хвостик: отстаёт от капли и делает форму «небрежной», пока жидкость не соберётся */
-@keyframes goo-drop {
-  0% {
-    right: 20px;
-    bottom: 20px;
-    width: 24px;
-    height: 24px;
-  }
-  30% {
-    right: 18px;
-    bottom: 42px;
-    width: 26px;
-    height: 32px;
-  }
-  55% {
-    right: 34px;
-    bottom: 72px;
-    width: 46px;
-    height: 34px;
-  }
-  80% {
-    right: 40%;
-    bottom: 86px;
-    width: 38px;
-    height: 30px;
-  }
-  100% {
-    right: 46%;
-    bottom: 86px;
-    width: 30px;
-    height: 30px;
-  }
-}
-@keyframes mini-settle {
-  0%,
-  58% {
-    opacity: 0;
-  }
-  86%,
-  100% {
-    opacity: 1;
-  }
-}
-@keyframes mini-out {
-  0% {
-    opacity: 1;
-  }
-  22%,
-  100% {
     opacity: 0;
   }
 }
@@ -889,48 +1096,22 @@ button:disabled {
     transform: translateY(6px);
   }
 }
-@keyframes fab-kick {
-  0% {
-    transform: none;
-    animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1);
-  }
-  12% {
-    transform: scale(0.9, 0.86);
-    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
-  }
-  30% {
-    transform: translateY(-2px) scale(0.95, 1.08);
-  }
-  48% {
-    transform: scale(1.04, 0.97);
-  }
-  66% {
-    transform: scale(0.99, 1.01);
-  }
-  80%,
-  100% {
-    transform: none;
-  }
-}
-@keyframes fab-gulp {
-  0%,
-  55% {
-    transform: none;
-  }
-  72% {
-    transform: scale(1.1, 0.92);
-  }
-  86% {
-    transform: scale(0.97, 1.03);
-  }
-  100% {
-    transform: none;
-  }
-}
-
+/* лист поднимается с лёгким перелётом в 2% и садится */
 @keyframes sheet-up {
-  from {
+  0% {
     transform: translateY(100%);
+  }
+  70% {
+    transform: translateY(-1.5%);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes sheet-field {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 @keyframes sheet-down {
@@ -956,6 +1137,106 @@ button:disabled {
   }
   75% {
     transform: scale(1.08);
+  }
+}
+
+@keyframes roll-out {
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+@keyframes roll-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+@keyframes row-new-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes row-glow {
+  from {
+    background-color: var(--accent-soft);
+  }
+}
+@keyframes row-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes row-lift {
+  from {
+    transform: none;
+    box-shadow: none;
+  }
+}
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes menu-item {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes ring-fill {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-45deg);
+  }
+}
+@keyframes ring-done-flash {
+  0% {
+    background-color: var(--success);
+    transform: scale(0);
+  }
+  40% {
+    background-color: var(--success);
+    transform: scale(1.06);
+  }
+  70% {
+    transform: none;
+  }
+}
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+@keyframes spark {
+  from {
+    opacity: 1;
+    transform: rotate(var(--a)) translateY(-14px);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translateY(-27px) scale(0.4);
+  }
+}
+@keyframes strike-in {
+  from {
+    background-size: 0% 1px;
+  }
+}
+@keyframes ring-charge {
+  from {
+    transform: scale(0.15);
+  }
+  to {
+    transform: none;
   }
 }
 
@@ -985,6 +1266,23 @@ button:disabled {
   }
   78% {
     transform: scale(1.03, 0.99);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes seg-stretch {
+  0% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  }
+  30% {
+    transform: scale(1.25, 1.06);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
+  }
+  60% {
+    transform: scale(0.96, 1.02);
   }
   100% {
     transform: none;

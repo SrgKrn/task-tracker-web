@@ -8,7 +8,7 @@ import { DuplicateTaskSheet } from '../components/DuplicateTaskSheet'
 import { SubtractSheet, type SubtractSource } from '../components/SubtractSheet'
 import { NextSprintSheet } from '../components/NextSprintSheet'
 import { SprintComposition } from '../components/SprintComposition'
-import { ArrowLeft, Check, ChevronDown, Comment as CommentIcon, MoreDots, Plus } from '../components/Icon'
+import { ArrowLeft, Check, ChevronDown, Close, Comment as CommentIcon, MoreDots, Play, Plus } from '../components/Icon'
 import { Ring, StopGlyph, type RingState } from '../components/Ring'
 import { QuickNoteSheet } from '../components/ActiveTimerBar'
 import { isOverdue } from '../components/TaskListItem'
@@ -44,6 +44,7 @@ import {
   useTrimSession,
 } from '../lib/queries/timer'
 import { useAddComment } from '../lib/queries/comments'
+import { RollingClock } from '../components/RollingClock'
 import { elapsedHours, entrySeconds, formatClock, formatHoursMinutes, useTicker } from '../lib/time'
 import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
@@ -327,11 +328,12 @@ export function TaskDetail() {
   const overdue = isOverdue(task, status)
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col lg:h-full lg:w-full lg:max-w-[var(--detail-max)]">
-      {/* шапка: назад, этап пилюлей (меняется чаще всего) и меню */}
-      <div className="safe-top sticky top-0 z-20 bg-bg">
+    <div className="mx-auto flex max-w-lg flex-col lg:min-h-full lg:w-full lg:max-w-[var(--detail-max)]">
+      {/* шапка: назад, этап пилюлей (меняется чаще всего) и меню; на компьютере ещё учёт и ✕ —
+          карточка открыта рядом со списком, «Назад» там нужен только к спринту (0.60) */}
+      <div className="safe-top sticky top-0 z-20 bg-bg lg:pt-3">
         <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
-          <Button variant="ghost" className="min-w-0" onClick={() => navigate(backTo)}>
+          <Button variant="ghost" className={`min-w-0 ${parent ? '' : 'lg:invisible'}`} onClick={() => navigate(backTo)}>
             <ArrowLeft size={16} />
             <span className="truncate">{parent ? parent.name : 'Назад'}</span>
           </Button>
@@ -351,17 +353,37 @@ export function TaskDetail() {
               {status?.label ?? 'Без этапа'}
               <ChevronDown size={13} className="text-text-tertiary" />
             </button>
-            <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" onClick={() => setMenuOpen(true)}>
+            <button
+              type="button"
+              onClick={() => (isRunning ? stopTimer.mutate(undefined, { onError }) : startTimer.mutate(task.id, { onError }))}
+              aria-label={isRunning ? 'Остановить учёт' : 'Начать учёт'}
+              title={isRunning ? 'Остановить учёт · S' : 'Начать учёт · S'}
+              className={`hidden h-9 w-9 items-center justify-center rounded-full lg:flex ${
+                isRunning ? 'bg-accent text-on-accent hover:bg-accent-hover' : 'border border-border bg-surface text-text hover:bg-surface-hover'
+              }`}
+            >
+              {isRunning ? <StopGlyph size={10} color="var(--on-accent)" /> : <Play size={14} />}
+            </button>
+            <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" title="Действия" onClick={() => setMenuOpen(true)}>
               <MoreDots size={18} />
             </Button>
+            <button
+              type="button"
+              onClick={() => navigate('/tasks')}
+              aria-label="Закрыть карточку"
+              title="Закрыть · Esc"
+              className="hidden h-9 w-9 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text lg:flex"
+            >
+              <Close size={16} />
+            </button>
           </div>
         </div>
-        {/* закреп учёта: в карточке идущей задачи нижней плашки нет — она здесь */}
+        {/* закреп учёта: в карточке идущей задачи нижней плашки нет — она здесь; на компьютере учёт в боковой панели */}
         {isRunning && activeTimer && (
-          <div className="mx-4 mb-2 flex items-center gap-2.5 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] py-1.5 pr-1.5 pl-3">
+          <div className="mx-4 mb-2 flex items-center lg:hidden gap-2.5 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] py-1.5 pr-1.5 pl-3">
             <span className="live-dot shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--timer-text)]">{notePreview || 'Идёт учёт'}</span>
-            <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]">{formatClock(activeTimer.started_at)}</span>
+            <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]"><RollingClock value={formatClock(activeTimer.started_at)} /></span>
             <button
               type="button"
               onClick={() => setNoteOpen(true)}
@@ -479,7 +501,7 @@ export function TaskDetail() {
       </div>
 
       {/* разделы друг под другом вместо вкладок: всё видно одной прокруткой */}
-      <div className="sc flex flex-col gap-6 px-5 pt-6 pb-4 lg:min-h-0 lg:w-full lg:flex-1 lg:overflow-y-auto">
+      <div className="flex flex-col gap-6 px-5 pt-6 pb-4 lg:flex-1">
         {!isSubtask && (
           <section data-tip="subtasks" className="flex flex-col gap-2.5">
             <h2 className="flex items-baseline gap-2 text-md font-semibold text-text">

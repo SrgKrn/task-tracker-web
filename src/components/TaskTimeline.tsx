@@ -1,5 +1,6 @@
 import { focusOnOpen } from '../lib/device'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { landComment, launchComment } from '../lib/flight'
 import { EmptyState, Overline, Sheet, SheetActions, fieldClass } from './ui'
 import { useAttachments, type AttachmentWithUrl } from '../lib/queries/attachments'
 import {
@@ -62,6 +63,9 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
   const [editing, setEditing] = useState<Comment | null>(null)
   const { data: entries = [] } = useTimeEntries(taskId)
   const { data: comments = [] } = useComments(taskId)
+  // только что отправленный комментарий прилетает из поля на своё место в ленте (0.60)
+  const feedRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => landComment(taskId, feedRef.current), [taskId, comments])
   const { data: files = [] } = useAttachments({ taskIds: [taskId] })
   const historyDays = useGate().plan?.limits.history_days ?? null
 
@@ -128,7 +132,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
   const firstRow = rows[0]
 
   return (
-    <div className="mt-1 flex flex-col gap-4">
+    <div ref={feedRef} className="mt-1 flex flex-col gap-4">
       {days.map((group) => (
         <section key={group.day} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-3">
@@ -167,6 +171,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                       // свой комментарий — нажатием править или удалить
                       <button
                         type="button"
+                        data-comment
                         onClick={() => setEditing(row.comment)}
                         className="self-start text-left text-base leading-[1.4] text-text"
                         style={{ overflowWrap: 'anywhere' }}
@@ -302,13 +307,20 @@ export function CommentBar({
   const { showError } = useToast()
   const [draft, setDraft] = useState('')
   const empty = !draft.trim()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   function submit() {
     const body = draft.trim()
     if (!body) return
     addComment.mutate(
       { taskId, body },
-      { onError: (e) => showError(describeError(e)), onSuccess: () => setDraft('') },
+      {
+        onError: (e) => showError(describeError(e)),
+        onSuccess: () => {
+          if (inputRef.current) launchComment(taskId, body, inputRef.current)
+          setDraft('')
+        },
+      },
     )
   }
 
@@ -327,6 +339,7 @@ export function CommentBar({
         </button>
       )}
       <input
+        ref={inputRef}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -348,7 +361,7 @@ export function CommentBar({
           type="button"
           onClick={submit}
           aria-label="Добавить комментарий"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+          className="send-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
         >
           <ArrowUp size={16} className="mx-auto" />
         </button>

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTip } from '../lib/tips'
 import { useQueryClient } from '@tanstack/react-query'
 import { switchWorkspace, useOtherWorkspace } from '../lib/workspace'
 import { Ring, StopGlyph } from './Ring'
+import { LEAVE_MS, TimerPour } from './TimerPour'
+import { RollingClock } from './RollingClock'
 import { Button, ClientDot, Segmented, Sheet, fieldClass } from './ui'
 import { Comment } from './Icon'
 import { describeError, useToast } from '../lib/Toast'
@@ -32,19 +34,16 @@ const NOTE_STATUS: Record<NoteStatus, string> = {
  * учёт и оставить комментарий можно, не уходя со страницы. На широком экране — сверху,
  * как раньше: там внизу ничего нет и тянуться туда мышью дольше.
  */
-export function ActiveTimerBar({ placement }: { placement: 'top' | 'bottom' }) {
+export function ActiveTimerBar({ placement, collapsed = false }: { placement: 'top' | 'bottom'; collapsed?: boolean }) {
   // верхняя плашка — только на широком экране. Раньше она была скрыта стилем, но оставалась
   // в разметке, и правила «под плашкой отступ от чёлки не нужен» срабатывали на телефоне:
   // шапка уезжала под часы и батарею
   const desktop = useMediaQuery('(min-width: 1024px)')
   if (placement === 'top' && !desktop) return null
-  return <TimerBar placement={placement} />
+  return <TimerBar placement={placement} collapsed={collapsed} />
 }
 
-/** сколько длится выход плашки — обратно в кружок «+» */
-const LEAVE_MS = 560
-
-function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
+function TimerBar({ placement, collapsed }: { placement: 'top' | 'bottom'; collapsed: boolean }) {
   const { data: liveTimer } = useActiveTimer()
   const { data: liveTask } = useTask(liveTimer?.task_id)
   const { data: parent } = useTask(liveTask?.parent_id ?? undefined)
@@ -54,6 +53,8 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
   const { showError } = useToast()
   const { data: run } = useFocusRun()
   const [noteOpen, setNoteOpen] = useState(false)
+  const pillRef = useRef<HTMLDivElement>(null)
+  const stopRef = useRef<HTMLButtonElement>(null)
   useTicker(!!liveTimer)
   // учёт один на профиль: задача может быть из другого пространства — тогда подпись и
   // переход туда по нажатию
@@ -70,13 +71,14 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
   )
 
   // в карточке идущей задачи свой закреп под шапкой — вторая плашка не нужна
-  const visible = !!liveTimer && !!liveTask && location.pathname !== `/tasks/${liveTask.id}`
+  // на компьютере плашка живёт в боковой панели и видна всегда, в том числе в карточке (0.60)
+  const visible = !!liveTimer && !!liveTask && (placement === 'top' || location.pathname !== `/tasks/${liveTask.id}`)
   // остановили учёт — плашка ещё доигрывает уход в кружок «+» с последними данными
   const [last, setLast] = useState<{ timer: ActiveTimer; task: Task } | null>(null)
   if (visible && (last?.timer !== liveTimer || last?.task !== liveTask)) setLast({ timer: liveTimer!, task: liveTask! })
   const [wasVisible, setWasVisible] = useState(visible)
   const [leaving, setLeaving] = useState(false)
-  // «жидкий» слой живёт только пока плашка вытекает из «+» или стекает обратно
+  // плашка вытекает из «+» — до конца этой анимации
   const [pouring, setPouring] = useState(visible)
   if (visible !== wasVisible) {
     setWasVisible(visible)
@@ -147,26 +149,23 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
         aria-hidden={leaving || undefined}
       >
         <div className="relative mx-auto max-w-lg">
-          {/* терракота вытекает из кружка «+»: капля тянется вверх, растекается в полосу и
-              «остывает» в плашку. Фильтр склеивает пятна в одну жидкость с перешейком */}
-          {pouring && (
-            <div className="mini-goo" aria-hidden onAnimationEnd={(e) => e.target === e.currentTarget && !leaving && setPouring(false)}>
-              <i className="goo-src" />
-              <i className="goo-drop" />
-              <i className="goo-blob" />
-            </div>
-          )}
-          <div className="mini-bar-pill pointer-events-auto relative flex items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-2.5 pl-3.5 shadow-popover">
+          {/* правый отступ подобран так, чтобы центр стоп-кнопки стоял ровно над центром «+»:
+              перешеек между ними — прямая капля, а не косая */}
+          <div
+            ref={pillRef}
+            className="mini-bar-pill pointer-events-auto relative flex items-center gap-2.5 rounded-lg border border-[var(--timer-border)] py-1.5 pr-2.25 pl-3.5 shadow-popover"
+          >
             <span className="live-dot shrink-0" aria-hidden />
             <Link to={focus ? '/focus' : `/tasks/${task.id}`} onClick={open} className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
               <span className="truncate text-sm font-medium text-text">{task.name}</span>
               <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">{sub}</span>
             </Link>
             <span className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]" aria-label={focus ? 'До конца отрезка' : 'Идёт учёт'}>
-              {clock}
+              <RollingClock value={clock} />
             </span>
             {noteButton}
             <button
+              ref={stopRef}
               type="button"
               onClick={stop}
               aria-label="Остановить учёт"
@@ -174,66 +173,85 @@ function TimerBar({ placement }: { placement: 'top' | 'bottom' }) {
             >
               <StopGlyph size={11} color="var(--on-accent)" />
             </button>
-            <svg className="mini-neck" width="40" height="27" viewBox="0 0 40 27" aria-hidden>
-              <path d="M5 0H35C30 6 28 10 28 13.5C28 17 32 22 38.5 27H1.5C8 22 12 17 12 13.5C12 10 10 6 5 0Z" fill="var(--accent)" />
-            </svg>
           </div>
+          {/* терракота вытекает из «+» и стекает обратно; в покое — перешеек к «+» */}
+          <TimerPour
+            mode={leaving ? 'leave' : pouring ? 'enter' : 'rest'}
+            pillRef={pillRef}
+            stopRef={stopRef}
+            onEntered={() => setPouring(false)}
+          />
         </div>
-        <svg width="0" height="0" className="absolute" aria-hidden>
-          <filter id="mini-goo" x="-20%" y="-40%" width="140%" height="180%" colorInterpolationFilters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="9" />
-            <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" />
-          </filter>
-        </svg>
         {createPortal(sheet, document.body)}
       </div>
     )
   }
 
+  // свёрнутая панель: только кольцо часа — нажать, чтобы остановить
+  if (collapsed) {
+    return (
+      <div data-top-bar className="flex justify-center py-1">
+        <Ring
+          size={36}
+          pct={sessionHourPct(activeTimer.started_at)}
+          state="running"
+          track="var(--timer-track)"
+          centerBg="var(--surface)"
+          onClick={stop}
+          ariaLabel={`Остановить учёт: ${task.name}, ${clock}`}
+        >
+          <StopGlyph size={9} />
+        </Ring>
+        {createPortal(sheet, document.body)}
+      </div>
+    )
+  }
+
+  // боковая панель компьютера: всегда на одном месте, как плеер в Telegram Desktop (0.60)
   return (
     <div
       data-top-bar
-      className="safe-top-box mx-4 mb-2 hidden items-center gap-3 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] px-3 py-2.5 lg:flex"
+      className="flex flex-col gap-1.5 rounded-md border border-[var(--timer-border)] bg-[var(--timer-bg)] p-2.5"
     >
-      <Ring
-        size={34}
-        pct={sessionHourPct(activeTimer.started_at)}
-        state="running"
-        track="var(--timer-track)"
-        centerBg="var(--timer-bg)"
-        onClick={stop}
-        ariaLabel="Остановить учёт"
-      >
-        <StopGlyph size={9} />
-      </Ring>
-      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1" onClick={open}>
-        <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--timer-text)]">
-          <span className="shrink-0">{focus ? 'Фокус' : 'Идёт учёт'}</span>
-          {other ? (
-            <>
-              <span aria-hidden>·</span>
-              <ClientDot color={other.color} size={7} />
-              <span className="min-w-0 truncate">в «{other.name}»</span>
-            </>
-          ) : (
-            <>
-              {(parent || label) && <span aria-hidden>·</span>}
-              {!parent && <ClientDot color={model.colorOf(task)} size={7} />}
-              {(parent || label) && <span className="min-w-0 truncate">{parent ? parent.name : label}</span>}
-            </>
-          )}
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="live-dot shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--timer-text)]">
+          {other ? `в «${other.name}»` : focus ? 'Фокус' : parent ? parent.name : label || 'Идёт учёт'}
         </span>
-        <span className="block truncate text-base font-medium text-text">{task.name}</span>
-        {notePreview && <span className="block truncate text-xs text-text-secondary">{notePreview}</span>}
+        <Link
+          to={focus ? '/focus' : `/tasks/${task.id}`}
+          onClick={open}
+          className="tabular shrink-0 font-mono text-base font-medium text-[var(--timer-text)]"
+          aria-label={focus ? 'До конца отрезка' : 'Идёт учёт'}
+        >
+          <RollingClock value={clock} />
+        </Link>
+      </div>
+      <Link to={`/tasks/${task.id}`} onClick={open} className="truncate text-sm font-medium text-text hover:underline" title={task.name}>
+        {task.name}
       </Link>
-      {noteButton}
-      <Link
-        to={focus ? '/focus' : `/tasks/${task.id}`}
-        className="tabular shrink-0 font-mono text-lg font-medium text-[var(--timer-text)]"
-        aria-label={focus ? 'До конца отрезка' : undefined}
-      >
-        {clock}
-      </Link>
+      {notePreview && <span className="-mt-1 truncate text-xs text-text-secondary">{notePreview}</span>}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={stop}
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-sm bg-accent text-sm font-medium text-on-accent hover:bg-accent-hover"
+        >
+          <StopGlyph size={9} color="var(--on-accent)" />
+          Стоп
+        </button>
+        <button
+          type="button"
+          onClick={() => setNoteOpen(true)}
+          aria-label="Комментарий"
+          aria-haspopup="dialog"
+          title="Комментарий"
+          className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-surface text-[var(--timer-text)] hover:bg-surface-hover"
+        >
+          <Comment size={15} />
+          {notePreview && <span className="absolute top-1 right-1 h-1.75 w-1.75 rounded-full border border-surface bg-accent" aria-hidden />}
+        </button>
+      </div>
       {createPortal(sheet, document.body)}
     </div>
   )

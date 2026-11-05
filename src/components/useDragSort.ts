@@ -17,7 +17,18 @@ const SCROLL_STEP = 10
  * Пока строку тащат, события касания до самой строки не доходят — иначе свайп строки
  * принял бы движение пальца за свой жест. После отпускания — onDrop(откуда, куда) в
  * индексах строк; нажатие, которое закончило перетаскивание, задачу не открывает.
+ *
+ * 0.60: пока палец держат, строка чуть проседает — «заряжается»; поднятая — крупнее, с
+ * глубокой тенью и лёгким наклоном; отпущенная садится на место с пружиной. Удержали и
+ * отпустили, не сдвинув, — это не перетаскивание, а меню строки: на строку уходит событие
+ * row-menu (его ловит TaskListItem).
  */
+
+/** поднятая строка: крупнее, наклонена, с глубокой тенью */
+const LIFT = 'scale(1.04) rotate(-0.5deg)'
+const LIFT_SHADOW = 'var(--shadow-popover), 0 18px 36px rgb(0 0 0 / 0.18)'
+const SPRING = 'cubic-bezier(0.34, 1.4, 0.64, 1)'
+export const ROW_MENU_EVENT = 'row-menu'
 export function useDragSort(
   containerRef: RefObject<HTMLElement | null>,
   { enabled, onDrop }: { enabled: boolean; onDrop: (from: number, to: number) => void },
@@ -32,7 +43,7 @@ export function useDragSort(
     if (!enabled || !box) return
 
     let timer = 0
-    let pending: { row: HTMLElement; x: number; y: number } | null = null
+    let pending: { row: HTMLElement; x: number; y: number; target: Element; squash: Animation | null } | null = null
     let drag: {
       rows: HTMLElement[]
       from: number
@@ -42,7 +53,10 @@ export function useDragSort(
       startY: number
       startScroll: number
       lastY: number
+      target: Element
+      moved: boolean
     } | null = null
+    box.dataset.sortActive = ''
     let raf = 0
 
     const rowsOf = () => [...box.children].filter((el): el is HTMLElement => el instanceof HTMLElement && el.hasAttribute('data-sort-row'))
@@ -52,6 +66,7 @@ export function useDragSort(
       const rows = rowsOf()
       const from = rows.indexOf(pending.row)
       if (from < 0) return
+      pending.squash?.cancel()
       const rects = rows.map((r) => r.getBoundingClientRect())
       drag = {
         rows,
@@ -63,6 +78,8 @@ export function useDragSort(
         startY: pending.y,
         startScroll: window.scrollY,
         lastY: pending.y,
+        target: pending.target,
+        moved: false,
       }
       pending = null
       tap(15)
@@ -74,8 +91,11 @@ export function useDragSort(
       el.style.transition = 'none'
       el.style.position = 'relative'
       el.style.zIndex = '20'
-      el.style.boxShadow = 'var(--shadow-popover)'
+      el.style.boxShadow = LIFT_SHADOW
       el.style.background = 'var(--surface)'
+      // подъём — пружиной, а не скачком
+      el.animate([{ transform: 'none', boxShadow: 'none' }, { transform: LIFT, boxShadow: LIFT_SHADOW }], { duration: 220, easing: SPRING })
+      el.style.transform = LIFT
       el.dataset.dragging = ''
       raf = requestAnimationFrame(autoScroll)
     }
@@ -84,12 +104,13 @@ export function useDragSort(
       if (!drag) return
       drag.lastY = y
       const dy = y - drag.startY + (window.scrollY - drag.startScroll)
+      if (Math.abs(y - drag.startY) > SLOP) drag.moved = true
       const center = drag.mids[drag.from] + dy
       const to = targetIndex(drag.mids, drag.from, center)
       drag.to = to
       drag.rows.forEach((r, i) => {
         if (i === drag!.from) {
-          r.style.transform = `translateY(${dy}px) scale(1.02)`
+          r.style.transform = `translateY(${dy}px) ${LIFT}`
           return
         }
         let shift = 0
@@ -111,11 +132,14 @@ export function useDragSort(
 
     function finish(commit: boolean) {
       window.clearTimeout(timer)
+      pending?.squash?.cancel()
       pending = null
       if (!drag) return
       cancelAnimationFrame(raf)
-      const { rows, from, to } = drag
+      const { rows, from, to, moved, target } = drag
       drag = null
+      const el = rows[from]
+      const before = el.getBoundingClientRect().top
       document.documentElement.style.userSelect = ''
       for (const r of rows) {
         r.style.transition = 'none'
@@ -134,6 +158,23 @@ export function useDragSort(
       window.addEventListener('click', swallow, { capture: true, once: true })
       window.setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 400)
       if (commit && from !== to) dropRef.current(from, to)
+      // строка садится на новое место с пружиной: от того, где её отпустили
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            const after = el.getBoundingClientRect().top
+            el.animate(
+              [
+                { transform: `translateY(${before - after}px) ${LIFT}`, boxShadow: LIFT_SHADOW, position: 'relative', zIndex: 20 },
+                { transform: 'none', boxShadow: 'none', position: 'relative', zIndex: 20 },
+              ],
+              { duration: 380, easing: SPRING },
+            )
+          }),
+        )
+      }
+      // удержали и отпустили на месте — меню строки
+      if (commit && !moved) target.dispatchEvent(new CustomEvent(ROW_MENU_EVENT, { bubbles: true }))
     }
 
     function down(target: EventTarget | null, x: number, y: number) {
@@ -142,7 +183,11 @@ export function useDragSort(
       if (!row || row.parentElement !== box) return
       // кнопки и поля строки (учёт, галочка, поле подзадачи) — не ручка перетаскивания
       if ((target as HTMLElement).closest('input, textarea, [data-no-drag]')) return
-      pending = { row, x, y }
+      // пока держат — строка чуть проседает: видно, что сейчас что-то будет
+      const squash = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? null
+        : row.animate([{ transform: 'none' }, { transform: 'scale(0.98)' }], { duration: HOLD_MS, delay: 80, easing: 'ease-out', fill: 'forwards' })
+      pending = { row, x, y, target: target as Element, squash }
       window.clearTimeout(timer)
       timer = window.setTimeout(start, HOLD_MS)
     }
@@ -156,6 +201,7 @@ export function useDragSort(
       }
       if (pending && (Math.abs(x - pending.x) > SLOP || Math.abs(y - pending.y) > SLOP)) {
         window.clearTimeout(timer)
+        pending.squash?.cancel()
         pending = null
       }
     }
@@ -196,6 +242,7 @@ export function useDragSort(
     window.addEventListener('keydown', onKey)
     return () => {
       finish(false)
+      delete box.dataset.sortActive
       box.removeEventListener('touchstart', onTouchStart, { capture: true })
       box.removeEventListener('touchmove', onTouchMove, { capture: true })
       box.removeEventListener('touchend', onTouchEnd, { capture: true })

@@ -1,9 +1,10 @@
 import { ProfileButton } from '../components/Avatar'
 import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useDeferredDelete } from '../components/useDeferredDelete'
+import { useRevealOnLoad } from '../lib/reveal'
 import { DayPlanSheet } from '../components/DayPlanSheet'
 import { DayByMethod } from '../components/DayByMethod'
 import { MethodInfoSheet, PriorityBadge } from '../components/Priority'
@@ -30,7 +31,7 @@ import {
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
+import { useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { usePriorityMethod, useUseDays, useUserSettings } from '../lib/queries/userSettings'
 import { useDayTiles, useMinuteClock } from '../lib/dayTile'
@@ -41,7 +42,7 @@ import { TASKS, elapsedHours, entryMinutes, formatHoursMinutes, formatHoursRu, p
 import { isInDay, planSections } from '../lib/dayPlan'
 import { usePref } from '../lib/prefs'
 import { useTaskSort } from '../lib/taskSort'
-import { childrenByParent, deleteDescription, rollupFact } from '../lib/tree'
+import { childrenByParent, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
 const METHOD_SHORT = { eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' } as const
@@ -81,13 +82,16 @@ export function Today() {
   const updateTask = useUpdateTask()
   const setPlanDate = useSetPlanDate()
   const duplicateTask = useDuplicateTask()
-  const deleteTask = useDeleteTask()
+  // удаление из списка — с «Вернуть» вместо окна подтверждения (0.60)
+  const deferredDelete = useDeferredDelete()
+  // данные пришли после заготовок — строки проявляются лесенкой
+  const pageRef = useRef<HTMLDivElement>(null)
+  useRevealOnLoad(pageRef, isLoading)
   const toggleDone = useToggleDone()
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   useTicker(!!activeTimer)
 
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [postponing, setPostponing] = useState<Task | null>(null)
   const [planning, setPlanning] = useState(false)
   // «Недавние» — две недели учёта: задачи, к которым возвращаются, но не на сегодня
@@ -150,6 +154,7 @@ export function Today() {
   const useDays = useUseDays()
   useTip('new-task', !isLoading && tasks.length === 0)
   useTip('timer', !isLoading && tasks.length > 0 && !activeTimer)
+  useTip('ring-done', !isLoading && tasks.length > 0)
   useTip('ring', !hasNorm && !activeTimer && (factByDay.get(today) ?? 0) > 0)
   useTip('tile', showTile && !!todayTile && dayFact >= 1)
   useTip('method', method === 'none' && useDays >= 3 && tasks.length > 0)
@@ -206,7 +211,7 @@ export function Today() {
         onStartTimer={() => startTimer.mutate(task.id, { onError })}
         onStopTimer={() => stopTimer.mutate(undefined, { onError })}
         onDuplicate={() => duplicateTask.mutate({ task }, { onError, onSuccess: () => showSuccess('Копия создана') })}
-        onDelete={() => setDeletingTask(task)}
+        onDelete={() => deferredDelete(task)}
         onToggleDone={() => toggleDone(task)}
         // снять можно только то, что выбрано: учёт и ежедневные задачи держат её в дне сами
         onUnplan={
@@ -617,7 +622,7 @@ export function Today() {
   const shown = widgets.order.filter((id) => widgets.on.includes(id) && id !== 'tile')
 
   return (
-    <div className="page page-wide mx-auto flex max-w-lg flex-col">
+    <div ref={pageRef} className="page page-wide mx-auto flex max-w-lg flex-col">
       <div className="safe-top">
         {/* верхняя строка: дата и пространство слева, хронология и профиль справа */}
         <div className="flex min-h-11 items-center gap-2 px-5 pt-3 lg:pt-4">
@@ -747,16 +752,6 @@ export function Today() {
 
       {method !== 'none' && <MethodInfoSheet method={method} open={methodInfo} onClose={() => setMethodInfo(false)} />}
 
-      <ConfirmDialog
-        open={deletingTask !== null}
-        title={`Удалить «${deletingTask?.name ?? ''}»?`}
-        description={deleteDescription(deletingTask ? (childrenOf.get(deletingTask.id)?.length ?? 0) : 0)}
-        onCancel={() => setDeletingTask(null)}
-        onConfirm={() => {
-          if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })
-          setDeletingTask(null)
-        }}
-      />
     </div>
   )
 }

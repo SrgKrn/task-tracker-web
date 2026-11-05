@@ -12,7 +12,14 @@ interface Toast {
   message: string
   tone: 'error' | 'success'
   action?: ToastAction
+  /** сколько живёт — для полоски «осталось на Вернуть» */
+  ms: number
+  /** уже уходит вниз — через LEAVE_MS уберём из разметки */
+  leaving?: boolean
 }
+
+/** уход уведомления вниз */
+const LEAVE_MS = 220
 
 interface ToastContextValue {
   showError: (message: string) => void
@@ -26,17 +33,20 @@ let nextId = 1
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
+  // уведомление не пропадает, а уходит вниз и гаснет (0.60)
   const dismiss = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)))
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), LEAVE_MS)
   }, [])
 
   const push = useCallback(
     (message: string, tone: Toast['tone'], action?: ToastAction) => {
       const id = nextId++
       // не больше трёх сразу: новый вытесняет самый старый
-      setToasts((prev) => [...prev, { id, message, tone, action }].slice(-3))
       // «готово» — коротко; с «Вернуть» — успеть дотянуться; ошибку — успеть прочитать
-      setTimeout(() => dismiss(id), tone === 'error' ? 7000 : action ? 5000 : 3000)
+      const ms = tone === 'error' ? 7000 : action ? 5000 : 3000
+      setToasts((prev) => [...prev, { id, message, tone, action, ms }].slice(-3))
+      setTimeout(() => dismiss(id), ms)
     },
     [dismiss],
   )
@@ -57,8 +67,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role={t.tone === 'error' ? 'alert' : 'status'}
-            className="toast-pop pointer-events-auto flex max-w-[min(92vw,420px)] items-center gap-2.5 rounded-md border border-border bg-surface py-2 pr-2 pl-3 text-base text-text shadow-popover"
+            data-leaving={t.leaving || undefined}
+            className="toast-pop relative pointer-events-auto flex max-w-[min(92vw,420px)] items-center gap-2.5 overflow-hidden rounded-md border border-border bg-surface py-2 pr-2 pl-3 text-base text-text shadow-popover"
           >
+            {/* полоска внизу убывает — видно, сколько осталось на «Вернуть» */}
+            {t.action && <span className="toast-time" style={{ animationDuration: `${t.ms}ms` }} aria-hidden />}
             <span
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
                 t.tone === 'error' ? 'bg-danger-soft text-danger' : 'bg-success-soft text-success'

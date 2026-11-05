@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useMatch } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useMatch, useNavigate } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
 import { ClientDot, Collapse } from './ui'
 import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
 import { tap } from '../lib/haptics'
+import { isFresh } from '../lib/fresh'
+import { RowMenu, type RowMenuItem } from './RowMenu'
+import { ROW_MENU_EVENT } from './useDragSort'
 import { autoExpandFor, startAdding, stopAdding, useAddingFor, useExpanded } from '../lib/expanded'
 import { useStatuses } from '../lib/queries/statuses'
 import { addDays, formatDueDate, todayStr } from '../lib/period'
@@ -56,6 +59,12 @@ const ACTION_WIDTH = 74
 const OPEN_THRESHOLD = 56
 /** свайп вправо дальше этого — отметка «Готово» */
 const DONE_THRESHOLD = 92
+/** удержание кольца дольше этого — «Готово» (касание — по-прежнему старт учёта) */
+const HOLD_MS = 550
+/** сколько играет «Готово» на кольце, прежде чем задача закроется (и, может, уйдёт из списка) */
+const FINISH_MS = 620
+/** свайп влево дальше «ящика» на столько — удаление целиком, без нажатия кнопки */
+const DELETE_PAST = 72
 /** дальше квадратики сливаются в полосу и перестают считываться поштучно */
 const MAX_PIPS = 12
 
@@ -98,7 +107,9 @@ export function TaskListItem({
     if (expandable) autoExpandFor(task.id, runningChildId)
   }, [task.id, runningChildId, expandable])
 
-  const done = !!status?.is_final
+  /** зажали кольцо: «Готово» доигрывает на строке, потом меняется этап */
+  const [finishing, setFinishing] = useState(false)
+  const done = !!status?.is_final || finishing
   // первая подзадача открытого спринта — из «ящика» свайпа, а не полосой под каждым спринтом
   // «ящик» есть только там, где строке дали действия (список задач), — туда и кладём
   const addSubtaskAction = expandable && !task.parent_id && !done && (!!onDuplicate || !!onDelete)
@@ -139,7 +150,7 @@ export function TaskListItem({
 
   const ringState: RingState = done ? 'done' : over ? 'over' : isRunning ? 'running' : 'idle'
   // отклик кольца — только на смену (старт, стоп, «готово»), не при каждом открытии списка
-  const ringKey = isRunning ? 'run' : done ? 'done' : 'idle'
+  const ringKey = done ? 'done' : isRunning ? 'run' : 'idle'
   const [prevRingKey, setPrevRingKey] = useState(ringKey)
   const [ringChanged, setRingChanged] = useState(false)
   if (ringKey !== prevRingKey) {
@@ -162,6 +173,41 @@ export function TaskListItem({
   // часы справа: у раскрытого спринта они уже тикают в строке подзадачи — второй раз не нужны
   const showClock = isRunning && !!activeTimer && (isRunningSelf || (!open && !subtasksBelow))
 
+  /*
+   * Зажать кольцо — «Готово» (0.60). Касание по-прежнему запускает учёт: удержание
+   * начинает наливать кольцо зелёным только через ~120 мс, так что быстрое нажатие ничего
+   * лишнего не показывает. Сдвинули палец (свайп, прокрутка) — удержание отменяется.
+   */
+  const [holding, setHolding] = useState(false)
+  const holdTimer = useRef(0)
+  const held = useRef(false)
+  useEffect(() => () => window.clearTimeout(holdTimer.current), [])
+  function holdStart(e: React.PointerEvent) {
+    if (!onToggleDone || flying || finishing || (e.pointerType === 'mouse' && e.button !== 0)) return
+    held.current = false
+    setHolding(true)
+    window.clearTimeout(holdTimer.current)
+    holdTimer.current = window.setTimeout(() => {
+      held.current = true
+      setHolding(false)
+      tap()
+      if (status?.is_final) {
+        onToggleDone()
+        return
+      }
+      setFinishing(true)
+      holdTimer.current = window.setTimeout(() => {
+        onToggleDone()
+        setFinishing(false)
+      }, FINISH_MS)
+    }, HOLD_MS)
+  }
+  function holdEnd() {
+    if (!holding) return
+    window.clearTimeout(holdTimer.current)
+    setHolding(false)
+  }
+
   function onTouchStart(e: React.TouchEvent) {
     if (!swipeable || flying) return
     startX.current = e.touches[0].clientX
@@ -182,15 +228,22 @@ export function TaskListItem({
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
       axisLocked.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
     }
+    holdEnd()
     if (axisLocked.current === 'y') return
-    const min = actionCount > 0 ? -actionsWidth : 0
+    // с «Удалить» строку можно дотянуть дальше «ящика» — туго, с сопротивлением
+    const min = actionCount > 0 ? (onDelete ? -Infinity : -actionsWidth) : 0
     // вправо — только к «Готово», с сопротивлением после порога
     const raw = startOffset.current + dx
     const max = onToggleDone ? Infinity : 0
-    const next = raw > DONE_THRESHOLD ? DONE_THRESHOLD + (raw - DONE_THRESHOLD) * 0.35 : raw
+    const next =
+      raw > DONE_THRESHOLD
+        ? DONE_THRESHOLD + (raw - DONE_THRESHOLD) * 0.35
+        : raw < -actionsWidth
+          ? -actionsWidth + (raw + actionsWidth) * 0.55
+          : raw
     const clamped = Math.min(max, Math.max(min, next))
     // порог пройден — лёгкий отклик, как у переключателя
-    const past = clamped >= DONE_THRESHOLD
+    const past = clamped >= DONE_THRESHOLD || (!!onDelete && clamped <= -(actionsWidth + DELETE_PAST))
     if (past !== passedDone.current) {
       passedDone.current = past
       tap()
@@ -214,14 +267,124 @@ export function TaskListItem({
       }, 240)
       return
     }
+    if (onDelete && offset <= -(actionsWidth + DELETE_PAST)) {
+      flyOut(-1, onDelete)
+      return
+    }
     setOffset((current) => (current < -OPEN_THRESHOLD ? -actionsWidth : 0))
   }
 
   const close = () => setOffset(0)
+
+  /*
+   * Меню строки (0.60): удержать строку и отпустить, не сдвигая. В списке с перетаскиванием
+   * удержание ловит useDragSort (сдвинули — перетаскивание, нет — меню); там, где его нет
+   * («Сегодня»), — своё удержание. Правая кнопка мыши — то же меню.
+   */
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuHold = useRef(0)
+  const menuPress = useRef<{ x: number; y: number } | null>(null)
+  const swallowClick = useRef(false)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const open = () => setMenuOpen(true)
+    root.addEventListener(ROW_MENU_EVENT, open)
+    return () => {
+      root.removeEventListener(ROW_MENU_EVENT, open)
+      window.clearTimeout(menuHold.current)
+    }
+  }, [])
+  function menuDown(e: React.PointerEvent) {
+    if (e.pointerType === 'mouse' || flying) return
+    const target = e.target as HTMLElement
+    if (target.closest('button, input, textarea, [data-no-drag]')) return
+    // перетаскивание здесь включено — удержание обработает оно
+    if (rowRef.current?.closest('[data-sort-active]')) return
+    menuPress.current = { x: e.clientX, y: e.clientY }
+    window.clearTimeout(menuHold.current)
+    menuHold.current = window.setTimeout(() => {
+      menuPress.current = null
+      swallowClick.current = true
+      tap(15)
+      setMenuOpen(true)
+    }, 450)
+  }
+  function menuMove(e: React.PointerEvent) {
+    const p = menuPress.current
+    if (p && (Math.abs(e.clientX - p.x) > 8 || Math.abs(e.clientY - p.y) > 8)) menuCancel()
+  }
+  function menuCancel() {
+    menuPress.current = null
+    window.clearTimeout(menuHold.current)
+  }
+  const menuItems: RowMenuItem[] = [
+    { label: 'Открыть', onSelect: () => navigate(`/tasks/${task.id}`) },
+    isRunning ? { label: 'Остановить учёт', onSelect: onStopTimer } : { label: 'Начать учёт', onSelect: onStartTimer },
+    ...(onToggleDone ? [{ label: done ? 'Вернуть в работу' : 'Готово', onSelect: onToggleDone }] : []),
+    ...(addSubtaskAction
+      ? [
+          {
+            label: 'Подзадача',
+            onSelect: () => {
+              setOpen(true)
+              startAdding(task.id)
+            },
+          },
+        ]
+      : []),
+    ...(onUnplan ? [{ label: 'Не сегодня', onSelect: onUnplan }] : []),
+    ...(onDuplicate ? [{ label: 'Дублировать', onSelect: onDuplicate }] : []),
+    ...(onDelete ? [{ label: 'Удалить', danger: true, onSelect: () => flyOut(-1, onDelete) }] : []),
+  ]
+
+  /*
+   * Строка улетает за край, её место схлопывается, и только потом действие (0.60): нижние
+   * строки подтягиваются плавно, а не прыжком, когда задача пропадёт из списка.
+   */
+  const rootRef = useRef<HTMLDivElement>(null)
+  // только что созданная задача: раздвигает место, проявляется и подсвечивается (0.60)
+  const [isNew] = useState(() => isFresh(task.id))
+  useLayoutEffect(() => {
+    const box = rootRef.current
+    if (!isNew || !box || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    box.style.overflow = 'hidden'
+    const anim = box.animate([{ height: '0px' }, { height: `${box.offsetHeight}px` }], {
+      duration: 300,
+      easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+      delay: 120,
+      fill: 'backwards',
+    })
+    anim.finished.then(
+      () => (box.style.overflow = ''),
+      () => {},
+    )
+    return () => anim.cancel()
+  }, [isNew])
+  function flyOut(dir: 1 | -1, then: () => void) {
+    setAnimating(true)
+    setFlying(true)
+    setOffset(dir * ((rowRef.current?.offsetWidth ?? 400) + 24))
+    window.setTimeout(() => {
+      const box = rootRef.current
+      if (!box || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        then()
+        return
+      }
+      box.style.overflow = 'hidden'
+      const anim = box.animate([{ height: `${box.offsetHeight}px` }, { height: '0px' }], {
+        duration: 220,
+        easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+        fill: 'forwards',
+      })
+      anim.finished.then(then, then)
+    }, 220)
+  }
   const swipeButton = 'flex-1 text-sm font-medium'
 
   return (
-    <div className="flex flex-col">
+    <div ref={rootRef} className={`flex flex-col ${isNew ? 'row-new' : ''}`}>
       <div className="relative overflow-hidden" ref={rowRef}>
         {onToggleDone && (
           <div
@@ -240,7 +403,7 @@ export function TaskListItem({
           </div>
         )}
         {actionCount > 0 && (
-          <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
+          <div className="absolute inset-y-0 right-0 flex" style={{ width: Math.max(actionsWidth, -offset) }}>
             {addSubtaskAction && (
               <button
                 type="button"
@@ -281,11 +444,9 @@ export function TaskListItem({
             {onDelete && (
               <button
                 type="button"
-                onClick={() => {
-                  close()
-                  onDelete()
-                }}
-                className={`${swipeButton} bg-danger-soft text-danger-text`}
+                onClick={() => flyOut(-1, onDelete)}
+                data-armed={offset <= -(actionsWidth + DELETE_PAST) || undefined}
+                className={`swipe-delete ${swipeButton} bg-danger-soft text-danger-text`}
               >
                 Удалить
               </button>
@@ -308,15 +469,46 @@ export function TaskListItem({
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onPointerDown={menuDown}
+          onPointerMove={menuMove}
+          onPointerUp={menuCancel}
+          onPointerCancel={menuCancel}
+          onContextMenu={(e) => {
+            if ((e.target as HTMLElement).closest('input, textarea')) return
+            e.preventDefault()
+            // долгое касание пальцем (Android) тоже присылает contextmenu — его ведёт удержание
+            const kind = (e.nativeEvent as PointerEvent).pointerType
+            if (kind && kind !== 'mouse') return
+            menuCancel()
+            setMenuOpen(true)
+          }}
         >
           <div className="flex items-center gap-3">
-            <span key={ringKey} data-tip="timer" className={`shrink-0 rounded-full ${ringChanged ? 'ring-pop' : ''}`}>
+            <span
+              key={ringKey}
+              data-no-drag
+              data-tip={onToggleDone ? 'timer ring-done' : 'timer'}
+              data-holding={holding || undefined}
+              className={`ring-hold relative shrink-0 rounded-full ${ringChanged ? `ring-pop ring-to-${ringKey}` : ''}`}
+              onPointerDown={holdStart}
+              onPointerUp={holdEnd}
+              onPointerCancel={holdEnd}
+              onPointerLeave={holdEnd}
+              onContextMenu={(e) => onToggleDone && e.preventDefault()}
+            >
             <Ring
               size={32}
               pct={done ? 100 : pct}
               state={ringState}
-              centerBg="var(--row-bg)"
+              // под учётом центр заливается терракотой — видно издалека, что идёт (0.60)
+              centerBg={isRunning && !done ? 'var(--accent)' : 'var(--row-bg)'}
               onClick={() => {
+                // удержание уже отметило «Готово» — отпускание пальца не должно ещё и запускать учёт
+                if (held.current) {
+                  held.current = false
+                  return
+                }
+                if (finishing) return
                 tap()
                 // идёт подзадача — кольцо спринта её останавливает; иначе учёт идёт в сам спринт
                 if (isRunning) onStopTimer()
@@ -325,8 +517,16 @@ export function TaskListItem({
               // с названием: на экране десять одинаковых «Начать учёт» диктору не различить
               ariaLabel={`${isRunning ? 'Остановить учёт' : 'Начать учёт'}: ${task.name}`}
             >
-              {isRunning ? <StopGlyph /> : done ? <Check size={14} className="text-success" /> : <PlayGlyph />}
+              {done ? <Check size={14} className="text-success" /> : isRunning ? <StopGlyph color="var(--on-accent)" /> : <PlayGlyph />}
             </Ring>
+            {onToggleDone && <span className="ring-charge" aria-hidden />}
+            {ringChanged && ringKey === 'done' && (
+              <span className="ring-sparks" aria-hidden>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <i key={i} style={{ ['--a' as string]: `${i * 60 + 30}deg` }} />
+                ))}
+              </span>
+            )}
             </span>
 
             <Link
@@ -334,6 +534,12 @@ export function TaskListItem({
               className="min-w-0 flex-1"
               // открытый «ящик» действий: первый тап должен закрывать его, а не уводить в карточку
               onClick={(e) => {
+                // удержание открыло меню — отпускание пальца не открывает ещё и карточку
+                if (swallowClick.current) {
+                  swallowClick.current = false
+                  e.preventDefault()
+                  return
+                }
                 if (offset !== 0) {
                   e.preventDefault()
                   close()
@@ -351,7 +557,7 @@ export function TaskListItem({
               <p
                 title={task.name}
                 className={`text-base leading-[1.35] ${
-                  done ? 'font-normal text-text-secondary line-through' : 'font-medium text-text'
+                  done ? 'font-normal text-text-secondary' : 'font-medium text-text'
                 }`}
                 style={{
                   display: '-webkit-box',
@@ -360,7 +566,8 @@ export function TaskListItem({
                   overflow: 'hidden',
                 }}
               >
-                {task.name}
+                {/* зачёркивание — линией-фоном: так оно прочерчивается слева направо (0.60) */}
+                <span className={done ? `strike ${ringChanged && ringKey === 'done' ? 'strike-in' : ''}` : undefined}>{task.name}</span>
               </p>
               {/* подпись серым: идущий учёт — терракотой с часами, иначе отметка методики,
                   этап (где нужен) и группы с цветной точкой */}
@@ -421,6 +628,8 @@ export function TaskListItem({
           )}
         </div>
       </div>
+
+      {menuOpen && <RowMenu anchor={rowRef.current} items={menuItems} onClose={() => setMenuOpen(false)} />}
 
       <Collapse open={open}>
         <div className="bg-surface px-3">

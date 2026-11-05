@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { NAV_TABS } from './navTabs'
 import { Avatar } from './Avatar'
 import { SidebarWorkspace } from './Workspaces'
+import { ActiveTimerBar } from './ActiveTimerBar'
 import { useProfile } from '../lib/profile'
 import { LogOut, PanelLeft, Plus, Search } from './Icon'
 import { Kbd, Logo, MOD_KEY } from './ui'
@@ -69,6 +70,11 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         >
           <PanelLeft size={18} />
         </button>
+      </div>
+
+      {/* идущий учёт — всегда здесь, на любом экране (0.60) */}
+      <div className="px-2 pb-2 empty:hidden">
+        <ActiveTimerBar placement="top" collapsed={collapsed} />
       </div>
 
       <div className="flex flex-col gap-1 px-2 pb-3">

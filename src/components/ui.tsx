@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
 import { Close } from './Icon'
@@ -163,12 +163,46 @@ export function Segmented<T extends string>({
   /** якорь подсказки 0.43 (data-tip) */
   tip?: string
 }) {
+  /*
+   * Ползунок переезжает к выбранному сегменту с перелётом и по дороге тянется каплей, как
+   * подложка таб-бара (0.60). Место и ширину берём у самой кнопки: сегменты бывают разной
+   * ширины.
+   */
+  const boxRef = useRef<HTMLDivElement>(null)
+  const thumbRef = useRef<HTMLSpanElement>(null)
+  const [prevValue, setPrevValue] = useState(value)
+  const [moves, setMoves] = useState(0)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setMoves(moves + 1)
+  }
+  useLayoutEffect(() => {
+    const box = boxRef.current
+    const thumb = thumbRef.current
+    if (!box || !thumb) return
+    const place = () => {
+      const btn = box.querySelector<HTMLElement>('[aria-selected="true"]')
+      thumb.style.opacity = btn ? '1' : '0'
+      if (!btn) return
+      thumb.style.left = `${btn.offsetLeft}px`
+      thumb.style.width = `${btn.offsetWidth}px`
+    }
+    place()
+    const ro = new ResizeObserver(place)
+    ro.observe(box)
+    return () => ro.disconnect()
+  }, [value, options.length])
+
   return (
     <div
-      className={`flex shrink-0 gap-0.5 rounded-md bg-surface-sunken p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
+      ref={boxRef}
+      className={`relative flex shrink-0 gap-0.5 rounded-md bg-surface-sunken p-0.5 ${stretch ? 'w-full' : ''} ${className}`}
       role="tablist"
       data-tip={tip}
     >
+      <span ref={thumbRef} className="seg-thumb absolute top-0.5 bottom-0.5" data-ready={moves > 0 || undefined} aria-hidden>
+        <span key={moves} className="seg-blob rounded-sm bg-surface shadow-sm ring-1 ring-border" data-moved={moves > 0 || undefined} />
+      </span>
       {options.map((o) => {
         const active = o.value === value
         return (
@@ -178,10 +212,8 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={`min-h-10 rounded-sm px-2.5 text-sm ${stretch ? 'flex-1' : ''} ${
-              active
-                ? 'bg-surface font-medium text-text shadow-sm ring-1 ring-border'
-                : 'text-text-secondary hover:text-text'
+            className={`relative min-h-10 rounded-sm px-2.5 text-sm transition-colors duration-200 ${stretch ? 'flex-1' : ''} ${
+              active ? 'font-medium text-text' : 'text-text-secondary hover:text-text'
             }`}
           >
             {o.label}
@@ -251,6 +283,7 @@ export function Sheet({
    * Закрытие с анимацией (0.57): лист уезжает вниз, подложка гаснет — и только потом
    * окно убирается из разметки. Раньше оно пропадало мгновенно.
    */
+  const [drag, setDrag] = useState(0)
   const [present, setPresent] = useState(open)
   const [closing, setClosing] = useState(false)
   const [prevOpen, setPrevOpen] = useState(open)
@@ -259,6 +292,7 @@ export function Sheet({
     if (open) {
       setPresent(true)
       setClosing(false)
+      setDrag(0)
     } else if (present) setClosing(true)
   }
   useEffect(() => {
@@ -270,22 +304,57 @@ export function Sheet({
     return () => window.clearTimeout(t)
   }, [closing])
 
-  // лист можно смахнуть вниз за «ручку» и шапку — как в iOS
-  const [drag, setDrag] = useState(0)
+  // лист можно смахнуть вниз за «ручку» и шапку — как в iOS. После 90 px тянется туже;
+  // отпустили за порогом — уходит вниз с того места, где его отпустили, а не с исходного
   const dragStart = useRef<number | null>(null)
   const onDragStart = (e: React.TouchEvent) => {
     dragStart.current = e.touches[0].clientY
   }
   const onDragMove = (e: React.TouchEvent) => {
     if (dragStart.current === null) return
-    setDrag(Math.max(0, e.touches[0].clientY - dragStart.current))
+    const d = Math.max(0, e.touches[0].clientY - dragStart.current)
+    setDrag(d > 90 ? 90 + (d - 90) * 0.6 : d)
   }
   const onDragEnd = () => {
     if (dragStart.current === null) return
     dragStart.current = null
     if (drag > 90) onClose()
-    setDrag(0)
+    else setDrag(0)
   }
+
+  /*
+   * Экран под листом уходит «в стопку» (0.60): уменьшается, скругляется и чуть опускается;
+   * пока лист тянут вниз — разжимается в такт пальцу. Стиль — в index.css по атрибутам
+   * корня: листов может быть открыто несколько, считаем их.
+   */
+  const stacked = open && !closing
+  useEffect(() => {
+    if (!stacked) return
+    const root = document.documentElement
+    const content = document.querySelector('.app-content')
+    if (content && !root.dataset.sheets) {
+      const r = content.getBoundingClientRect()
+      root.style.setProperty('--stack-origin', `${window.innerHeight / 2 - r.top}px`)
+      root.style.setProperty('--stack-clip-top', `${Math.max(0, -r.top)}px`)
+      root.style.setProperty('--stack-clip-bottom', `${Math.max(0, r.bottom - window.innerHeight)}px`)
+    }
+    root.dataset.sheets = String(Number(root.dataset.sheets ?? 0) + 1)
+    return () => {
+      const n = Number(root.dataset.sheets ?? 1) - 1
+      if (n > 0) root.dataset.sheets = String(n)
+      else delete root.dataset.sheets
+    }
+  }, [stacked])
+  useEffect(() => {
+    const root = document.documentElement
+    if (!stacked || drag === 0) {
+      root.style.removeProperty('--stack-pull')
+      delete root.dataset.sheetDrag
+      return
+    }
+    root.style.setProperty('--stack-pull', String(Math.min(1, drag / 260)))
+    root.dataset.sheetDrag = ''
+  }, [stacked, drag])
 
   useEffect(() => {
     if (!open) return

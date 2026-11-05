@@ -19,7 +19,11 @@ import { StaleTimerBanner } from './StaleTimerBanner'
 import { FocusBreakBar, FocusWatcher } from './FocusWatcher'
 import { TipHost } from './Tip'
 import { useNavDirection } from '../lib/navMotion'
+import { documentTitle } from '../lib/docTitle'
+import { elapsedSeconds, useTicker } from '../lib/time'
 import { useScreenMotion } from '../lib/screenMotion'
+import { CompactTitle } from './CompactTitle'
+import { PullToRefresh } from './PullToRefresh'
 
 /** Фоновые связки приложения: плашка учёта в уведомлениях и переходы по нажатию на них. */
 function useAppEffects() {
@@ -27,6 +31,16 @@ function useAppEffects() {
   const { data: activeTimer } = useActiveTimer()
   const { data: task } = useTask(activeTimer?.task_id)
   useLiveTimerNotification(activeTimer, task?.name.trim())
+
+  // заголовок вкладки: экран или открытая задача, при учёте — время впереди (0.60)
+  const { pathname } = useLocation()
+  const openId = pathname.match(/^\/tasks\/([^/]+)$/)?.[1]
+  const { data: openTask } = useTask(openId && openId !== 'new' ? openId : undefined)
+  useTicker(!!activeTimer)
+  const title = documentTitle(pathname, openTask?.name, activeTimer ? elapsedSeconds(activeTimer.started_at) : null)
+  useEffect(() => {
+    document.title = title
+  }, [title])
 
   // «был в приложении» и версия — для активности и версий в админке; раз за запуск
   useEffect(() => reportAppSeen(), [])
@@ -46,10 +60,7 @@ function SignedIn() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const openCreate = useCallback(() => setSheetOpen(true), [])
   useAppEffects()
-  // в карточке задачи у плашки учёта своя шапка с кнопками — при прокрутке плашка
-  // наезжала на неё; там плашка уезжает вместе со страницей
   const { pathname } = useLocation()
-  const onTaskCard = /^\/(tasks|items)\/[^/]+/.test(pathname)
   // «Задачи» — рабочее место во всю высоту экрана, поля держат сами панели
   const fullBleed = pathname === '/tasks' || pathname.startsWith('/tasks/')
   // анимация перехода (0.57): «Задачи» целиком — один экран, список ↔ карточку анимирует сама вкладка
@@ -68,10 +79,8 @@ function SignedIn() {
         <div className="app-top sticky top-0 z-40">
           <NetworkBanner />
           <StaleTimerBanner />
-          {!onTaskCard && <ActiveTimerBar placement="top" />}
           <FocusBreakBar />
         </div>
-        {onTaskCard && <ActiveTimerBar placement="top" />}
         <div ref={contentRef} className={`app-content lg:pb-0 ${fullBleed ? 'app-content-full' : ''}`}>
           {/* редкие экраны грузятся по первому заходу — шапка и панель при этом на месте */}
           <div key={screenKey} className="route-enter" data-dir={dir}>
@@ -82,6 +91,10 @@ function SignedIn() {
         </div>
       </div>
 
+      {/* крупный заголовок ушёл вверх — название в матовой шапке (0.60) */}
+      <CompactTitle pathname={pathname} />
+      {/* потянуть вниз на корневом экране — обновить (0.60) */}
+      <PullToRefresh contentRef={contentRef} />
       {/* на телефоне учёт — плашкой над таб-баром на любом экране (0.57) */}
       <ActiveTimerBar placement="bottom" />
       <BottomTabBar onCreate={() => setSheetOpen(true)} />

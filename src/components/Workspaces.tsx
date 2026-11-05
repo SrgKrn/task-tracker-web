@@ -86,7 +86,7 @@ export function WorkspaceTag({ className = '', full = false }: { className?: str
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`hit-44 inline-flex h-6 ${full ? 'max-w-full' : 'max-w-[60%]'} items-center gap-1.5 rounded-full bg-surface-sunken pr-2 pl-2 text-xs font-medium text-text-secondary ${className}`}
+        className={`hit-44 inline-flex h-6 lg:hidden ${full ? 'max-w-full' : 'max-w-[60%]'} items-center gap-1.5 rounded-full bg-surface-sunken pr-2 pl-2 text-xs font-medium text-text-secondary ${className}`}
         aria-label={`Пространство «${ws.name}», сменить`}
       >
         <ClientDot color={ws.color} size={7} />

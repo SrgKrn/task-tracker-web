@@ -69,8 +69,8 @@ export function Ring({
   const body = (
     <>
       <div
-        className="absolute flex items-center justify-center rounded-full"
-        style={{ inset: `${inset}px`, background: centerBg }}
+        className="ring-center absolute flex items-center justify-center rounded-full"
+        style={{ inset: `${inset}px`, background: centerBg, transition: 'background-color var(--duration-base) var(--ease-out)' }}
       >
         {children}
       </div>

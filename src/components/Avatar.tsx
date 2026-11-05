@@ -1,3 +1,4 @@
+import { revealFrom } from '../lib/screenMotion'
 import { Link } from 'react-router-dom'
 import { useProfile } from '../lib/profile'
 
@@ -22,7 +23,13 @@ export function Avatar({ size = 36, className = '' }: { size?: number; className
 export function ProfileButton({ className = '' }: { className?: string }) {
   const profile = useProfile()
   return (
-    <Link to="/settings" aria-label={`Профиль: ${profile.name}`} className={`hit-44 shrink-0 rounded-full lg:hidden ${className}`}>
+    <Link
+      to="/settings"
+      aria-label={`Профиль: ${profile.name}`}
+      // профиль раскрывается кругом из аватара, а не въезжает справа (0.60)
+      onClick={(e) => revealFrom(e.currentTarget)}
+      className={`avatar-btn hit-44 shrink-0 rounded-full lg:hidden ${className}`}
+    >
       <Avatar size={36} />
     </Link>
   )

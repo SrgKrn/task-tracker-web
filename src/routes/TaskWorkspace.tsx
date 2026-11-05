@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Ring } from '../components/Ring'
 import { Overline } from '../components/ui'
@@ -10,6 +10,8 @@ import { dayNormFor, normSettingsOf } from '../lib/norm'
 import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
 import { useNavDirection } from '../lib/navMotion'
+import { useMediaQuery } from '../lib/device'
+import { clampListWidth, LIST_WIDTH_DEFAULT, loadListWidth, saveListWidth } from '../lib/paneWidth'
 
 const DEFAULT_DAY_NORM = 8
 
@@ -70,25 +72,83 @@ function TaskWorkspaceEmpty() {
   )
 }
 
+/**
+ * Граница между списком и карточкой (0.60): тянется мышью или стрелками, двойной клик —
+ * ширина по умолчанию. Ширина запоминается на устройстве.
+ */
+function PaneSplitter({ width, onChange }: { width: number; onChange: (w: number) => void }) {
+  const [dragging, setDragging] = useState(false)
+  const start = useRef<{ x: number; w: number } | null>(null)
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Ширина списка задач"
+      aria-valuenow={width}
+      aria-valuemin={clampListWidth(0)}
+      aria-valuemax={clampListWidth(10_000)}
+      tabIndex={0}
+      title="Потяните, чтобы изменить ширину. Двойной клик — как было"
+      data-dragging={dragging || undefined}
+      className="task-split hidden lg:block"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return
+        e.currentTarget.setPointerCapture(e.pointerId)
+        start.current = { x: e.clientX, w: width }
+        setDragging(true)
+      }}
+      onPointerMove={(e) => {
+        if (!start.current) return
+        onChange(clampListWidth(start.current.w + e.clientX - start.current.x))
+      }}
+      onPointerUp={() => {
+        start.current = null
+        setDragging(false)
+        saveListWidth(width)
+      }}
+      onPointerCancel={() => {
+        start.current = null
+        setDragging(false)
+      }}
+      onDoubleClick={() => {
+        onChange(LIST_WIDTH_DEFAULT)
+        saveListWidth(LIST_WIDTH_DEFAULT)
+      }}
+      onKeyDown={(e) => {
+        const step = e.shiftKey ? 64 : 16
+        const next = e.key === 'ArrowLeft' ? width - step : e.key === 'ArrowRight' ? width + step : null
+        if (next === null) return
+        e.preventDefault()
+        const w = clampListWidth(next)
+        onChange(w)
+        saveListWidth(w)
+      }}
+    />
+  )
+}
+
 export function TaskWorkspace() {
   const location = useLocation()
   const hasDetail = location.pathname !== '/tasks'
   const dir = useNavDirection(location.pathname)
+  const desktop = useMediaQuery('(min-width: 1024px)')
+  const [listWidth, setListWidth] = useState(loadListWidth)
 
   return (
-    <div className="lg:flex lg:items-start">
+    <div className="lg:flex lg:items-start" style={desktop ? ({ '--list-w': `${listWidth}px` } as React.CSSProperties) : undefined}>
       <div
         className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane sc lg:sc-fade`}
       >
         <TaskList />
       </div>
+      <PaneSplitter width={listWidth} onChange={setListWidth} />
       <div
         className={`${hasDetail ? 'block' : 'hidden lg:flex lg:items-center lg:justify-center'} task-detail-pane min-w-0 flex-1`}
-        style={{ borderLeft: '1px solid var(--divider)' }}
       >
         {hasDetail ? (
           // карточка въезжает справа, как экран в iOS; соседняя — тоже, «назад» — слева
-          <div key={location.pathname} className="route-enter lg:h-full" data-dir={dir}>
+          <div key={location.pathname} className="route-enter lg:min-h-full" data-dir={dir}>
             <Outlet />
           </div>
         ) : (

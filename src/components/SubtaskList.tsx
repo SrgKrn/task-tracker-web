@@ -145,6 +145,13 @@ function SubtaskRow({
   const overdue = isOverdue(task, status)
   const ringState: RingState = done ? 'done' : pct > 100 ? 'over' : isRunning ? 'running' : 'idle'
   const bg = isRunning ? 'var(--timer-bg)' : 'var(--surface-sunken)'
+  // отклик кольца — только на смену, не при каждом открытии списка
+  const [prevRunning, setPrevRunning] = useState(isRunning)
+  const [ringChanged, setRingChanged] = useState(false)
+  if (prevRunning !== isRunning) {
+    setPrevRunning(isRunning)
+    setRingChanged(true)
+  }
 
   const hours = hasPlan
     ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)} ч`
@@ -156,11 +163,13 @@ function SubtaskRow({
       className="flex min-h-12 items-center gap-2.5 rounded-sm py-2 pr-2.5 pl-2"
       style={{ background: bg, boxShadow: isRunning ? 'inset 2px 0 0 var(--accent)' : undefined }}
     >
+      {/* как в строке задачи (0.60): под учётом центр кольца залит терракотой */}
+      <span key={isRunning ? 'run' : 'idle'} className={`relative shrink-0 rounded-full ${ringChanged ? (isRunning ? 'ring-pop ring-to-run' : 'ring-pop ring-to-idle') : ''}`}>
       <Ring
         size={26}
         pct={done ? 100 : pct}
         state={ringState}
-        centerBg={bg}
+        centerBg={isRunning ? 'var(--accent)' : bg}
         onClick={() => {
           tap()
           if (isRunning) onStop()
@@ -169,13 +178,14 @@ function SubtaskRow({
         ariaLabel={`${isRunning ? 'Остановить учёт' : 'Начать учёт'}: ${task.name}`}
       >
         {isRunning ? (
-          <StopGlyph size={7} />
+          <StopGlyph size={7} color="var(--on-accent)" />
         ) : done ? (
           <Check size={11} className="text-success" />
         ) : (
           <PlayGlyph size={6} />
         )}
       </Ring>
+      </span>
 
       <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1">
         <span

@@ -10,7 +10,7 @@ export function useTicker(active: boolean) {
   }, [active])
 }
 
-function elapsedSeconds(startedAt: string): number {
+export function elapsedSeconds(startedAt: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
 }
 

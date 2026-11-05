@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import migration from '../../supabase/migrations/0039_tips.sql?raw'
 import { HELP, HELP_BY_ID } from './help'
-import { FIRST_STEPS, TIP_IDS, TIPS, pickTip, stepLabel, type TipId } from './tips'
+import { FIRST_STEPS, TIP_IDS, TIP_IDS_043, TIPS, pickTip, stepLabel, type TipId } from './tips'
 
 describe('подсказки 0.43', () => {
   it('список совпадает с миграцией 0039 — старым аккаунтам отмечены ровно эти', () => {
     const m = migration.match(/unnest\(array\[([^\]]+)\]/)
     expect(m).not.toBeNull()
     const ids = [...m![1].matchAll(/'([^']+)'/g)].map((x) => x[1])
-    expect(ids).toEqual([...TIP_IDS])
+    expect(ids).toEqual([...TIP_IDS_043])
+    // подсказки новее идут после — их старым аккаунтам показываем
+    expect(TIP_IDS.slice(0, TIP_IDS_043.length)).toEqual([...TIP_IDS_043])
   })
 
   it('у каждой подсказки есть статья справки, у статей — существующие соседи', () => {

@@ -5,7 +5,8 @@ import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMediaQuery } from '../lib/device'
 import { Link, useLocation } from 'react-router-dom'
-import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useDeferredDelete } from '../components/useDeferredDelete'
+import { useRevealOnLoad } from '../lib/reveal'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
 import { Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
@@ -16,7 +17,7 @@ import { PriorityBadge } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { useGroupModel, type GroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDeleteTask, useDuplicateTask, useTasks } from '../lib/queries/tasks'
+import { useDuplicateTask, useTasks } from '../lib/queries/tasks'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
@@ -24,7 +25,7 @@ import { useToggleDone } from '../components/useToggleDone'
 import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
-import { childrenByParent, deleteDescription, rollupFact, runningWithin } from '../lib/tree'
+import { childrenByParent, rollupFact, runningWithin } from '../lib/tree'
 import { isInDay } from '../lib/dayPlan'
 import { usePref } from '../lib/prefs'
 import { useActiveWorkspaceId } from '../lib/workspace'
@@ -68,7 +69,11 @@ export function TaskList() {
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const duplicateTask = useDuplicateTask()
-  const deleteTask = useDeleteTask()
+  // удаление из списка — с «Вернуть» вместо окна подтверждения (0.60)
+  const deferredDelete = useDeferredDelete()
+  // данные пришли после заготовок — строки проявляются лесенкой
+  const listRef = useRef<HTMLDivElement>(null)
+  useRevealOnLoad(listRef, isLoading)
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const workspaceId = useActiveWorkspaceId()
@@ -76,7 +81,6 @@ export function TaskList() {
   // список на телефоне скрыт, пока открыта карточка, — панель в корне страницы прячем сами
   const onList = useLocation().pathname === '/tasks'
 
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [search, setSearch] = useState('')
   const [periodFrom, setPeriodFrom] = useState('')
   const [periodTo, setPeriodTo] = useState('')
@@ -158,6 +162,7 @@ export function TaskList() {
   // подсказки 0.43: перетаскивание — когда задач стало пять; группы — когда задач три, а групп ещё нет
   const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 3
   useTip('drag', sorted.length >= 5)
+  useTip('ring-done', sorted.length > 0)
   useTip('groups', suggestGroups)
 
   const sectionsBy =
@@ -250,8 +255,9 @@ export function TaskList() {
         </div>
       </div>
 
-      <div className="px-5 pb-2.5">
-        <label className="flex h-[var(--tap)] items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary">
+      {/* на компьютере поиск, фильтр и порядок — одной строкой инструментов над списком (0.60) */}
+      <div className="flex items-center gap-2 px-5 pb-2.5">
+        <label className="flex h-[var(--tap)] min-w-0 flex-1 items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary">
           <Search size={16} />
           <input
             value={search}
@@ -267,6 +273,29 @@ export function TaskList() {
             </button>
           )}
         </label>
+        {desktop && (
+          <>
+            <button
+              type="button"
+              onClick={() => setSheet('filter')}
+              className={`flex h-[var(--tap)] shrink-0 items-center gap-1.5 rounded-sm border px-3 text-sm font-medium hover:bg-surface-hover ${
+                filtersActive ? 'border-accent text-accent-text' : 'border-border text-text'
+              }`}
+            >
+              Фильтр
+              {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="есть фильтры" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSheet('sort')}
+              title="Порядок"
+              className="flex h-[var(--tap)] shrink-0 items-center gap-1.5 rounded-sm border border-border px-3 text-sm font-medium text-text hover:bg-surface-hover"
+            >
+              <SortArrows size={15} />
+              {TASK_SORT_LABEL[sort]}
+            </button>
+          </>
+        )}
       </div>
 
       {/* папки: источник выбирает человек — группа, свои папки или ничего */}
@@ -307,7 +336,7 @@ export function TaskList() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 px-5 pb-2">
+      <div ref={listRef} className="flex flex-col gap-3 px-5 pb-2">
         {isLoading ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2, 3].map((i) => (
@@ -362,7 +391,7 @@ export function TaskList() {
                                 },
                               )
                             }
-                            onDelete={() => setDeletingTask(task)}
+                            onDelete={() => deferredDelete(task)}
                             onToggleDone={() => toggleDone(task)}
                             subtasks={childrenOf.get(task.id)}
                             forceExpanded={matchedInside.has(task.id)}
@@ -397,7 +426,7 @@ export function TaskList() {
         )}
       </div>
 
-      {desktop ? floatPanel : onList && createPortal(floatPanel, document.body)}
+      {!desktop && onList && createPortal(floatPanel, document.body)}
 
       <Sheet open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
         <ListGroup>
@@ -516,16 +545,6 @@ export function TaskList() {
         model={model}
       />
 
-      <ConfirmDialog
-        open={deletingTask !== null}
-        title={`Удалить «${deletingTask?.name ?? ''}»?`}
-        description={deleteDescription(deletingTask ? (childrenOf.get(deletingTask.id)?.length ?? 0) : 0)}
-        onCancel={() => setDeletingTask(null)}
-        onConfirm={() => {
-          if (deletingTask) deleteTask.mutate(deletingTask.id, { onError })
-          setDeletingTask(null)
-        }}
-      />
     </div>
   )
 }

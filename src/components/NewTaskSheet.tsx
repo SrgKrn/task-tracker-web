@@ -11,6 +11,7 @@ import { describeError, useToast } from '../lib/Toast'
 import { missingRequired, useGroupModel, type GroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useCreateTask, useTask, useTasks } from '../lib/queries/tasks'
+import { markFresh } from '../lib/fresh'
 import { useActiveTimer, useStartTimer } from '../lib/queries/timer'
 import { formatHoursMinutes } from '../lib/time'
 import { todayStr } from '../lib/period'
@@ -169,6 +170,8 @@ export function NewTaskSheet({
       {
         onError: (e) => showError(describeError(e)),
         onSuccess: (row) => {
+          // строка новой задачи встанет в список заметно — с подсветкой (0.60)
+          markFresh(row.id)
           onClose()
           if (onCreated) return onCreated(row, andStart)
           if (andStart) startTimer.mutate(row.id, { onError: (e) => showError(describeError(e)) })
