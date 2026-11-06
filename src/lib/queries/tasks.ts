@@ -128,6 +128,35 @@ export function useUpdateTask() {
 }
 
 /**
+ * Правка нескольких задач разом (0.63, выделение в списке): у каждой свои поля — «Вернуть»
+ * восстанавливает каждой её прежнее. Список меняется сразу, отказ возвращает прежнее.
+ */
+export function useBulkUpdateTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (changes: { id: string; fields: TaskFieldsInput }[]) => {
+      const results = await Promise.all(changes.map(({ id, fields }) => supabase.from('tasks').update(fields).eq('id', id)))
+      const failed = results.find((r) => r.error)
+      if (failed?.error) throw failed.error
+    },
+    onMutate: async (changes) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const list = qc.getQueryData<Task[]>(['tasks'])
+      const byId = new Map(changes.map((c) => [c.id, c.fields]))
+      if (list) qc.setQueryData<Task[]>(['tasks'], list.map((t) => (byId.has(t.id) ? { ...t, ...byId.get(t.id) } : t)))
+      return { list }
+    },
+    onError: (_e, _v, snapshot) => {
+      if (snapshot?.list) qc.setQueryData(['tasks'], snapshot.list)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['task_status_events_closed'] })
+    },
+  })
+}
+
+/**
  * Выбор задач на день одним запросом: ids получают дату плана, null — снимаются с плана.
  * Список меняется сразу, отказ возвращает прежнее.
  */

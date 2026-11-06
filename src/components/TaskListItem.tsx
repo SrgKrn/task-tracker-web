@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { Link, useMatch, useNavigate } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
-import { ClientDot, Collapse } from './ui'
+import { ClientDot, Collapse, MOD_KEY } from './ui'
 import { Check, ChevronDown, CornerDownRight, Grip, MoreDots, Plus } from './Icon'
 import { useDensity } from '../lib/density'
 import { tap } from '../lib/haptics'
@@ -17,6 +17,9 @@ import { elapsedHours, formatClock, formatHoursRu, useTicker } from '../lib/time
 import { isOverdue, rollupFact, runningWithin } from '../lib/tree'
 
 export { isOverdue }
+
+/** F2 в списке (0.63): событие на корне строки `[data-row-id]` — переименовать в строке */
+export const ROW_RENAME_EVENT = 'semternity:row-rename'
 
 interface TaskListItemProps {
   task: Task
@@ -60,6 +63,12 @@ interface TaskListItemProps {
   table?: boolean
   /** переименовать прямо в строке — двойной клик по названию */
   onRename?: (name: string) => void
+  /** строка в выделении (0.63) */
+  picked?: boolean
+  /** под курсором клавиатуры */
+  cursor?: boolean
+  /** клик по строке с Ctrl или Shift — выделение; true — карточку не открывать */
+  onPick?: (e: React.MouseEvent) => boolean
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -104,6 +113,9 @@ export function TaskListItem({
   onToggleDone,
   table = false,
   onRename,
+  picked = false,
+  cursor = false,
+  onPick,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -351,11 +363,24 @@ export function TaskListItem({
     setDraftName(task.name)
     setRenaming(true)
   }
+  const canRename = table && !!onRename
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !canRename) return
+    const go = () => {
+      setDraftName(task.name)
+      setRenaming(true)
+    }
+    root.addEventListener(ROW_RENAME_EVENT, go)
+    return () => root.removeEventListener(ROW_RENAME_EVENT, go)
+  }, [canRename, task.name])
   const menuItems: RowMenuItem[] = [
     { label: 'Открыть', onSelect: () => navigate(`/tasks/${task.id}`) },
-    ...(table && onRename ? [{ label: 'Переименовать', onSelect: startRename }] : []),
+    ...(table && onRename ? [{ label: 'Переименовать', hint: 'F2', onSelect: startRename }] : []),
     isRunning ? { label: 'Остановить учёт', onSelect: onStopTimer } : { label: 'Начать учёт', onSelect: onStartTimer },
-    ...(onToggleDone ? [{ label: done ? 'Вернуть в работу' : 'Готово', onSelect: onToggleDone }] : []),
+    ...(onToggleDone
+      ? [{ label: done ? 'Вернуть в работу' : 'Готово', hint: table ? `${MOD_KEY}+Enter` : undefined, onSelect: onToggleDone }]
+      : []),
     ...(addSubtaskAction
       ? [
           {
@@ -369,7 +394,7 @@ export function TaskListItem({
       : []),
     ...(onUnplan ? [{ label: 'Не сегодня', onSelect: onUnplan }] : []),
     ...(onDuplicate ? [{ label: 'Дублировать', onSelect: onDuplicate }] : []),
-    ...(onDelete ? [{ label: 'Удалить', danger: true, onSelect: () => flyOut(-1, onDelete) }] : []),
+    ...(onDelete ? [{ label: 'Удалить', danger: true, hint: table ? 'Del' : undefined, onSelect: () => flyOut(-1, onDelete) }] : []),
   ]
 
   /*
@@ -510,19 +535,29 @@ export function TaskListItem({
           ? 'font-medium text-warning-text'
           : 'text-text-secondary'
     const hoursShort = hasPlan ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)}` : fact > 0 ? formatHoursRu(fact) : ''
+    // открытая и идущая — полоса слева, выделенная — заливка, курсор клавиатуры — рамка
+    const shadows = [isRunning || selected ? 'inset 2px 0 0 var(--accent)' : '', cursor ? 'inset 0 0 0 1.5px var(--accent)' : '']
+      .filter(Boolean)
+      .join(', ')
     return (
-      <div ref={rootRef} className={`flex flex-col ${isNew ? 'row-new' : ''}`}>
+      <div ref={rootRef} data-row-id={task.id} className={`flex flex-col ${isNew ? 'row-new' : ''}`}>
         <div
           ref={rowRef}
           className="task-row trow"
-          data-quiet={isRunning || selected ? undefined : ''}
+          aria-selected={picked || undefined}
+          data-quiet={isRunning || selected || picked ? undefined : ''}
           style={{
-            ['--row-bg' as string]: isRunning || selected ? cardBg : undefined,
+            ['--row-bg' as string]: picked ? 'var(--surface-selected)' : isRunning || selected ? cardBg : undefined,
             background: 'var(--row-bg)',
-            boxShadow: isRunning || selected ? 'inset 2px 0 0 var(--accent)' : undefined,
+            boxShadow: shadows || undefined,
+          }}
+          onMouseDown={(e) => {
+            // Shift-клик — диапазон, а не выделение текста
+            if (e.shiftKey && onPick) e.preventDefault()
           }}
           onClick={(e) => {
             if (renaming || (e.target as HTMLElement).closest('a, button, input, [data-no-drag], [data-drag-handle]')) return
+            if (onPick?.(e)) return
             navigate(`/tasks/${task.id}`)
           }}
           onContextMenu={(e) => {
@@ -587,6 +622,10 @@ export function TaskListItem({
                 to={`/tasks/${task.id}`}
                 data-name
                 title={task.name}
+                onClick={(e) => {
+                  // Ctrl/Shift по названию — тоже выделение, а не новая вкладка
+                  if (onPick?.(e)) e.preventDefault()
+                }}
                 onDoubleClick={(e) => {
                   if (!onRename) return
                   e.preventDefault()

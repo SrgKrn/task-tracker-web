@@ -160,3 +160,34 @@ export function deleteDescription(subtaskCount: number): string {
   const one = subtaskCount % 10 === 1 && subtaskCount % 100 !== 11
   return `Вместе с задачей ${one ? 'удалится' : 'удалятся'} ${plural(subtaskCount, SUBTASKS)} и вся история трекинга по ним.`
 }
+
+/**
+ * То же, что лист предзаполняет, — без листа: для нескольких выделенных спринтов разом (0.63).
+ * Название и сроки — следующие, план прежний, этап — первый открытый, едут все незакрытые
+ * подзадачи с остатком плана.
+ */
+export function autoNextSprint(task: Task, subtasks: Task[], statuses: Status[]): {
+  name: string
+  planned_hours: number
+  start_date: string | null
+  end_date: string | null
+  status_id: string | null
+  carry: { name: string; planned_hours: number }[]
+} {
+  const sorted = [...statuses].sort((a, b) => a.sort_order - b.sort_order)
+  const finalIds = new Set(sorted.filter((s) => s.is_final).map((s) => s.id))
+  const dates = nextSprintDates(task.start_date, task.end_date)
+  return {
+    name: nextSprintName(task.name),
+    planned_hours: task.planned_hours,
+    start_date: dates.start_date,
+    end_date: dates.end_date,
+    status_id: sorted.find((s) => !s.is_final)?.id ?? null,
+    carry: subtasks
+      .filter((t) => !(t.status_id && finalIds.has(t.status_id)))
+      .map((t) => ({
+        name: t.name,
+        planned_hours: t.planned_hours > 0 ? Math.round(Math.max(0, t.planned_hours - t.fact_hours) * 4) / 4 : 0,
+      })),
+  }
+}

@@ -4,30 +4,40 @@ import { WorkspaceTag } from '../components/Workspaces'
 import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMediaQuery } from '../lib/device'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
 import { useDeferredDelete } from '../components/useDeferredDelete'
 import { useRevealOnLoad } from '../lib/reveal'
 import { DatePicker } from '../components/DatePicker'
-import { TaskListItem } from '../components/TaskListItem'
+import { ROW_RENAME_EVENT, TaskListItem } from '../components/TaskListItem'
+import { BulkBar, type BulkPanel } from '../components/BulkBar'
+import { useListSelection, type ListAction } from '../components/useListSelection'
 import { ArrowUp, Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
 import { usePopoverMode } from '../components/Popover'
 import { DENSITY_LABEL, useDensity, type Density } from '../lib/density'
 import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton, fieldClass } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
-import { overlapsPeriod, todayStr } from '../lib/period'
+import { formatDueDate, overlapsPeriod, todayStr } from '../lib/period'
 import { PriorityBadge } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { setGroupValue, useGroupModel, type GroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
+import {
+  useBulkUpdateTasks,
+  useCreateNextSprint,
+  useDeleteTask,
+  useDuplicateTask,
+  useTasks,
+  useUpdateTask,
+  type TaskFieldsInput,
+} from '../lib/queries/tasks'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
 import { useToggleDone } from '../components/useToggleDone'
 import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { ACTIVE_TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
-import { childrenByParent, rollupFact, runningWithin } from '../lib/tree'
+import { ACTIVE_TASKS, TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
+import { autoNextSprint, childrenByParent, rollupFact, runningWithin } from '../lib/tree'
 import { isInDay } from '../lib/dayPlan'
 import { usePref } from '../lib/prefs'
 import { useActiveWorkspaceId } from '../lib/workspace'
@@ -84,6 +94,12 @@ export function TaskList() {
   const table = usePopoverMode()
   const [density, setDensity] = useDensity()
   const updateTask = useUpdateTask()
+  const bulkUpdate = useBulkUpdateTasks()
+  const createNextSprint = useCreateNextSprint()
+  const deleteTask = useDeleteTask()
+  const navigate = useNavigate()
+  const openMatch = useMatch('/tasks/:id')?.params.id
+  const openId = openMatch && openMatch !== 'new' ? openMatch : undefined
   // список на телефоне скрыт, пока открыта карточка, — панель в корне страницы прячем сами
   const onList = useLocation().pathname === '/tasks'
 
@@ -207,6 +223,161 @@ export function TaskList() {
       )
       .filter((s) => s.items.length > 0)
   }, [sectionsBy, sorted, statuses, model])
+
+  // поиск открывает всё: найденное не должно прятаться в свёрнутой секции
+  const isCollapsed = (section: { id: string; doneByDefault: boolean }) =>
+    sectionsBy !== 'none' && !query && (view.collapsed[section.id] ?? section.doneByDefault)
+  const visibleSections = useMemo(
+    () =>
+      sections
+        .filter((s) => !(sectionsBy !== 'none' && !query && (view.collapsed[s.id] ?? s.doneByDefault)))
+        .map((s) => s.items.map((t) => t.id)),
+    [sections, sectionsBy, query, view.collapsed],
+  )
+
+  /*
+   * Выделение и клавиши (0.63): Ctrl/Shift-клик, ↑↓, Space, Ctrl+A, E, D, F2, Ctrl+Enter,
+   * Delete и Ctrl+1…9 по папкам. Действия — панелью над выделенными, всё с «Вернуть».
+   */
+  const [bulkPanel, setBulkPanel] = useState<BulkPanel | null>(null)
+  const selection = useListSelection({
+    enabled: table,
+    sections: visibleSections,
+    openId,
+    onOpen: (id) => navigate(`/tasks/${id}`),
+    onRename: (id) => document.querySelector(`.task-list-pane [data-row-id="${id}"]`)?.dispatchEvent(new Event(ROW_RENAME_EVENT)),
+    onAction: (action, ids) => runAction(action, ids),
+    onFolder: (index) => {
+      if (folderSettings.source === 'off') return
+      if (index === 0) setFolderKey('all')
+      else if (folders[index - 1]) setFolderKey(folders[index - 1].key)
+    },
+  })
+  const pickedTasks = sorted.filter((t) => selection.picked.has(t.id))
+  // выделение сняли — открытое меню панели закрываем, чтобы не всплыло само при следующем
+  if (bulkPanel && selection.picked.size === 0) setBulkPanel(null)
+
+  const tasksOf = (ids: string[]) => {
+    const set = new Set(ids)
+    return sorted.filter((t) => set.has(t.id))
+  }
+  /** правка нескольких: у каждой — свои поля; «Вернуть» возвращает каждой её прежнее */
+  const applyBulk = (
+    list: Task[],
+    make: (t: Task) => TaskFieldsInput | null,
+    message: (changed: Task[]) => string,
+    after?: (changed: Task[]) => void,
+  ) => {
+    const changes = list.flatMap((t) => {
+      const fields = make(t)
+      return fields ? [{ task: t, fields }] : []
+    })
+    if (changes.length === 0) return
+    const undo = changes.map(({ task, fields }) => ({
+      id: task.id,
+      fields: Object.fromEntries(Object.keys(fields).map((k) => [k, task[k as keyof Task]])) as TaskFieldsInput,
+    }))
+    const changed = changes.map((c) => c.task)
+    bulkUpdate.mutate(
+      changes.map((c) => ({ id: c.task.id, fields: c.fields })),
+      {
+        onError,
+        onSuccess: () => {
+          after?.(changed)
+          showSuccess(message(changed), { label: 'Вернуть', onAction: () => bulkUpdate.mutate(undo, { onError }) })
+        },
+      },
+    )
+  }
+  const stopIfClosed = (closing: boolean) => (changed: Task[]) => {
+    if (closing && activeTimer && changed.some((t) => t.id === activeTimer.task_id)) stopTimer.mutate(undefined, { onError })
+  }
+  const orderedStatuses = [...statuses].sort((a, b) => a.sort_order - b.sort_order)
+  const bulkStage = (list: Task[], statusId: string | null) => {
+    const stage = statusId ? statusById.get(statusId) : undefined
+    const label = stage?.label ?? 'без этапа'
+    applyBulk(
+      list,
+      (t) => (t.status_id === statusId ? null : { status_id: statusId }),
+      (changed) => (changed.length === 1 ? `${changed[0].name} → ${label}` : `Этап «${label}»: ${plural(changed.length, TASKS)}`),
+      stopIfClosed(!!stage?.is_final),
+    )
+  }
+  const bulkDue = (list: Task[], date: string | null) => {
+    const label = date ? `срок ${formatDueDate(date, today).toLowerCase()}` : 'без срока'
+    applyBulk(
+      list,
+      (t) =>
+        t.end_date === date ? null : { end_date: date, ...(date && t.start_date && t.start_date > date ? { start_date: date } : {}) },
+      (changed) => (changed.length === 1 ? `${changed[0].name}: ${label}` : `${plural(changed.length, TASKS)}: ${label}`),
+    )
+  }
+  const bulkGroup = (list: Task[], groupId: string, itemId: string | null) => {
+    const group = model.groupById.get(groupId)
+    if (!group) return
+    if (!itemId && group.required) {
+      showError(`«${group.name}» — обязательная группа, без значения задачу не оставить`)
+      return
+    }
+    const name = itemId ? (model.itemById.get(itemId)?.name ?? '') : 'не указано'
+    applyBulk(
+      list,
+      (t) => {
+        const before = t.item_ids ?? []
+        const next = setGroupValue(model, before, groupId, itemId)
+        const same = next.length === before.length && next.every((id) => before.includes(id))
+        return same ? null : { item_ids: next }
+      },
+      (changed) => (changed.length === 1 ? `${changed[0].name} → ${name}` : `${group.name} «${name}»: ${plural(changed.length, TASKS)}`),
+    )
+  }
+  const bulkDone = (list: Task[]) => {
+    if (list.length === 1) {
+      toggleDone(list[0])
+      return
+    }
+    const allDone = list.every(isDone)
+    const target = allDone ? (orderedStatuses.find((s) => !s.is_final)?.id ?? null) : orderedStatuses.find((s) => s.is_final)?.id
+    if (!allDone && !target) {
+      showError('Нет этапа «готово» — отметьте финальный этап в настройке этапов')
+      return
+    }
+    applyBulk(
+      list,
+      (t) => (t.status_id === target ? null : { status_id: target ?? null }),
+      (changed) => (allDone ? `Снова в работе: ${plural(changed.length, TASKS)}` : `Готово: ${plural(changed.length, TASKS)}`),
+      stopIfClosed(!allDone),
+    )
+  }
+  const bulkNextPeriod = async (list: Task[]) => {
+    const created: string[] = []
+    try {
+      for (const t of list) {
+        const row = await createNextSprint.mutateAsync({ from: t, ...autoNextSprint(t, childrenOf.get(t.id) ?? [], statuses) })
+        created.push(row.id)
+      }
+    } catch (error) {
+      onError(error)
+    }
+    if (created.length === 0) return
+    selection.clear()
+    showSuccess(created.length === 1 ? 'Новый период создан' : `Новый период: ${plural(created.length, TASKS)}`, {
+      label: 'Вернуть',
+      onAction: () => created.forEach((id) => deleteTask.mutate(id, { onError })),
+    })
+  }
+  const bulkDelete = (list: Task[]) => {
+    deferredDelete(list)
+    selection.clear()
+  }
+  function runAction(action: ListAction, ids: string[]) {
+    if (action === 'stage' || action === 'due') {
+      // с одной строкой под курсором — она и выделяется: панель появляется сразу с меню
+      selection.setPicked(new Set(ids))
+      setBulkPanel(action)
+    } else if (action === 'done') bulkDone(tasksOf(ids))
+    else bulkDelete(tasksOf(ids))
+  }
 
   /** сколько задач за каждым чипом фильтра — видно ещё до его нажатия */
   const counts = useMemo(() => {
@@ -438,8 +609,7 @@ export function TaskList() {
           <>
             {sections.map((section) => {
               const showHeader = sectionsBy !== 'none'
-              // поиск открывает всё: найденное не должно прятаться в свёрнутой секции
-              const collapsed = showHeader && !query && (view.collapsed[section.id] ?? section.doneByDefault)
+              const collapsed = isCollapsed(section)
               return (
                 <div
                   key={section.id}
@@ -498,6 +668,9 @@ export function TaskList() {
                             hideDoneSubtasks={!view.showDone}
                             table={table}
                             onRename={(name) => updateTask.mutate({ id: task.id, fields: { name } }, { onError })}
+                            picked={selection.picked.has(task.id)}
+                            cursor={selection.cursor === task.id}
+                            onPick={table ? (e) => selection.pick(e, task.id) : undefined}
                           />
                         </div>
                       ))}
@@ -527,6 +700,24 @@ export function TaskList() {
           </>
         )}
       </div>
+
+      {table && pickedTasks.length > 0 && (
+        <BulkBar
+          tasks={pickedTasks}
+          statuses={statuses}
+          model={model}
+          panel={bulkPanel}
+          onPanel={setBulkPanel}
+          onStage={(id) => bulkStage(pickedTasks, id)}
+          onDue={(date) => bulkDue(pickedTasks, date)}
+          onGroup={(groupId, itemId) => bulkGroup(pickedTasks, groupId, itemId)}
+          onNextPeriod={() => void bulkNextPeriod(pickedTasks)}
+          allDone={pickedTasks.every(isDone)}
+          onDone={() => bulkDone(pickedTasks)}
+          onDelete={() => bulkDelete(pickedTasks)}
+          onClear={selection.clear}
+        />
+      )}
 
       {!desktop && onList && createPortal(floatPanel, document.body)}
 

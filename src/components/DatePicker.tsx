@@ -63,13 +63,8 @@ export function DatePicker({
   ariaLabel,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
-  const [cursor, setCursor] = useState(() => (value ? new Date(value) : new Date()))
   const wrapRef = useRef<HTMLDivElement>(null)
   const today = todayStr()
-
-  useEffect(() => {
-    if (open && value) setCursor(new Date(value))
-  }, [open, value])
 
   useEffect(() => {
     if (!open) return
@@ -89,8 +84,6 @@ export function DatePicker({
     }
   }, [open])
 
-  const cells = useMemo(() => monthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
-
   const height = small ? 'h-9' : 'h-[var(--tap)]'
   const text = small ? 'text-sm' : 'text-base'
   const trigger = row
@@ -98,10 +91,6 @@ export function DatePicker({
     : `${height} ${text} justify-between gap-2 rounded-sm border bg-surface px-2.5 ${
         open ? 'border-accent' : 'border-border hover:border-border-strong'
       } ${value ? 'text-text' : 'text-text-tertiary'}`
-
-  function shiftMonth(delta: number) {
-    setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
-  }
 
   const face = (
     <>
@@ -147,67 +136,13 @@ export function DatePicker({
             row ? 'right-0' : 'left-0'
           }`}
         >
-          <div className="mb-2.5 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
-              style={{ border: '1px solid var(--border)' }}
-              aria-label="Предыдущий месяц"
-            >
-              <ChevronLeft size={16} className="mx-auto" />
-            </button>
-            <span className="text-base font-medium text-text">
-              {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
-            </span>
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
-              style={{ border: '1px solid var(--border)' }}
-              aria-label="Следующий месяц"
-            >
-              <ChevronRight size={16} className="mx-auto" />
-            </button>
-          </div>
-
-          <div className="mb-1 grid grid-cols-7 gap-0.5">
-            {WEEKDAYS.map((d) => (
-              <span key={d} className="text-center text-xs text-text-secondary">
-                {d}
-              </span>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((iso, i) => {
-              if (!iso) return <span key={`pad-${i}`} />
-              const selected = iso === value
-              const isToday = iso === today
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => {
-                    onChange(iso)
-                    setOpen(false)
-                  }}
-                  className="tabular flex h-9 items-center justify-center rounded-sm font-mono text-sm"
-                  style={{
-                    background: selected ? 'var(--accent)' : 'transparent',
-                    color: selected
-                      ? 'var(--on-accent)'
-                      : isToday
-                        ? 'var(--accent)'
-                        : 'var(--text-secondary)',
-                    fontWeight: selected || isToday ? 600 : 400,
-                  }}
-                >
-                  {Number(iso.slice(8, 10))}
-                </button>
-              )
-            })}
-          </div>
+          <MonthGrid
+            value={value}
+            onPick={(iso) => {
+              onChange(iso)
+              setOpen(false)
+            }}
+          />
 
           <div className="mt-2.5 flex gap-2" style={{ borderTop: '1px solid var(--divider)' }}>
             <button
@@ -236,5 +171,80 @@ export function DatePicker({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Сетка месяца без поля и выпадашки — для календаря внутри всплывающего окна (0.63:
+ * срок нескольких задач). Выбор дня — onPick; месяц листается стрелками.
+ */
+export function MonthGrid({ value, onPick }: { value: string | null; onPick: (iso: string) => void }) {
+  const [cursor, setCursor] = useState(() => (value ? new Date(value) : new Date()))
+  const cells = useMemo(() => monthGrid(cursor.getFullYear(), cursor.getMonth()), [cursor])
+  const today = todayStr()
+  function shiftMonth(delta: number) {
+    setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
+  }
+  return (
+    <>
+      <div className="mb-2.5 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => shiftMonth(-1)}
+          className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
+          style={{ border: '1px solid var(--border)' }}
+          aria-label="Предыдущий месяц"
+        >
+          <ChevronLeft size={16} className="mx-auto" />
+        </button>
+        <span className="text-base font-medium text-text">
+          {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
+        </span>
+        <button
+          type="button"
+          onClick={() => shiftMonth(1)}
+          className="hit-44 h-8 w-8 rounded-sm text-base text-text-secondary"
+          style={{ border: '1px solid var(--border)' }}
+          aria-label="Следующий месяц"
+        >
+          <ChevronRight size={16} className="mx-auto" />
+        </button>
+      </div>
+
+      <div className="mb-1 grid grid-cols-7 gap-0.5">
+        {WEEKDAYS.map((d) => (
+          <span key={d} className="text-center text-xs text-text-secondary">
+            {d}
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((iso, i) => {
+          if (!iso) return <span key={`pad-${i}`} />
+          const selected = iso === value
+          const isToday = iso === today
+          return (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => onPick(iso)}
+              className="tabular flex h-9 items-center justify-center rounded-sm font-mono text-sm"
+              style={{
+                background: selected ? 'var(--accent)' : 'transparent',
+                color: selected
+                  ? 'var(--on-accent)'
+                  : isToday
+                    ? 'var(--accent)'
+                    : 'var(--text-secondary)',
+                fontWeight: selected || isToday ? 600 : 400,
+              }}
+            >
+              {Number(iso.slice(8, 10))}
+            </button>
+          )
+        })}
+      </div>
+    </>
   )
 }

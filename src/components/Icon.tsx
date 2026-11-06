@@ -72,6 +72,8 @@ export const MoreDots = (p: IconProps) =>
 /** ручка перетаскивания строки — две колонки точек */
 export const Grip = (p: IconProps) =>
   svg(<><circle cx="9" cy="6" r="1.2" /><circle cx="15" cy="6" r="1.2" /><circle cx="9" cy="12" r="1.2" /><circle cx="15" cy="12" r="1.2" /><circle cx="9" cy="18" r="1.2" /><circle cx="15" cy="18" r="1.2" /></>, p)
+export const Trash = (p: IconProps) =>
+  svg(<><path d="M4.5 7h15" /><path d="M9.5 7V4.5h5V7" /><path d="M6.5 7l1 12.5h9l1-12.5" /><path d="M10 11v5M14 11v5" /></>, p)
 export const Download = (p: IconProps) =>
   svg(<><path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></>, p)
 export const Calendar = (p: IconProps) =>

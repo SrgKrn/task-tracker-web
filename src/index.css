@@ -1417,3 +1417,19 @@ button:disabled {
 .sortable:has([data-dragging]) {
   overflow: visible;
 }
+
+/* панель над выделенными задачами (0.63) — поднимается снизу */
+@keyframes bulk-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+.bulk-bar {
+  animation: bulk-in var(--duration-base) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bulk-bar {
+    animation: none;
+  }
+}

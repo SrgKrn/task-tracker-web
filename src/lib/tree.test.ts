@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  autoNextSprint,
   childrenByParent,
   deleteDescription,
   isOverdue,
@@ -146,5 +147,26 @@ describe('isOverdue и deleteDescription', () => {
     expect(deleteDescription(1)).toMatch(/удалится 1 подзадача/)
     expect(deleteDescription(3)).toMatch(/удалятся 3 подзадачи/)
     expect(deleteDescription(11)).toMatch(/удалятся 11 подзадач/)
+  })
+})
+
+describe('новый период для нескольких спринтов (0.63)', () => {
+  const statuses = [
+    { id: 'done', label: 'Готово', sort_order: 2, is_final: true },
+    { id: 'todo', label: 'В работе', sort_order: 1, is_final: false },
+  ] as unknown as Status[]
+  const sprint = { id: 's', name: 'Спринт 6', planned_hours: 40, start_date: '2026-10-01', end_date: '2026-10-31' } as unknown as Task
+  const sub = (id: string, status: string | null, plan: number, fact: number) =>
+    ({ id, name: id, status_id: status, planned_hours: plan, fact_hours: fact }) as unknown as Task
+
+  it('следующее название, первый открытый этап, едут незакрытые с остатком', () => {
+    const v = autoNextSprint(sprint, [sub('a', 'done', 5, 5), sub('b', null, 4, 1.1), sub('c', 'todo', 0, 2)], statuses)
+    expect(v.name).toBe('Спринт 7')
+    expect(v.status_id).toBe('todo')
+    expect(v.planned_hours).toBe(40)
+    expect(v.carry).toEqual([
+      { name: 'b', planned_hours: 3 },
+      { name: 'c', planned_hours: 0 },
+    ])
   })
 })

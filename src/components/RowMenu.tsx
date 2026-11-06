@@ -6,6 +6,8 @@ export interface RowMenuItem {
   label: string
   onSelect: () => void
   danger?: boolean
+  /** клавиша справа — в меню у курсора на компьютере (0.63) */
+  hint?: string
 }
 
 const MENU_W = 232

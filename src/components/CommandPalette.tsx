@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router-dom'
 import { ArrowRight, Keyboard, Play, Plus, Search } from './Icon'
-import { Kbd, MOD_KEY, Sheet } from './ui'
+import { Kbd, MOD_KEY, Overline, Sheet } from './ui'
+import { usePopoverMode } from './Popover'
 import { isTypingTarget, onOpenCommandPalette, openCommandPalette } from '../lib/commands'
 import { useGroupModel } from '../lib/groups'
 import { useTasks } from '../lib/queries/tasks'
@@ -222,29 +223,88 @@ function CommandPalette({ onClose, onCreate, onHelp }: { onClose: () => void; on
   )
 }
 
-const SHORTCUTS: [string[], string][] = [
-  [[MOD_KEY, 'K'], 'Поиск и команды'],
-  [['/'], 'Поиск'],
-  [['C'], 'Новая задача'],
-  [['J', 'K'], 'Следующая и предыдущая задача в списке'],
-  [['S'], 'Начать или остановить учёт открытой задачи'],
-  [['1', '2', '3', '4'], 'Сегодня, Задачи, Сводка, Фокус'],
-  [['Esc'], 'Закрыть окно или карточку'],
-  [['?'], 'Эта подсказка'],
+type Shortcut = [string[], string]
+
+/**
+ * Справка по разделам (0.63). Список задач с выделением — только на компьютере с мышью:
+ * на телефоне этих клавиш нет, и показывать их там незачем.
+ */
+const SHORTCUTS: { title: string; items: Shortcut[] }[] = [
+  {
+    title: 'Везде',
+    items: [
+      [[MOD_KEY, 'K'], 'Поиск и команды'],
+      [['/'], 'Поиск'],
+      [['C'], 'Новая задача'],
+      [['1', '2', '3', '4'], 'Сегодня, Задачи, Сводка, Фокус'],
+      [['Esc'], 'Закрыть окно или карточку'],
+      [['?'], 'Эта подсказка'],
+    ],
+  },
+  {
+    title: 'Список задач',
+    items: [
+      [['J', 'K'], 'Открыть следующую или предыдущую'],
+      [['↑', '↓'], 'По строкам; с открытой карточкой — она следом'],
+      [['Enter'], 'Открыть задачу'],
+      [[MOD_KEY, '1…9'], 'Папка по порядку (в браузере — Alt)'],
+    ],
+  },
+  {
+    title: 'Выделение',
+    items: [
+      [[`${MOD_KEY}-клик`], 'Добавить задачу к выделенным'],
+      [['Shift-клик'], 'Выделить диапазон'],
+      [['Shift', '↑↓'], 'Расширить выделение'],
+      [['Space'], 'Выделить строку под курсором'],
+      [[MOD_KEY, 'A'], 'Вся секция, ещё раз — весь список'],
+      [['Esc'], 'Снять выделение'],
+    ],
+  },
+  {
+    title: 'С задачей или выделенными',
+    items: [
+      [['E'], 'Этап'],
+      [['D'], 'Срок'],
+      [[MOD_KEY, 'Enter'], 'Готово или снова в работу'],
+      [['Del'], 'Удалить, с «Вернуть»'],
+      [['F2'], 'Переименовать в строке'],
+      [['S'], 'Начать или остановить учёт открытой задачи'],
+    ],
+  },
 ]
 
 function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const desktop = usePopoverMode()
+  // без таблицы (телефон, планшет) выделения и клавиш строк нет — общие, J K и учёт
+  const sections = desktop
+    ? SHORTCUTS
+    : [
+        SHORTCUTS[0],
+        {
+          title: 'Задачи',
+          items: [
+            [['J', 'K'], 'Открыть следующую или предыдущую'],
+            [['S'], 'Начать или остановить учёт открытой задачи'],
+          ] as Shortcut[],
+        },
+      ]
   return (
     <Sheet open={open} onClose={onClose} title="Горячие клавиши">
-      <div className="flex flex-col">
-        {SHORTCUTS.map(([keys, what]) => (
-          <div key={what} className="flex items-center justify-between gap-4 border-b border-divider py-2.5 last:border-0">
-            <span className="text-base text-text">{what}</span>
-            <span className="flex shrink-0 gap-1">
-              {keys.map((k) => (
-                <Kbd key={k}>{k}</Kbd>
-              ))}
-            </span>
+      <div className="flex flex-col gap-4">
+        {sections.map((section) => (
+          <div key={section.title} className="flex flex-col">
+            <Overline className="pb-1">{section.title}</Overline>
+            {section.items.map(([keys, what]) => (
+              <div key={what} className="flex items-center justify-between gap-4 border-b border-divider py-2 last:border-0">
+                <span className="text-base text-text">{what}</span>
+                <span className="flex shrink-0 gap-1">
+                  {keys.map((k) => (
+                    <Kbd key={k}>{k}</Kbd>
+                  ))}
+                </span>
+              </div>
+            ))}
           </div>
         ))}
       </div>
