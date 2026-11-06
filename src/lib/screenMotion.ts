@@ -107,14 +107,14 @@ const nativeGesture = (e: PopStateEvent) =>
   (e as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition === true ||
   ((edge.moved > 40 || edge.cancelled || edge.down) && performance.now() - edge.at < 700)
 
-/** Safari на iPhone/iPad в браузере: там свой свайп «назад», наш поверх него — двойной. */
-const iosBrowser = () => {
-  if (typeof navigator === 'undefined') return false
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
-  return ios && !standalone
-}
+/**
+ * iPhone и iPad — и в Safari, и с экрана «Домой»: у системы свой свайп «назад» от края.
+ * Наш поверх него давал два прежних экрана рядом: системный сдвигал всё окно со своей
+ * картинкой, а внутри окна наш выдвигал свой слепок. Здесь «назад» — только системный.
+ */
+const ios = () =>
+  typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 
 let installed = false
 /** Подключить до первого рендера роутера: «назад» должен увидеть ещё старый экран. */
@@ -300,7 +300,7 @@ function edgeSwipe(getContent: () => HTMLElement | null) {
 
   const blocked = () =>
     !mobile() ||
-    iosBrowser() ||
+    ios() ||
     reduced() ||
     !!finish ||
     !!swipedBack ||
