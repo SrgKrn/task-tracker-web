@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
@@ -367,7 +368,9 @@ export function Sheet({
 
   if (!present) return null
 
-  return (
+  // в корень документа: экран под листом уходит «в стопку» через transform, и лист внутри
+  // него встал бы от его краёв — на длинной странице ниже окна — и сжался бы вместе с ним
+  return createPortal(
     <div
       className="overlay-in fixed inset-0 z-[var(--z-modal)] flex items-end bg-overlay lg:items-center lg:justify-center"
       data-closing={closing || undefined}
@@ -404,7 +407,8 @@ export function Sheet({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

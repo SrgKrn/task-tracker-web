@@ -45,7 +45,9 @@ export function RowMenu({ anchor, items, onClose }: { anchor: HTMLElement | null
   })
 
   useEffect(() => {
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true })
+    // фокус — для клавиатуры и экранного диктора; рамку на телефоне не рисуем — её видели как
+    // «нажатый» первый пункт
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true, focusVisible: false } as FocusOptions)
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeRef.current()
     }

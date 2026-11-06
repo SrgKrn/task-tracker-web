@@ -16,9 +16,15 @@ export function CompactTitle({ pathname }: { pathname: string }) {
     let tries = 0
     let h1: HTMLElement | null = null
     // заголовок появляется не сразу (экран грузится частями) — ищем несколько кадров
+    const shown = (el: Element) => el.getClientRects().length > 0
+    const ownBar = () => [...document.querySelectorAll('.app-content .sticky')].some((s) => shown(s) && s.getBoundingClientRect().top <= 1)
     const find = () => {
-      h1 = document.querySelector<HTMLElement>('.app-content h1')
-      if (!h1 || h1.closest('.sticky')) {
+      // у экрана своя липкая шапка (карточка задачи) — свёрнутый заголовок только мешал бы:
+      // он ложился поверх неё вместе с «Назад», да ещё с названием списка, скрытого под карточкой
+      if (ownBar()) return
+      // первый видимый: на телефоне список задач остаётся в разметке скрытым под карточкой
+      h1 = [...document.querySelectorAll<HTMLElement>('.app-content h1')].find((h) => shown(h) && !h.closest('.sticky')) ?? null
+      if (!h1) {
         if (++tries < 40) raf = requestAnimationFrame(find)
         return
       }
@@ -29,7 +35,7 @@ export function CompactTitle({ pathname }: { pathname: string }) {
         ([e]) => {
           // гаснет, пока уходит под шапку; совсем ушёл — шапка с названием
           el.style.opacity = e.isIntersecting ? String(Math.min(1, e.intersectionRatio * 1.25)) : '0'
-          const gone = !e.isIntersecting && e.boundingClientRect.top < top
+          const gone = !e.isIntersecting && e.boundingClientRect.top < top && el.isConnected && !ownBar()
           setState((s) => (s?.path === pathname && s.title === title && s.shown === gone ? s : { path: pathname, title, shown: gone }))
         },
         { rootMargin: `-${top}px 0px 0px 0px`, threshold: [0, 0.2, 0.4, 0.6, 0.8, 1] },

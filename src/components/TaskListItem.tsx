@@ -65,6 +65,12 @@ const HOLD_MS = 550
 const FINISH_MS = 620
 /** свайп влево дальше «ящика» на столько — удаление целиком, без нажатия кнопки */
 const DELETE_PAST = 72
+/**
+ * …но не дальше этой доли строки: с тремя кнопками «ящик» и запас вместе шире экрана
+ * телефона, и одним движением до удаления было не дотянуться (как в Почте на iPhone —
+ * длинный свайп через полстроки удаляет)
+ */
+const DELETE_SHARE = 0.55
 /** дальше квадратики сливаются в полосу и перестают считываться поштучно */
 const MAX_PIPS = 12
 
@@ -128,6 +134,8 @@ export function TaskListItem({
   const [animating, setAnimating] = useState(true)
   const startX = useRef(0)
   const startOffset = useRef(0)
+  /** где в этом жесте срабатывает удаление; вне жеста — нигде */
+  const [deleteAt, setDeleteAt] = useState(Infinity)
   const axisLocked = useRef<'x' | 'y' | null>(null)
 
   /*
@@ -213,6 +221,9 @@ export function TaskListItem({
     startX.current = e.touches[0].clientX
     startY.current = e.touches[0].clientY
     startOffset.current = offset
+    // из открытого «ящика» — ещё немного влево, чтобы не удалить случайным касанием
+    const width = rowRef.current?.offsetWidth ?? 360
+    setDeleteAt(onDelete ? Math.max(Math.min(actionsWidth + DELETE_PAST, width * DELETE_SHARE), -offset + 40) : Infinity)
     axisLocked.current = null
     passedDone.current = false
     draggingRef.current = true
@@ -243,7 +254,7 @@ export function TaskListItem({
           : raw
     const clamped = Math.min(max, Math.max(min, next))
     // порог пройден — лёгкий отклик, как у переключателя
-    const past = clamped >= DONE_THRESHOLD || (!!onDelete && clamped <= -(actionsWidth + DELETE_PAST))
+    const past = clamped >= DONE_THRESHOLD || clamped <= -deleteAt
     if (past !== passedDone.current) {
       passedDone.current = past
       tap()
@@ -255,6 +266,7 @@ export function TaskListItem({
     if (!swipeable || !draggingRef.current) return
     draggingRef.current = false
     setAnimating(true)
+    setDeleteAt(Infinity)
     if (onToggleDone && offset >= DONE_THRESHOLD) {
       // строка уезжает вправо, затем меняется этап; там, где строка остаётся, — возвращается
       setFlying(true)
@@ -267,7 +279,7 @@ export function TaskListItem({
       }, 240)
       return
     }
-    if (onDelete && offset <= -(actionsWidth + DELETE_PAST)) {
+    if (onDelete && offset <= -deleteAt) {
       flyOut(-1, onDelete)
       return
     }
@@ -378,7 +390,15 @@ export function TaskListItem({
         easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
         fill: 'forwards',
       })
-      anim.finished.then(then, then)
+      // анимация в фоне (свернули приложение) не идёт и не заканчивается — не ждём её вечно
+      let ran = false
+      const once = () => {
+        if (ran) return
+        ran = true
+        then()
+      }
+      anim.finished.then(once, once)
+      window.setTimeout(once, 400)
     }, 220)
   }
   const swipeButton = 'flex-1 text-sm font-medium'
@@ -445,7 +465,7 @@ export function TaskListItem({
               <button
                 type="button"
                 onClick={() => flyOut(-1, onDelete)}
-                data-armed={offset <= -(actionsWidth + DELETE_PAST) || undefined}
+                data-armed={offset <= -deleteAt || undefined}
                 className={`swipe-delete ${swipeButton} bg-danger-soft text-danger-text`}
               >
                 Удалить

@@ -61,6 +61,61 @@ function take() {
   snap = { el: el.cloneNode(true) as HTMLElement, rect: el.getBoundingClientRect(), path: shownPath, at: performance.now() }
 }
 
+/**
+ * Системный жест «назад» (свайп от края в Safari на iPhone, жест навигации Android) рисует
+ * свою анимацию: прежний экран уже выехал из-под пальца. Если поверх сыграть ещё и свою —
+ * прежний экран показывается дважды. Такой «назад» узнаём по флагу браузера, а где его
+ * нет — по пальцу, который только что протянули от края экрана.
+ */
+const edge = { x0: 0, moved: 0, at: 0, down: false, cancelled: false }
+const NATIVE_EDGE = 32
+function trackEdgeGesture() {
+  const opts = { passive: true, capture: true }
+  window.addEventListener(
+    'touchstart',
+    (e) => {
+      const x = e.touches[0]?.clientX ?? NATIVE_EDGE + 1
+      edge.down = x <= NATIVE_EDGE || x >= window.innerWidth - NATIVE_EDGE
+      edge.x0 = x
+      edge.moved = 0
+      edge.cancelled = false
+      edge.at = performance.now()
+    },
+    opts,
+  )
+  window.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!edge.down) return
+      edge.moved = Math.max(edge.moved, Math.abs((e.touches[0]?.clientX ?? edge.x0) - edge.x0))
+      edge.at = performance.now()
+    },
+    opts,
+  )
+  const up = (e: TouchEvent) => {
+    if (edge.down) {
+      edge.at = performance.now()
+      // палец у края забрал сам браузер (Safari так начинает свой жест) — касание отменено
+      edge.cancelled = e.type === 'touchcancel'
+    }
+    edge.down = false
+  }
+  window.addEventListener('touchend', up, opts)
+  window.addEventListener('touchcancel', up, opts)
+}
+const nativeGesture = (e: PopStateEvent) =>
+  (e as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition === true ||
+  ((edge.moved > 40 || edge.cancelled || edge.down) && performance.now() - edge.at < 700)
+
+/** Safari на iPhone/iPad в браузере: там свой свайп «назад», наш поверх него — двойной. */
+const iosBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  return ios && !standalone
+}
+
 let installed = false
 /** Подключить до первого рендера роутера: «назад» должен увидеть ещё старый экран. */
 export function installScreenSnapshots() {
@@ -74,7 +129,16 @@ export function installScreenSnapshots() {
     if (url != null && new URL(url, location.href).pathname !== location.pathname) take()
     push(data, unused, url)
   }
-  window.addEventListener('popstate', take)
+  trackEdgeGesture()
+  window.addEventListener('popstate', (e) => {
+    // системный жест уже показал переход — свой не играем, только запоминаем прокрутку
+    if (!swipedBack && nativeGesture(e)) {
+      scrolls.set(shownPath, window.scrollY)
+      snap = null
+      return
+    }
+    take()
+  })
 }
 
 function layer(className: string, z: number) {
@@ -180,7 +244,25 @@ function play(s: Snap, content: HTMLElement, dir: NavDir, pathname: string, from
     }
   }
   finish = done
-  Promise.all(anims.map((a) => a.finished)).then(done, done)
+  settled(anims, reveal ? 420 : dir === 'tab' ? 180 : DURATION).then(done)
+}
+
+/**
+ * Конец анимаций — или запасной таймер: анимация, начатая в свёрнутом приложении (или если
+ * браузер её так и не запустил), может не закончиться никогда, а экран не должен навсегда
+ * остаться со слепком поверх.
+ */
+function settled(anims: Animation[], ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    let ran = false
+    const once = () => {
+      if (ran) return
+      ran = true
+      resolve()
+    }
+    Promise.all(anims.map((a) => a.finished)).then(once, once)
+    window.setTimeout(once, ms + 120)
+  })
 }
 
 const fresh = (o: Origin | null) => (o && performance.now() - o.at < 800 ? o : undefined)
@@ -218,6 +300,7 @@ function edgeSwipe(getContent: () => HTMLElement | null) {
 
   const blocked = () =>
     !mobile() ||
+    iosBrowser() ||
     reduced() ||
     !!finish ||
     !!swipedBack ||
@@ -317,7 +400,7 @@ function edgeSwipe(getContent: () => HTMLElement | null) {
       d.animate([{ opacity: d.style.opacity }, { opacity: go ? 0 : DIM }], timing),
     ]
     state = 'idle'
-    Promise.all(anims.map((a) => a.finished)).then(() => {
+    settled(anims, duration).then(() => {
       if (!go) {
         anims.forEach((a) => a.cancel())
         cleanup()
@@ -373,6 +456,8 @@ export function useScreenMotion(ref: RefObject<HTMLElement | null>, pathname: st
     }
     const popped = trackUnders(dir, pathname)
     const content = ref.current
+    // «назад» без своей анимации (системный жест, компьютер) — прокрутку всё равно возвращаем
+    if (!s && dir === 'back') window.scrollTo(0, scrolls.get(pathname) ?? 0)
     if (!s || !content || dir === 'none' || s.path === pathname || performance.now() - s.at > 800) return
     play(s, content, dir, pathname, popped?.origin)
   }, [ref, pathname, dir])

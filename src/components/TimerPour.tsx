@@ -125,7 +125,7 @@ export function TimerPour({
   useLayoutEffect(() => {
     if (mode === 'rest') return
     // обёртка плашки — родитель слоя: её ref на этом этапе ещё не подключён
-      const wrap = svg.current?.parentElement
+    const wrap = svg.current?.parentElement
     const pill = pillRef.current
     const stop = stopRef.current
     if (!wrap || !pill || !stop) return
@@ -193,14 +193,26 @@ export function TimerPour({
     frame(0)
     const t0 = performance.now()
     let raf = 0
+    let ended = false
+    const end = () => {
+      if (ended) return
+      ended = true
+      cancelAnimationFrame(raf)
+      frame(1)
+      if (enter) doneRef.current()
+    }
     const loop = (now: number) => {
       const t = Math.min(1, (now - t0) / duration)
+      if (t >= 1) return end()
       frame(t)
-      if (t < 1) raf = requestAnimationFrame(loop)
-      else if (enter) doneRef.current()
+      raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
+    // кадров нет (учёт начали из свёрнутого приложения, с часов, из Telegram) — плашка всё
+    // равно должна проявиться, а не остаться прозрачной до следующего касания
+    const fallback = window.setTimeout(end, duration + 250)
     return () => {
+      window.clearTimeout(fallback)
       cancelAnimationFrame(raf)
       fabEl.style.transform = ''
       pill.style.opacity = ''

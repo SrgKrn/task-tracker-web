@@ -730,8 +730,10 @@ button:disabled {
     animation: overlay-out 160ms var(--ease-in-out) forwards;
   }
 
-  /* часы-барабан (RollingClock): старая цифра уезжает вверх, новая приходит снизу */
-  .roll-out {
+  /* часы-барабан (RollingClock): старая цифра уезжает вверх, новая приходит снизу.
+     Селектор сильнее базового `.roll-out { display: none }` ниже — иначе старая цифра
+     не показывалась вовсе и просто пропадала */
+  .roll-digit > .roll-out {
     display: inline;
     animation: roll-out 300ms var(--ease-ios) both;
   }
