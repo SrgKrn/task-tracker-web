@@ -9,7 +9,9 @@ import type { PriorityMethod, Task } from './types'
  * порядок» включает перетаскивание и там, и там. Выбор запоминается: раньше после
  * перезапуска список всегда открывался «по сроку».
  */
-export type TaskSort = 'manual' | 'due' | 'created' | 'method'
+export type TaskSort = 'manual' | 'due' | 'created' | 'method' | 'name' | 'hours'
+
+const SORTS: readonly TaskSort[] = ['manual', 'due', 'created', 'method', 'name', 'hours']
 
 const KEY = 'semternity.taskSort'
 const listeners = new Set<() => void>()
@@ -17,7 +19,7 @@ const listeners = new Set<() => void>()
 function read(): TaskSort {
   try {
     const v = localStorage.getItem(KEY)
-    if (v === 'manual' || v === 'due' || v === 'created' || v === 'method') return v
+    if (SORTS.includes(v as TaskSort)) return v as TaskSort
   } catch {
     // нет хранилища — порядок по умолчанию
   }
@@ -63,9 +65,19 @@ const byDue = (a: Task, b: Task) => {
  * Головные задачи в порядке выбранного режима — тот же, что видит человек в «Задачах».
  * На входе — задачи в порядке загрузки (новые выше), это и есть «по созданию».
  */
-export function sortHeads(list: Task[], sort: TaskSort, method: PriorityMethod, today: string): Task[] {
+export function sortHeads(
+  list: Task[],
+  sort: TaskSort,
+  method: PriorityMethod,
+  today: string,
+  /** факт задачи вместе с подзадачами — для «по часам»; без него — только свой */
+  factOf: (t: Task) => number = (t) => t.fact_hours,
+): Task[] {
   if (sort === 'created') return list
   if (sort === 'manual') return [...list].sort(compareManual)
+  // заголовки колонок таблицы на компьютере (0.62): по названию — по алфавиту, по часам — больше вверху
+  if (sort === 'name') return [...list].sort((a, b) => a.name.localeCompare(b.name, 'ru', { numeric: true }))
+  if (sort === 'hours') return [...list].sort((a, b) => factOf(b) - factOf(a) || byDue(a, b))
   // по методике — внутри равных по приоритету задач порядок по сроку
   const byMethod = comparePriority(method, today)
   return [...list].sort(sort === 'method' ? (a, b) => byMethod(a, b) || byDue(a, b) : byDue)
@@ -76,6 +88,8 @@ export const TASK_SORT_LABEL: Record<TaskSort, string> = {
   created: 'По созданию',
   method: 'По методике',
   manual: 'Свой порядок',
+  name: 'По названию',
+  hours: 'По часам',
 }
 
 /* Подсказка «Удерживайте задачу…» — до первого перетаскивания, потом больше не нужна. */

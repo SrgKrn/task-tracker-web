@@ -11,7 +11,7 @@ import {
   sortHeads,
   useTaskSort,
 } from '../lib/taskSort'
-import { childrenByParent } from '../lib/tree'
+import { childrenByParent, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
 
 /**
@@ -38,13 +38,15 @@ export function useMoveTask() {
       return
     }
     // весь список и все составы — в том порядке, что сейчас на экране, со скрытыми
+    const children = childrenByParent(tasks, false)
     const heads = sortHeads(
       tasks.filter((t) => !t.parent_id),
       sort,
       method,
       todayStr(),
+      (t) => rollupFact(t, children.get(t.id)),
     )
-    const order = freezeOrder(heads, childrenByParent(tasks, false).values())
+    const order = freezeOrder(heads, children.values())
     reorder.mutate(freezeAndMove(order, visible, from, to), { onError })
     setTaskSort('manual')
     showSuccess('Порядок: свой', {

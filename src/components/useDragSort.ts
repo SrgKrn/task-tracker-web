@@ -29,13 +29,30 @@ const LIFT = 'scale(1.04) rotate(-0.5deg)'
 const LIFT_SHADOW = 'var(--shadow-popover), 0 18px 36px rgb(0 0 0 / 0.18)'
 const SPRING = 'cubic-bezier(0.34, 1.4, 0.64, 1)'
 export const ROW_MENU_EVENT = 'row-menu'
+/*
+ * 0.62, компьютер: строку таблицы тянут за ручку [data-drag-handle] — сразу, без удержания
+ * (handleOnly: мышью без ручки строка не перетаскивается, клик открывает задачу). Отпустили
+ * над другой секцией ([data-drop-zone]) — onDropOutside(откуда, id секции), например смена этапа.
+ */
 export function useDragSort(
   containerRef: RefObject<HTMLElement | null>,
-  { enabled, onDrop }: { enabled: boolean; onDrop: (from: number, to: number) => void },
+  {
+    enabled,
+    onDrop,
+    onDropOutside,
+    handleOnly = false,
+  }: {
+    enabled: boolean
+    onDrop: (from: number, to: number) => void
+    onDropOutside?: (from: number, zone: string) => void
+    handleOnly?: boolean
+  },
 ) {
   const dropRef = useRef(onDrop)
+  const outsideRef = useRef(onDropOutside)
   useEffect(() => {
     dropRef.current = onDrop
+    outsideRef.current = onDropOutside
   })
 
   useEffect(() => {
@@ -55,6 +72,9 @@ export function useDragSort(
       lastY: number
       target: Element
       moved: boolean
+      lastX: number
+      /** секция под курсором, если это не своя */
+      zone: HTMLElement | null
     } | null = null
     box.dataset.sortActive = ''
     let raf = 0
@@ -80,6 +100,8 @@ export function useDragSort(
         lastY: pending.y,
         target: pending.target,
         moved: false,
+        lastX: pending.x,
+        zone: null,
       }
       pending = null
       tap(15)
@@ -100,13 +122,32 @@ export function useDragSort(
       raf = requestAnimationFrame(autoScroll)
     }
 
-    function layout(y: number) {
+    /** другая секция под курсором: строки своей не раздвигаем, подсвечиваем ту */
+    function zoneAt(x: number, y: number): HTMLElement | null {
+      if (!outsideRef.current) return null
+      const own = box!.closest('[data-drop-zone]')
+      for (const z of document.querySelectorAll<HTMLElement>('[data-drop-zone]')) {
+        if (z === own) continue
+        const r = z.getBoundingClientRect()
+        if (y >= r.top && y <= r.bottom && x >= r.left && x <= r.right) return z
+      }
+      return null
+    }
+
+    function layout(y: number, x = drag?.lastX ?? 0) {
       if (!drag) return
       drag.lastY = y
+      drag.lastX = x
       const dy = y - drag.startY + (window.scrollY - drag.startScroll)
       if (Math.abs(y - drag.startY) > SLOP) drag.moved = true
+      const zone = zoneAt(x, y)
+      if (zone !== drag.zone) {
+        if (drag.zone) delete drag.zone.dataset.dropOver
+        if (zone) zone.dataset.dropOver = ''
+        drag.zone = zone
+      }
       const center = drag.mids[drag.from] + dy
-      const to = targetIndex(drag.mids, drag.from, center)
+      const to = zone ? drag.from : targetIndex(drag.mids, drag.from, center)
       drag.to = to
       drag.rows.forEach((r, i) => {
         if (i === drag!.from) {
@@ -136,8 +177,9 @@ export function useDragSort(
       pending = null
       if (!drag) return
       cancelAnimationFrame(raf)
-      const { rows, from, to, moved, target } = drag
+      const { rows, from, to, moved, target, zone } = drag
       drag = null
+      if (zone) delete zone.dataset.dropOver
       const el = rows[from]
       const before = el.getBoundingClientRect().top
       document.documentElement.style.userSelect = ''
@@ -157,7 +199,9 @@ export function useDragSort(
       }
       window.addEventListener('click', swallow, { capture: true, once: true })
       window.setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 400)
-      if (commit && from !== to) dropRef.current(from, to)
+      const zoneId = zone?.dataset.dropZone
+      if (commit && zoneId && outsideRef.current) outsideRef.current(from, zoneId)
+      else if (commit && from !== to) dropRef.current(from, to)
       // строка садится на новое место с пружиной: от того, где её отпустили
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         requestAnimationFrame(() =>
@@ -173,16 +217,24 @@ export function useDragSort(
           }),
         )
       }
-      // удержали и отпустили на месте — меню строки
-      if (commit && !moved) target.dispatchEvent(new CustomEvent(ROW_MENU_EVENT, { bubbles: true }))
+      // удержали и отпустили на месте — меню строки (за ручку мышью — просто ничего)
+      if (commit && !moved && !(target as HTMLElement).closest('[data-drag-handle]')) target.dispatchEvent(new CustomEvent(ROW_MENU_EVENT, { bubbles: true }))
     }
 
-    function down(target: EventTarget | null, x: number, y: number) {
+    function down(target: EventTarget | null, x: number, y: number, mouse = false) {
       if (drag) return
       const row = (target as HTMLElement | null)?.closest?.('[data-sort-row]') as HTMLElement | null
       if (!row || row.parentElement !== box) return
       // кнопки и поля строки (учёт, галочка, поле подзадачи) — не ручка перетаскивания
       if ((target as HTMLElement).closest('input, textarea, [data-no-drag]')) return
+      const handle = (target as HTMLElement).closest('[data-drag-handle]')
+      if (mouse && handleOnly && !handle) return
+      if (handle && mouse) {
+        // за ручку мышью — сразу, без удержания и проседания
+        pending = { row, x, y, target: target as Element, squash: null }
+        start()
+        return
+      }
       // пока держат — строка чуть проседает: видно, что сейчас что-то будет
       const squash = window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? null
@@ -196,7 +248,7 @@ export function useDragSort(
       if (drag) {
         e.preventDefault()
         e.stopPropagation()
-        layout(y)
+        layout(y, x)
         return
       }
       if (pending && (Math.abs(x - pending.x) > SLOP || Math.abs(y - pending.y) > SLOP)) {
@@ -213,7 +265,7 @@ export function useDragSort(
       finish(e.type === 'touchend')
     }
     const onMouseDown = (e: MouseEvent) => {
-      if (e.button === 0) down(e.target, e.clientX, e.clientY)
+      if (e.button === 0) down(e.target, e.clientX, e.clientY, true)
     }
     const onMouseMove = (e: MouseEvent) => move(e.clientX, e.clientY, e)
     const onMouseUp = () => finish(true)
@@ -254,5 +306,5 @@ export function useDragSort(
       box.removeEventListener('dragstart', onDragStart)
       window.removeEventListener('keydown', onKey)
     }
-  }, [containerRef, enabled])
+  }, [containerRef, enabled, handleOnly])
 }

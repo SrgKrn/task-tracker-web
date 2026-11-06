@@ -4,6 +4,7 @@ import { describeError, UserError, useToast } from '../lib/Toast'
 import { liveNotificationEnabled, setLiveNotificationEnabled, usePush } from '../lib/push'
 import { useTelegramActions, useTelegramLink, useTelegramStatus } from '../lib/telegram'
 import { setTheme, useTheme, type ThemeChoice } from '../lib/theme'
+import { DENSITY_LABEL, useDensity, type Density } from '../lib/density'
 import { timeZoneOptions } from '../lib/timezones'
 import { useSaveTimeBlockSettings, useUserSettings } from '../lib/queries/userSettings'
 
@@ -28,6 +29,30 @@ export function ThemeCard() {
           { value: 'system', label: 'Как в системе' },
           { value: 'light', label: 'Светлая' },
           { value: 'dark', label: 'Тёмная' },
+        ]}
+      />
+    </div>
+  )
+}
+
+/** Плотность списка задач на компьютере (0.62): строки под мышь ниже, чем под палец. */
+export function DensityCard() {
+  const [density, setDensity] = useDensity()
+  return (
+    <div className="flex flex-col gap-3 rounded-md p-3.5" style={card}>
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-text">Список задач на компьютере</span>
+        <span className="text-xs leading-[1.5] text-text-secondary">
+          «Компактно» — строки ниже, на экран входит больше задач. На телефоне строки всегда под палец.
+        </span>
+      </div>
+      <Segmented<Density>
+        value={density}
+        onChange={setDensity}
+        className="self-start"
+        options={[
+          { value: 'compact', label: DENSITY_LABEL.compact },
+          { value: 'comfortable', label: DENSITY_LABEL.comfortable },
         ]}
       />
     </div>

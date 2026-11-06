@@ -3,7 +3,8 @@ import { Link, useMatch, useNavigate } from 'react-router-dom'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { SubtaskList } from './SubtaskList'
 import { ClientDot, Collapse } from './ui'
-import { Check, ChevronDown, CornerDownRight, Plus } from './Icon'
+import { Check, ChevronDown, CornerDownRight, Grip, MoreDots, Plus } from './Icon'
+import { useDensity } from '../lib/density'
 import { tap } from '../lib/haptics'
 import { isFresh } from '../lib/fresh'
 import { RowMenu, type RowMenuItem } from './RowMenu'
@@ -52,6 +53,13 @@ interface TaskListItemProps {
   showStage?: boolean
   /** свайп вправо — «Готово» (или «Вернуть в работу» у закрытой), не открывая карточку */
   onToggleDone?: () => void
+  /**
+   * Строка таблицы (0.62, компьютер с мышью): колонки, действия при наведении, ручка
+   * перетаскивания. Без свайпов — они для пальца.
+   */
+  table?: boolean
+  /** переименовать прямо в строке — двойной клик по названию */
+  onRename?: (name: string) => void
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -94,6 +102,8 @@ export function TaskListItem({
   badge,
   showStage = false,
   onToggleDone,
+  table = false,
+  onRename,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -296,6 +306,11 @@ export function TaskListItem({
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPoint, setMenuPoint] = useState<{ x: number; y: number } | null>(null)
+  /** меню открыли кнопкой ⋯ в строке таблицы — всплывает у неё */
+  const [menuButton, setMenuButton] = useState<HTMLElement | null>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState(task.name)
+  const [density] = useDensity()
   const menuHold = useRef(0)
   const menuPress = useRef<{ x: number; y: number } | null>(null)
   const swallowClick = useRef(false)
@@ -332,8 +347,13 @@ export function TaskListItem({
     menuPress.current = null
     window.clearTimeout(menuHold.current)
   }
+  const startRename = () => {
+    setDraftName(task.name)
+    setRenaming(true)
+  }
   const menuItems: RowMenuItem[] = [
     { label: 'Открыть', onSelect: () => navigate(`/tasks/${task.id}`) },
+    ...(table && onRename ? [{ label: 'Переименовать', onSelect: startRename }] : []),
     isRunning ? { label: 'Остановить учёт', onSelect: onStopTimer } : { label: 'Начать учёт', onSelect: onStartTimer },
     ...(onToggleDone ? [{ label: done ? 'Вернуть в работу' : 'Готово', onSelect: onToggleDone }] : []),
     ...(addSubtaskAction
@@ -403,6 +423,237 @@ export function TaskListItem({
     }, 220)
   }
   const swipeButton = 'flex-1 text-sm font-medium'
+
+  const ringNode = (size: number) => (
+    <span
+      key={ringKey}
+      data-no-drag
+      data-tip={onToggleDone ? 'timer ring-done' : 'timer'}
+      data-holding={holding || undefined}
+      className={`ring-hold relative shrink-0 rounded-full ${ringChanged ? `ring-pop ring-to-${ringKey}` : ''}`}
+      onPointerDown={holdStart}
+      onPointerUp={holdEnd}
+      onPointerCancel={holdEnd}
+      onPointerLeave={holdEnd}
+      onContextMenu={(e) => onToggleDone && e.preventDefault()}
+    >
+      <Ring
+        size={size}
+        pct={done ? 100 : pct}
+        state={ringState}
+        // под учётом центр заливается терракотой — видно издалека, что идёт (0.60)
+        centerBg={isRunning && !done ? 'var(--accent)' : 'var(--row-bg)'}
+        onClick={() => {
+          // удержание уже отметило «Готово» — отпускание пальца не должно ещё и запускать учёт
+          if (held.current) {
+            held.current = false
+            return
+          }
+          if (finishing) return
+          tap()
+          // идёт подзадача — кольцо спринта её останавливает; иначе учёт идёт в сам спринт
+          if (isRunning) onStopTimer()
+          else onStartTimer()
+        }}
+        // с названием: на экране десять одинаковых «Начать учёт» диктору не различить
+        ariaLabel={`${isRunning ? 'Остановить учёт' : 'Начать учёт'}: ${task.name}`}
+      >
+        {done ? (
+          <Check size={size < 28 ? 12 : 14} className="text-success" />
+        ) : isRunning ? (
+          <StopGlyph color="var(--on-accent)" size={size < 28 ? 7 : 8} />
+        ) : (
+          <PlayGlyph size={size < 28 ? 7 : 8} />
+        )}
+      </Ring>
+      {onToggleDone && <span className="ring-charge" aria-hidden />}
+      {ringChanged && ringKey === 'done' && (
+        <span className="ring-sparks" aria-hidden>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <i key={i} style={{ ['--a' as string]: `${i * 60 + 30}deg` }} />
+          ))}
+        </span>
+      )}
+    </span>
+  )
+
+  const menuNode = menuOpen && (
+    <RowMenu
+      anchor={menuButton ?? rowRef.current}
+      point={menuPoint}
+      items={menuItems}
+      onClose={() => {
+        setMenuOpen(false)
+        setMenuPoint(null)
+        setMenuButton(null)
+      }}
+    />
+  )
+
+  /*
+   * Строка таблицы (0.62): ручка · кольцо · название · группы · срок · часы. Колонки — сетка
+   * .trow в index.css; узкий список (меньше 520 px) прячет колонку групп, оставляя цветную
+   * точку у названия. Клик по строке открывает задачу, двойной по названию — переименовать.
+   */
+  if (table) {
+    const commitRename = () => {
+      setRenaming(false)
+      const name = draftName.trim()
+      if (name && name !== task.name) onRename?.(name)
+    }
+    const dueText = task.end_date ? formatDueDate(task.end_date, today) : ''
+    const dueTone = done
+      ? 'text-text-tertiary'
+      : overdue
+        ? 'font-medium text-danger-text'
+        : soon
+          ? 'font-medium text-warning-text'
+          : 'text-text-secondary'
+    const hoursShort = hasPlan ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)}` : fact > 0 ? formatHoursRu(fact) : ''
+    return (
+      <div ref={rootRef} className={`flex flex-col ${isNew ? 'row-new' : ''}`}>
+        <div
+          ref={rowRef}
+          className="task-row trow"
+          data-quiet={isRunning || selected ? undefined : ''}
+          style={{
+            ['--row-bg' as string]: isRunning || selected ? cardBg : undefined,
+            background: 'var(--row-bg)',
+            boxShadow: isRunning || selected ? 'inset 2px 0 0 var(--accent)' : undefined,
+          }}
+          onClick={(e) => {
+            if (renaming || (e.target as HTMLElement).closest('a, button, input, [data-no-drag], [data-drag-handle]')) return
+            navigate(`/tasks/${task.id}`)
+          }}
+          onContextMenu={(e) => {
+            if ((e.target as HTMLElement).closest('input, textarea')) return
+            e.preventDefault()
+            setMenuButton(null)
+            setMenuPoint({ x: e.clientX, y: e.clientY })
+            setMenuOpen(true)
+          }}
+        >
+          <span data-drag-handle className="tgrip" title="Перетащить" aria-hidden>
+            <Grip size={14} />
+          </span>
+          {ringNode(density === 'compact' ? 22 : 26)}
+          <div className="relative flex min-w-0 items-center gap-1.5">
+            {showComposition && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!hasSubtasks) {
+                    if (addingHere) stopAdding(task.id)
+                    else startAdding(task.id)
+                    return
+                  }
+                  if (open) stopAdding(task.id)
+                  setOpen(!open)
+                }}
+                aria-expanded={open}
+                aria-controls={`subtasks-${task.id}`}
+                aria-label={open ? 'Свернуть подзадачи' : 'Показать подзадачи'}
+                className="-ml-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text"
+              >
+                <span className="flex transition-transform duration-200" style={{ transform: open ? undefined : 'rotate(-90deg)' }}>
+                  <ChevronDown size={14} />
+                </span>
+              </button>
+            )}
+            {label && (
+              <span className="tname-dot shrink-0" title={meta}>
+                <ClientDot color={color} />
+              </span>
+            )}
+            {badge}
+            {renaming ? (
+              <input
+                autoFocus
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  // Esc здесь — отмена правки, а не закрытие карточки
+                  e.stopPropagation()
+                  if (e.key === 'Enter') commitRename()
+                  if (e.key === 'Escape') setRenaming(false)
+                }}
+                aria-label="Название задачи"
+                className="h-7 min-w-0 flex-1 rounded-sm border border-accent bg-surface px-1.5 text-sm text-text outline-none"
+              />
+            ) : (
+              <Link
+                to={`/tasks/${task.id}`}
+                data-name
+                title={task.name}
+                onDoubleClick={(e) => {
+                  if (!onRename) return
+                  e.preventDefault()
+                  startRename()
+                }}
+                className={`min-w-0 truncate text-sm ${done ? 'text-text-secondary' : 'font-medium text-text'}`}
+              >
+                <span className={done ? `strike ${ringChanged && ringKey === 'done' ? 'strike-in' : ''}` : undefined}>{task.name}</span>
+              </Link>
+            )}
+            {hasSubtasks && <SubCount subtasks={subtasks ?? []} />}
+            {!renaming && (
+              <span className="trow-actions absolute inset-y-0 right-0 flex items-center gap-0.5 pl-4">
+                {onToggleDone && (
+                  <button
+                    type="button"
+                    onClick={onToggleDone}
+                    title={done ? 'Вернуть в работу' : 'Готово'}
+                    aria-label={`${done ? 'Вернуть в работу' : 'Готово'}: ${task.name}`}
+                    className={`flex h-6 w-6 items-center justify-center rounded-sm hover:bg-surface-sunken ${
+                      done ? 'text-success' : 'text-text-secondary hover:text-success'
+                    }`}
+                  >
+                    <Check size={14} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    setMenuPoint(null)
+                    setMenuButton(e.currentTarget)
+                    setMenuOpen(true)
+                  }}
+                  title="Действия"
+                  aria-label={`Действия: ${task.name}`}
+                  aria-haspopup="menu"
+                  className="flex h-6 w-6 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text"
+                >
+                  <MoreDots size={15} />
+                </button>
+              </span>
+            )}
+          </div>
+          <span className="tcol-meta min-w-0 items-center gap-1.5 text-sm text-text-secondary" title={meta || undefined}>
+            {label && <ClientDot color={color} />}
+            <span className="min-w-0 truncate">{meta}</span>
+          </span>
+          <span className={`truncate text-sm ${dueTone}`} aria-label={overdue && dueText ? `Просрочено: ${dueText}` : undefined}>
+            {dueText}
+          </span>
+          {showClock && activeTimer ? (
+            <span className="tcol-hours tabular truncate text-right font-mono text-xs font-medium text-accent-text">{formatClock(activeTimer.started_at)}</span>
+          ) : (
+            <span className={`tcol-hours tabular truncate text-right font-mono text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hoursShort}</span>
+          )}
+        </div>
+
+        {menuNode}
+
+        <Collapse open={open}>
+          <div className="bg-surface pr-2 pl-12">
+            <SubtaskList id={`subtasks-${task.id}`} parent={task} subtasks={subtasks ?? []} hideDone={hideDoneSubtasks} nested />
+          </div>
+        </Collapse>
+      </div>
+    )
+  }
 
   return (
     <div ref={rootRef} className={`flex flex-col ${isNew ? 'row-new' : ''}`}>
@@ -506,50 +757,7 @@ export function TaskListItem({
           }}
         >
           <div className="flex items-center gap-3">
-            <span
-              key={ringKey}
-              data-no-drag
-              data-tip={onToggleDone ? 'timer ring-done' : 'timer'}
-              data-holding={holding || undefined}
-              className={`ring-hold relative shrink-0 rounded-full ${ringChanged ? `ring-pop ring-to-${ringKey}` : ''}`}
-              onPointerDown={holdStart}
-              onPointerUp={holdEnd}
-              onPointerCancel={holdEnd}
-              onPointerLeave={holdEnd}
-              onContextMenu={(e) => onToggleDone && e.preventDefault()}
-            >
-            <Ring
-              size={32}
-              pct={done ? 100 : pct}
-              state={ringState}
-              // под учётом центр заливается терракотой — видно издалека, что идёт (0.60)
-              centerBg={isRunning && !done ? 'var(--accent)' : 'var(--row-bg)'}
-              onClick={() => {
-                // удержание уже отметило «Готово» — отпускание пальца не должно ещё и запускать учёт
-                if (held.current) {
-                  held.current = false
-                  return
-                }
-                if (finishing) return
-                tap()
-                // идёт подзадача — кольцо спринта её останавливает; иначе учёт идёт в сам спринт
-                if (isRunning) onStopTimer()
-                else onStartTimer()
-              }}
-              // с названием: на экране десять одинаковых «Начать учёт» диктору не различить
-              ariaLabel={`${isRunning ? 'Остановить учёт' : 'Начать учёт'}: ${task.name}`}
-            >
-              {done ? <Check size={14} className="text-success" /> : isRunning ? <StopGlyph color="var(--on-accent)" /> : <PlayGlyph />}
-            </Ring>
-            {onToggleDone && <span className="ring-charge" aria-hidden />}
-            {ringChanged && ringKey === 'done' && (
-              <span className="ring-sparks" aria-hidden>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <i key={i} style={{ ['--a' as string]: `${i * 60 + 30}deg` }} />
-                ))}
-              </span>
-            )}
-            </span>
+            {ringNode(32)}
 
             <Link
               to={`/tasks/${task.id}`}
@@ -651,17 +859,7 @@ export function TaskListItem({
         </div>
       </div>
 
-      {menuOpen && (
-        <RowMenu
-          anchor={rowRef.current}
-          point={menuPoint}
-          items={menuItems}
-          onClose={() => {
-            setMenuOpen(false)
-            setMenuPoint(null)
-          }}
-        />
-      )}
+      {menuNode}
 
       <Collapse open={open}>
         <div className="bg-surface px-3">
@@ -762,5 +960,17 @@ function CompositionToggle({
         <ChevronDown size={14} />
       </span>
     </button>
+  )
+}
+
+/** «3/7» у названия спринта в таблице: сколько подзадач закрыто */
+function SubCount({ subtasks }: { subtasks: Task[] }) {
+  const { data: statuses = [] } = useStatuses()
+  const finalIds = new Set(statuses.filter((s) => s.is_final).map((s) => s.id))
+  const done = subtasks.filter((t) => !!t.status_id && finalIds.has(t.status_id)).length
+  return (
+    <span className="tabular shrink-0 font-mono text-xs text-text-tertiary" title={`Подзадач закрыто: ${done} из ${subtasks.length}`}>
+      {done}/{subtasks.length}
+    </span>
   )
 }

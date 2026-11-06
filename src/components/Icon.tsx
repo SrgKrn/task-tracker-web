@@ -69,6 +69,9 @@ export const Sparkle = (p: IconProps) =>
   svg(<><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m6.3 6.3 2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1" /></>, p)
 export const MoreDots = (p: IconProps) =>
   svg(<><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>, p)
+/** ручка перетаскивания строки — две колонки точек */
+export const Grip = (p: IconProps) =>
+  svg(<><circle cx="9" cy="6" r="1.2" /><circle cx="15" cy="6" r="1.2" /><circle cx="9" cy="12" r="1.2" /><circle cx="15" cy="12" r="1.2" /><circle cx="9" cy="18" r="1.2" /><circle cx="15" cy="18" r="1.2" /></>, p)
 export const Download = (p: IconProps) =>
   svg(<><path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></>, p)
 export const Calendar = (p: IconProps) =>

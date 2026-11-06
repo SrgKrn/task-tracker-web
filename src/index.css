@@ -1316,3 +1316,104 @@ button:disabled {
     animation: popover-in 140ms var(--ease-out);
   }
 }
+
+/*
+ * Список-таблица на компьютере (0.62): ручка · кольцо · название · группы · срок · часы.
+ * Колонка групп — только в широком списке (от 640 px); в узком у названия остаётся цветная точка.
+ * Плотность: «Компактно» — 34 px, «Обычно» — 44 px.
+ */
+.task-table {
+  container-type: inline-size;
+  --trow-h: 44px;
+  --tring: 26px;
+}
+.task-table[data-density='compact'] {
+  --trow-h: 34px;
+  --tring: 22px;
+}
+.trow {
+  display: grid;
+  grid-template-columns: 14px var(--tring) minmax(0, 1fr) 60px 76px;
+  align-items: center;
+  column-gap: 8px;
+  min-height: var(--trow-h);
+  padding: 0 10px 0 2px;
+  cursor: default;
+}
+.tcol-meta {
+  display: none;
+}
+.tname-dot {
+  display: flex;
+}
+@container (min-width: 600px) {
+  .trow {
+    grid-template-columns: 14px var(--tring) minmax(0, 1fr) minmax(0, 132px) 60px 76px;
+  }
+  .tcol-meta {
+    display: flex;
+  }
+  .tname-dot {
+    display: none;
+  }
+}
+/* ручка и действия строки — при наведении или фокусе внутри, иначе строка спокойная */
+.tgrip {
+  display: flex;
+  justify-content: center;
+  color: var(--text-tertiary);
+  opacity: 0;
+  cursor: grab;
+}
+.sortable .trow:hover .tgrip {
+  opacity: 1;
+}
+/* действия ложатся поверх конца названия: скрытые не отнимают у него место */
+.trow-actions {
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--row-bg) 14px);
+}
+.trow:hover .trow-actions,
+.trow:focus-within .trow-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-dragging] .tgrip {
+  opacity: 1;
+  cursor: grabbing;
+}
+/* строку тянут над другой секцией — её подсвечиваем: отпустить — сменить этап или группу */
+[data-drop-over] {
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--accent-soft);
+}
+/* шапка таблицы: заголовки колонок, по клику — порядок */
+.thead {
+  display: grid;
+  grid-template-columns: 14px var(--tring) minmax(0, 1fr) 60px 76px;
+  column-gap: 8px;
+  align-items: center;
+  /* +1 px — рамка списка под строками */
+  padding: 0 11px 0 3px;
+}
+@container (min-width: 600px) {
+  .thead {
+    grid-template-columns: 14px var(--tring) minmax(0, 1fr) minmax(0, 132px) 60px 76px;
+  }
+}
+/* узкий список (меньше 440 px — на 1024 рядом с карточкой): без колонки часов, они есть в карточке */
+@container (max-width: 399px) {
+  .trow,
+  .thead {
+    grid-template-columns: 14px var(--tring) minmax(0, 1fr) 60px;
+  }
+  .tcol-hours {
+    display: none;
+  }
+}
+/* пока строку тянут, рамка списка её не обрезает — иначе над другой секцией строка пропадает */
+.sortable:has([data-dragging]) {
+  overflow: visible;
+}

@@ -1,5 +1,6 @@
 /** Ширина списка задач на компьютере (0.60): тянется границей, запоминается на устройстве. */
-export const LIST_WIDTH_DEFAULT = 440
+/** 0.62: под таблицу с колонками — шире, чем строки телефона; карточке на 1440 остаётся ~630 */
+export const LIST_WIDTH_DEFAULT = 560
 const MIN = 320
 const MAX = 720
 const KEY = 'semternity.listWidth'

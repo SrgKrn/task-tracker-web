@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { NotificationsCard, TelegramCard, ThemeCard, TimeBlockCard } from '../components/AppPreferences'
+import { DensityCard, NotificationsCard, TelegramCard, ThemeCard, TimeBlockCard } from '../components/AppPreferences'
 import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
 import { SettingsMenu, SettingsShell } from '../components/SettingsMenu'
@@ -1009,6 +1009,7 @@ export function AppearanceSettings() {
   return (
     <SettingsPage title="Оформление">
       <ThemeCard />
+      <DensityCard />
       <TimeBlockCard />
     </SettingsPage>
   )

@@ -9,15 +9,17 @@ import { useDeferredDelete } from '../components/useDeferredDelete'
 import { useRevealOnLoad } from '../lib/reveal'
 import { DatePicker } from '../components/DatePicker'
 import { TaskListItem } from '../components/TaskListItem'
-import { Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
+import { ArrowUp, Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
+import { usePopoverMode } from '../components/Popover'
+import { DENSITY_LABEL, useDensity, type Density } from '../lib/density'
 import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton, fieldClass } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { overlapsPeriod, todayStr } from '../lib/period'
 import { PriorityBadge } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
-import { useGroupModel, type GroupModel } from '../lib/groups'
+import { setGroupValue, useGroupModel, type GroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
-import { useDuplicateTask, useTasks } from '../lib/queries/tasks'
+import { useDuplicateTask, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
@@ -78,6 +80,10 @@ export function TaskList() {
   const onError = (error: unknown) => showError(describeError(error))
   const workspaceId = useActiveWorkspaceId()
   const desktop = useMediaQuery('(min-width: 1024px)')
+  // таблица с колонками — на широком экране с мышью (0.62); на телефоне и планшете прежние строки
+  const table = usePopoverMode()
+  const [density, setDensity] = useDensity()
+  const updateTask = useUpdateTask()
   // список на телефоне скрыт, пока открыта карточка, — панель в корне страницы прячем сами
   const onList = useLocation().pathname === '/tasks'
 
@@ -156,7 +162,10 @@ export function TaskList() {
   }, [heads, query, matchedInside, periodFrom, periodTo, view.showDone, statusById, model, selected])
 
   const filtered = useMemo(() => (folder ? base.filter(folder.match) : base), [base, folder])
-  const sorted = useMemo(() => sortHeads(filtered, sort, method, today), [filtered, sort, method, today])
+  const sorted = useMemo(
+    () => sortHeads(filtered, sort, method, today, (t) => rollupFact(t, childrenOf.get(t.id))),
+    [filtered, sort, method, today, childrenOf],
+  )
   const moveTask = useMoveTask()
   const toggleDone = useToggleDone()
   // подсказки 0.43: перетаскивание — когда задач стало пять; группы — когда задач три, а групп ещё нет
@@ -235,6 +244,68 @@ export function TaskList() {
         </div>
       </div>
   )
+
+  /*
+   * Строку перетащили в другую секцию (0.62): по этапам — меняется этап, по группе — значение
+   * группы. В уведомлении — «Вернуть». Секции «Без секций» нет — переносить некуда.
+   */
+  const crossDrop = table && sectionsBy !== 'none'
+  const moveToSection = (task: Task, zone: string) => {
+    if (zone.startsWith('stage:')) {
+      const raw = zone.slice('stage:'.length)
+      const target = raw === 'none' ? null : raw
+      if (target === task.status_id) return
+      const previous = task.status_id
+      const stage = target ? statusById.get(target) : undefined
+      updateTask.mutate(
+        { id: task.id, fields: { status_id: target } },
+        {
+          onError,
+          onSuccess: () => {
+            if (stage?.is_final && activeTimer?.task_id === task.id) stopTimer.mutate(undefined, { onError })
+            showSuccess(`${task.name} → ${stage?.label ?? 'без этапа'}`, {
+              label: 'Вернуть',
+              onAction: () => updateTask.mutate({ id: task.id, fields: { status_id: previous } }, { onError }),
+            })
+          },
+        },
+      )
+      return
+    }
+    if (zone.startsWith('g:')) {
+      const group = model.groupById.get(sectionsBy)
+      if (!group) return
+      const raw = zone.slice('g:'.length)
+      const itemId = raw === 'none' ? null : raw
+      if (!itemId && group.required) {
+        showError(`«${group.name}» — обязательная группа, без значения задачу не оставить`)
+        return
+      }
+      const previous = task.item_ids ?? []
+      const next = setGroupValue(model, previous, group.id, itemId)
+      updateTask.mutate(
+        { id: task.id, fields: { item_ids: next } },
+        {
+          onError,
+          onSuccess: () =>
+            showSuccess(`${task.name} → ${itemId ? (model.itemById.get(itemId)?.name ?? '') : 'не указано'}`, {
+              label: 'Вернуть',
+              onAction: () => updateTask.mutate({ id: task.id, fields: { item_ids: previous } }, { onError }),
+            }),
+        },
+      )
+    }
+  }
+  // заголовок колонки групп — названия групп «в строке» (у всех они свои)
+  const metaTitle = [
+    sectionsBy !== 'stage' ? 'Этап' : '',
+    model.groups
+      .filter((g) => g.show_in_list)
+      .map((g) => g.name)
+      .join(' · '),
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   const toggleSection = (id: string, collapsed: boolean) =>
     setView({ ...view, collapsed: { ...view.collapsed, [id]: !collapsed } })
@@ -336,7 +407,27 @@ export function TaskList() {
         </div>
       )}
 
-      <div ref={listRef} className="flex flex-col gap-3 px-5 pb-2">
+      <div
+        ref={listRef}
+        className={`flex flex-col gap-3 px-5 pb-2 ${table ? 'task-table' : ''}`}
+        data-density={table ? density : undefined}
+      >
+        {table && !isLoading && sections.length > 0 && (
+          <div className="thead sticky top-0 z-10 -mb-2 h-8 border-b border-divider bg-bg text-xs text-text-tertiary">
+            <span />
+            <span />
+            <SortHead mode="name" current={sort}>
+              Название
+            </SortHead>
+            <span className="tcol-meta min-w-0 truncate">{metaTitle}</span>
+            <SortHead mode="due" current={sort}>
+              Срок
+            </SortHead>
+            <SortHead mode="hours" current={sort} right className="tcol-hours">
+              Часы
+            </SortHead>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2, 3].map((i) => (
@@ -350,7 +441,11 @@ export function TaskList() {
               // поиск открывает всё: найденное не должно прятаться в свёрнутой секции
               const collapsed = showHeader && !query && (view.collapsed[section.id] ?? section.doneByDefault)
               return (
-                <div key={section.id} className="flex flex-col gap-1.5">
+                <div
+                  key={section.id}
+                  className={`flex flex-col gap-1.5 ${crossDrop ? '-m-1 p-1' : ''}`}
+                  data-drop-zone={crossDrop ? section.id : undefined}
+                >
                   {showHeader && (
                     <button
                       type="button"
@@ -369,7 +464,12 @@ export function TaskList() {
                     </button>
                   )}
                   <Collapse open={!collapsed}>
-                    <SortableGroup enabled={section.items.length > 1} onDrop={(from, to) => moveTask(section.items, from, to)}>
+                    <SortableGroup
+                      enabled={section.items.length > 1 || crossDrop}
+                      handleOnly={table}
+                      onDrop={(from, to) => moveTask(section.items, from, to)}
+                      onDropOutside={crossDrop ? (from, zone) => moveToSection(section.items[from], zone) : undefined}
+                    >
                       {section.items.map((task, i) => (
                         <div key={task.id} data-sort-row data-tip={i === 0 ? 'drag' : undefined}>
                           <TaskListItem
@@ -396,6 +496,8 @@ export function TaskList() {
                             subtasks={childrenOf.get(task.id)}
                             forceExpanded={matchedInside.has(task.id)}
                             hideDoneSubtasks={!view.showDone}
+                            table={table}
+                            onRename={(name) => updateTask.mutate({ id: task.id, fields: { name } }, { onError })}
                           />
                         </div>
                       ))}
@@ -430,7 +532,15 @@ export function TaskList() {
 
       <Sheet anchored open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
         <ListGroup>
-          {(['due', 'created', ...(method !== 'none' ? (['method'] as const) : []), 'manual'] as TaskSort[]).map((s) => (
+          {(
+            [
+              'due',
+              'created',
+              ...(method !== 'none' ? (['method'] as const) : []),
+              ...(table ? (['name', 'hours'] as const) : []),
+              'manual',
+            ] as TaskSort[]
+          ).map((s) => (
             <button
               key={s}
               type="button"
@@ -445,7 +555,11 @@ export function TaskList() {
             </button>
           ))}
         </ListGroup>
-        <span className="text-sm text-text-secondary">«Свой порядок» — удерживайте задачу и перетаскивайте.</span>
+        <span className="text-sm text-text-secondary">
+          {table
+            ? '«Свой порядок» — тяните задачу за ручку слева. В другую секцию — сменить этап или группу.'
+            : '«Свой порядок» — удерживайте задачу и перетаскивайте.'}
+        </span>
       </Sheet>
 
       <Sheet
@@ -485,6 +599,20 @@ export function TaskList() {
           </div>
         </div>
         <Switch on={view.showDone} onChange={(v) => setView({ ...view, showDone: v })} label="Показывать готовые" />
+        {table && (
+          <div className="flex flex-col gap-1.5">
+            <Overline>Плотность</Overline>
+            <Segmented<Density>
+              value={density}
+              onChange={setDensity}
+              className="self-start"
+              options={[
+                { value: 'compact', label: DENSITY_LABEL.compact },
+                { value: 'comfortable', label: DENSITY_LABEL.comfortable },
+              ]}
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Overline>Срок пересекается с периодом</Overline>
           <div className="flex items-center gap-2">
@@ -698,17 +826,55 @@ function FactSum({
 function SortableGroup({
   enabled,
   onDrop,
+  onDropOutside,
+  handleOnly = false,
   children,
 }: {
   enabled: boolean
   onDrop: (from: number, to: number) => void
+  onDropOutside?: (from: number, zone: string) => void
+  handleOnly?: boolean
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  useDragSort(ref, { enabled, onDrop })
+  useDragSort(ref, { enabled, onDrop, onDropOutside, handleOnly })
   return (
     <ListGroup ref={ref} className={enabled ? 'sortable' : ''}>
       {children}
     </ListGroup>
+  )
+}
+
+/** Заголовок колонки таблицы: по клику — порядок по этой колонке, у выбранной — стрелка. */
+function SortHead({
+  mode,
+  current,
+  right = false,
+  className = '',
+  children,
+}: {
+  mode: TaskSort
+  current: TaskSort
+  right?: boolean
+  className?: string
+  children: React.ReactNode
+}) {
+  const active = current === mode
+  return (
+    <button
+      type="button"
+      onClick={() => setTaskSort(mode)}
+      title={TASK_SORT_LABEL[mode]}
+      aria-pressed={active}
+      className={`flex h-8 min-w-0 items-center gap-1 hover:text-text ${right ? 'justify-end' : ''} ${active ? 'font-medium text-text-secondary' : ''} ${className}`}
+    >
+      <span className="truncate">{children}</span>
+      {active && (
+        // по возрастанию — вверх, как в Asana; часы — по убыванию, больше вверху
+        <span className="flex shrink-0" style={{ transform: mode === 'hours' ? 'rotate(180deg)' : undefined }}>
+          <ArrowUp size={11} />
+        </span>
+      )}
+    </button>
   )
 }
