@@ -42,7 +42,7 @@ export function WorkspaceSwitcherSheet({ open, onClose }: { open: boolean; onClo
   const { data: list = [] } = useWorkspaces()
   const room = useRoom('workspaces', list.filter((w) => !w.archived_at).length)
   return (
-    <Sheet open={open} onClose={onClose} title="Пространство">
+    <Sheet anchored open={open} onClose={onClose} title="Пространство">
       <WorkspaceList onPicked={onClose} />
       <RoomNote room={room} what="Ещё одно пространство" max="Это максимум пространств." />
       <div className="flex gap-2">

@@ -24,7 +24,7 @@ export function DurationSheet({ open, title, hours, onCancel, onSubmit }: Durati
   const minutes = draftMinutes(draft)
 
   return (
-    <Sheet open={open} onClose={onCancel} title={title}>
+    <Sheet anchored open={open} onClose={onCancel} title={title}>
       <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <SheetActions
         onCancel={onCancel}
@@ -66,7 +66,7 @@ export function AddTimeSheet({
   const valid = minutes !== null && minutes > 0
 
   return (
-    <Sheet open={open} onClose={onCancel} title="Добавить время">
+    <Sheet anchored open={open} onClose={onCancel} title="Добавить время">
       <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       <span className="font-mono text-xs text-text-secondary">

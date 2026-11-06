@@ -21,6 +21,7 @@ import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
 import { useTip } from '../lib/tips'
 import { Button, ClientDot, ListGroup, Sheet } from '../components/ui'
+import { Menu, usePopoverMode, type MenuItem } from '../components/Popover'
 import { describeError, useToast } from '../lib/Toast'
 import { formatDueDate, todayStr } from '../lib/period'
 import { useGroupModel } from '../lib/groups'
@@ -102,6 +103,10 @@ export function TaskDetail() {
   // свойства теперь над вкладками — вкладки только для истории, состава и файлов
   const [menuOpen, setMenuOpen] = useState(false)
   const [stageOpen, setStageOpen] = useState(false)
+  // на компьютере этап и «⋯» — меню у кнопки, а не шторка (0.61)
+  const popoverMode = usePopoverMode()
+  const [stageAnchor, setStageAnchor] = useState<HTMLElement | null>(null)
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const [factOpen, setFactOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const isRunning = activeTimer?.task_id === id
@@ -341,7 +346,7 @@ export function TaskDetail() {
             <button
               type="button"
               data-tip="stage"
-              onClick={() => setStageOpen(true)}
+              onClick={(e) => (popoverMode ? setStageAnchor(e.currentTarget) : setStageOpen(true))}
               aria-haspopup="dialog"
               className="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-text"
             >
@@ -364,7 +369,7 @@ export function TaskDetail() {
             >
               {isRunning ? <StopGlyph size={10} color="var(--on-accent)" /> : <Play size={14} />}
             </button>
-            <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" title="Действия" onClick={() => setMenuOpen(true)}>
+            <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Действия с задачей" title="Действия" onClick={(e) => (popoverMode ? setMenuAnchor(e.currentTarget) : setMenuOpen(true))}>
               <MoreDots size={18} />
             </Button>
             <button
@@ -546,6 +551,55 @@ export function TaskDetail() {
         />
       </div>
 
+      {stageAnchor && (
+        <Menu
+          anchor={stageAnchor}
+          label="Этап"
+          onClose={() => setStageAnchor(null)}
+          items={[
+            ...[{ id: null as string | null, label: 'Без этапа' }, ...sortedStatuses.map((st) => ({ id: st.id as string | null, label: st.label }))].map(
+              (st): MenuItem => {
+                const full = st.id ? sortedStatuses.find((x) => x.id === st.id) : undefined
+                return {
+                  label: st.label,
+                  checked: task.status_id === st.id,
+                  icon: (
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ background: full ? `var(--status-${stageTone(full, statuses)})` : 'var(--border-strong)' }}
+                    />
+                  ),
+                  onSelect: () => {
+                    if (st.id !== task.status_id) saveField({ status_id: st.id })
+                  },
+                }
+              },
+            ),
+            { label: 'Настроить этапы…', separated: true, onSelect: () => navigate('/statuses') },
+          ]}
+        />
+      )}
+      {menuAnchor && (
+        <Menu
+          anchor={menuAnchor}
+          label="Действия с задачей"
+          onClose={() => setMenuAnchor(null)}
+          items={[
+            isRunning
+              ? { label: 'Остановить учёт', hint: 'S', onSelect: () => stopTimer.mutate(undefined, { onError }) }
+              : { label: 'Начать учёт', hint: 'S', onSelect: () => startTimer.mutate(task.id, { onError }) },
+            { label: 'Переименовать', onSelect: () => {
+                setDraftName(task.name)
+                setRenaming(true)
+              },
+            },
+            { label: 'Дублировать…', separated: true, onSelect: () => setDuplicating(true) },
+            ...(!isSubtask ? [{ label: 'Новый период…', onSelect: () => setNextSprint(true) }] : []),
+            { label: 'Удалить задачу…', danger: true, separated: true, onSelect: () => setConfirmingDelete(true) },
+          ]}
+        />
+      )}
+
       <Sheet open={stageOpen} onClose={() => setStageOpen(false)} title="Этап">
         <ListGroup>
           {[{ id: null as string | null, label: 'Без этапа' }, ...sortedStatuses.map((s) => ({ id: s.id as string | null, label: s.label }))].map((s) => {
@@ -576,7 +630,7 @@ export function TaskDetail() {
         </Link>
       </Sheet>
 
-      <Sheet open={factOpen} onClose={() => setFactOpen(false)} title="Факт">
+      <Sheet anchored open={factOpen} onClose={() => setFactOpen(false)} title="Факт">
         <div className="flex items-center gap-4">
           <Ring size={72} pct={done ? 100 : pct} state={ringState} centerBg="var(--surface)">
             <span className="tabular font-mono text-sm font-medium text-text">{task.planned_hours > 0 ? `${Math.round(pct)}%` : '—'}</span>

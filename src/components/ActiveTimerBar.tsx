@@ -298,6 +298,7 @@ export function QuickNoteSheet({
 
   return (
     <Sheet
+      anchored
       open={open}
       onClose={onClose}
       title="Комментарий"

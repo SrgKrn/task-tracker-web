@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { Popover, pressedAnchor, usePopoverMode } from './Popover'
 import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import type { StageTone } from '../lib/stage'
 import type { LabelColor } from '../lib/types'
@@ -264,20 +265,45 @@ function useDialogFocus(ref: RefObject<HTMLElement | null>, open: boolean) {
  * Лист снизу на телефоне, окно по центру на широком экране — один каркас на все диалоги.
  * Закрытие: Esc, подложка, кнопка в шапке (headerAction) или в подвале.
  */
-export function Sheet({
-  open,
-  onClose,
-  title,
-  children,
-  headerAction,
-}: {
+interface SheetProps {
   open: boolean
   onClose: () => void
   title: string
   children: ReactNode
   /** справа от заголовка — например «Отмена» */
   headerAction?: ReactNode
-}) {
+  /**
+   * Выбор у кнопки (0.61): на компьютере с мышью окно всплывает у кнопки, которая его
+   * открыла, а не по центру с затемнением. На телефоне — та же шторка снизу.
+   */
+  anchored?: boolean
+}
+
+export function Sheet(props: SheetProps) {
+  const popover = usePopoverMode()
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const [wasOpen, setWasOpen] = useState(false)
+  if (props.open !== wasOpen) {
+    setWasOpen(props.open)
+    setAnchor(props.open && props.anchored ? pressedAnchor() : null)
+  }
+  if (props.anchored && popover && anchor && props.open) {
+    return (
+      <Popover anchor={anchor} onClose={props.onClose} label={props.title} minWidth={280}>
+        <div className="flex flex-col gap-3 p-3">
+          <div className="flex min-h-6 items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-text-secondary">{props.title}</h3>
+            {props.headerAction}
+          </div>
+          {props.children}
+        </div>
+      </Popover>
+    )
+  }
+  return <DialogSheet {...props} />
+}
+
+function DialogSheet({ open, onClose, title, children, headerAction }: SheetProps) {
   const ref = useRef<HTMLDivElement>(null)
   const onDialogKey = useDialogFocus(ref, open)
   /*

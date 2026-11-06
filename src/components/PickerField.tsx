@@ -141,7 +141,7 @@ export function PickerField({
         </>
       )}
 
-      <Sheet open={open} onClose={close} title={label}>
+      <Sheet anchored open={open} onClose={close} title={label}>
         <div
           className="flex h-11 items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary"
         >

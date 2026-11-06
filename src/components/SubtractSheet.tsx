@@ -89,7 +89,7 @@ export function SubtractSheet({
     : null
 
   return (
-    <Sheet open={open} onClose={onCancel} title="Отнять время">
+    <Sheet anchored open={open} onClose={onCancel} title="Отнять время">
       <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       {(nothing || tooMuch) && (

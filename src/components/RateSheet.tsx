@@ -29,7 +29,7 @@ export function RateSheet({
   onSubmit: (value: RateValue) => void
 }) {
   return (
-    <Sheet open={open} onClose={onCancel} title={title}>
+    <Sheet anchored open={open} onClose={onCancel} title={title}>
       {/* поля монтируются при открытии — сразу с текущим значением, без сброса после первого кадра */}
       <RateFields value={value} inheritedLabel={inheritedLabel} onCancel={onCancel} onSubmit={onSubmit} />
     </Sheet>

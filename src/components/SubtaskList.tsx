@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { addInputId, setOpen, startAdding, stopAdding, useAddingFor } from '../lib/expanded'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { Menu, usePopoverMode } from './Popover'
 import { PlayGlyph, Ring, StopGlyph, type RingState } from './Ring'
 import { Check, Plus } from './Icon'
 import { tap } from '../lib/haptics'
@@ -137,6 +138,10 @@ function SubtaskRow({
 }) {
   const isRunning = activeTimer?.task_id === task.id
   useTicker(isRunning)
+  // правый клик на компьютере — меню у курсора (0.61)
+  const popoverMode = usePopoverMode()
+  const navigate = useNavigate()
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
 
   const done = !!status?.is_final
   const fact = isRunning && activeTimer ? task.fact_hours + elapsedHours(activeTimer.started_at) : task.fact_hours
@@ -162,7 +167,24 @@ function SubtaskRow({
     <div
       className="flex min-h-12 items-center gap-2.5 rounded-sm py-2 pr-2.5 pl-2"
       style={{ background: bg, boxShadow: isRunning ? 'inset 2px 0 0 var(--accent)' : undefined }}
+      onContextMenu={(e) => {
+        if (!popoverMode) return
+        e.preventDefault()
+        setMenuAt({ x: e.clientX, y: e.clientY })
+      }}
     >
+      {menuAt && (
+        <Menu
+          anchor={menuAt}
+          label="Действия с подзадачей"
+          onClose={() => setMenuAt(null)}
+          items={[
+            { label: 'Открыть', onSelect: () => navigate(`/tasks/${task.id}`) },
+            isRunning ? { label: 'Остановить учёт', onSelect: onStop } : { label: 'Начать учёт', onSelect: onStart },
+            ...(canClose ? [{ label: done ? 'Вернуть в работу' : 'Готово', onSelect: onToggleDone }] : []),
+          ]}
+        />
+      )}
       {/* как в строке задачи (0.60): под учётом центр кольца залит терракотой */}
       <span key={isRunning ? 'run' : 'idle'} className={`relative shrink-0 rounded-full ${ringChanged ? (isRunning ? 'ring-pop ring-to-run' : 'ring-pop ring-to-idle') : ''}`}>
       <Ring

@@ -428,7 +428,7 @@ export function TaskList() {
 
       {!desktop && onList && createPortal(floatPanel, document.body)}
 
-      <Sheet open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
+      <Sheet anchored open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
         <ListGroup>
           {(['due', 'created', ...(method !== 'none' ? (['method'] as const) : []), 'manual'] as TaskSort[]).map((s) => (
             <button
@@ -449,6 +449,7 @@ export function TaskList() {
       </Sheet>
 
       <Sheet
+        anchored
         open={sheet === 'filter'}
         onClose={() => setSheet(null)}
         title="Фильтр и вид"
@@ -582,7 +583,7 @@ function FoldersSheet({
   const condKey = (c: FolderCond | null) => (c ? (c.kind === 'item' ? `item:${c.itemId}` : c.kind) : '')
 
   return (
-    <Sheet open={open} onClose={onClose} title="Папки">
+    <Sheet anchored open={open} onClose={onClose} title="Папки">
       <ListGroup>
         {options.map((o) => (
           <button

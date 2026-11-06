@@ -672,7 +672,7 @@ export function Today() {
       </div>
       <NewTaskSheet open={firstTask !== null} onClose={() => setFirstTask(null)} preset={{ title: firstTask ?? '', planDate: today }} />
 
-      <Sheet open={widgetsOpen} onClose={() => setWidgetsOpen(false)} title="Виджеты">
+      <Sheet anchored open={widgetsOpen} onClose={() => setWidgetsOpen(false)} title="Виджеты">
         <span className="-mt-2 text-sm text-text-secondary">Что показывать на «Сегодня» и в каком порядке. Запоминается на этом устройстве.</span>
         <ListGroup>
           {widgets.order.map((id, i) => {
@@ -727,7 +727,7 @@ export function Today() {
         />
       )}
 
-      <Sheet open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">
+      <Sheet anchored open={postponing !== null} onClose={() => setPostponing(null)} title="Перенести срок">
         {postponing && (
           <div className="flex flex-col gap-2 pb-2">
             <p className="truncate text-base text-text-secondary">{postponing.name}</p>

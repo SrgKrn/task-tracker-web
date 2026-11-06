@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Menu, usePopoverMode } from './Popover'
 
 export interface RowMenuItem {
   label: string
@@ -17,7 +18,33 @@ const CLOSE_MS = 160
  * строка «отрывается» — чуть крупнее и с тенью, — под ней раскрывается меню из угла.
  * Строка здесь — копия настоящей: настоящая остаётся в списке на своём месте.
  */
-export function RowMenu({ anchor, items, onClose }: { anchor: HTMLElement | null; items: RowMenuItem[]; onClose: () => void }) {
+export function RowMenu({
+  anchor,
+  point,
+  items,
+  onClose,
+}: {
+  anchor: HTMLElement | null
+  /** где нажали правой кнопкой: на компьютере меню всплывает у курсора (0.61) */
+  point?: { x: number; y: number } | null
+  items: RowMenuItem[]
+  onClose: () => void
+}) {
+  const popover = usePopoverMode()
+  if (popover && (point || anchor)) {
+    return (
+      <Menu
+        anchor={point ?? anchor!}
+        label="Действия с задачей"
+        onClose={onClose}
+        items={items.map((it, i) => ({ ...it, separated: it.danger && i > 0 }))}
+      />
+    )
+  }
+  return <TouchRowMenu anchor={anchor} items={items} onClose={onClose} />
+}
+
+function TouchRowMenu({ anchor, items, onClose }: { anchor: HTMLElement | null; items: RowMenuItem[]; onClose: () => void }) {
   const cloneBox = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [closing, setClosing] = useState(false)

@@ -20,6 +20,7 @@ export function TimerNoteSheet({ open, onClose, timer }: { open: boolean; onClos
   // и изнутри неё окно оказывалось под нижней панелью вкладок
   return createPortal(
     <Sheet
+      anchored
       open={open}
       onClose={onClose}
       title="Комментарий к учёту"

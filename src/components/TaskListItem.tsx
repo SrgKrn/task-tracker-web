@@ -295,6 +295,7 @@ export function TaskListItem({
    */
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPoint, setMenuPoint] = useState<{ x: number; y: number } | null>(null)
   const menuHold = useRef(0)
   const menuPress = useRef<{ x: number; y: number } | null>(null)
   const swallowClick = useRef(false)
@@ -500,6 +501,7 @@ export function TaskListItem({
             const kind = (e.nativeEvent as PointerEvent).pointerType
             if (kind && kind !== 'mouse') return
             menuCancel()
+            setMenuPoint({ x: e.clientX, y: e.clientY })
             setMenuOpen(true)
           }}
         >
@@ -649,7 +651,17 @@ export function TaskListItem({
         </div>
       </div>
 
-      {menuOpen && <RowMenu anchor={rowRef.current} items={menuItems} onClose={() => setMenuOpen(false)} />}
+      {menuOpen && (
+        <RowMenu
+          anchor={rowRef.current}
+          point={menuPoint}
+          items={menuItems}
+          onClose={() => {
+            setMenuOpen(false)
+            setMenuPoint(null)
+          }}
+        />
+      )}
 
       <Collapse open={open}>
         <div className="bg-surface px-3">

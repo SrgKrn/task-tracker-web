@@ -11,7 +11,9 @@ export function useRevealOnLoad(ref: RefObject<HTMLElement | null>, loading: boo
     was.current = loading
     const box = ref.current
     if (!came || !box || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const rows = [...box.querySelectorAll<HTMLElement>('.task-row')].slice(0, 12)
+    // проявляется строка вместе с «ящиком» свайпа под ней: если гасить только саму строку,
+    // под прозрачной строкой на долю секунды видны «Готово» и «Удалить» (0.61)
+    const rows = [...box.querySelectorAll<HTMLElement>('.task-row')].slice(0, 12).map((row) => row.parentElement ?? row)
     const anims = rows.map((row, i) =>
       row.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], {
         duration: 320,
