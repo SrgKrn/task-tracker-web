@@ -36,6 +36,10 @@ export interface ClientSnapshot {
   journal?: ClientJournalDay[]
   /** комментарии к учёту показаны клиенту (галочка при создании ссылки) */
   withNotes?: boolean
+  /** 0.66: реквизиты сторон («Про»), номер документа и подзадачи спринтов (ключ — id спринта в снимке) */
+  requisites?: { owner?: string | null; client?: string | null }
+  number?: string | null
+  subs?: Record<string, { name: string; hours: number }[]>
 }
 
 export interface ClientJournalDay {
@@ -56,6 +60,12 @@ export function buildClientSnapshot(args: {
   color?: string | null
   /** показать клиенту комментарии к учёту (отчёт для этого собирают с комментариями) */
   withNotes?: boolean
+  /** раздел «Что сделано» по дням; по умолчанию есть */
+  withJournal?: boolean
+  requisites?: { owner?: string | null; client?: string | null }
+  number?: string | null
+  /** подзадачи спринта с часами за период — если их показывают клиенту */
+  subsOf?: (sprintId: string) => { name: string; hours: number }[]
 }): ClientSnapshot {
   const { report: r, itemId } = args
   const ofClient = new Set(args.tasks.filter((t) => t.item_ids.includes(itemId)).map((t) => t.id))
@@ -77,7 +87,19 @@ export function buildClientSnapshot(args: {
     journal.push({ date: day.date, label: day.label, total, rows: [...rows.values()].sort((a, b) => b.hours - a.hours) })
   }
   // id задач клиенту ни к чему — заменяем порядковыми
-  const sprints = r.sprints.filter((s) => ofClient.has(s.id)).map((s, i) => ({ ...s, id: String(i + 1) }))
+  const own = r.sprints.filter((s) => ofClient.has(s.id))
+  const sprints = own.map((s, i) => ({ ...s, id: String(i + 1) }))
+  const subs: Record<string, { name: string; hours: number }[]> = {}
+  if (args.subsOf) {
+    own.forEach((s, i) => {
+      const list = args.subsOf!(s.id).filter((x) => x.hours > 0.004)
+      if (list.length) subs[String(i + 1)] = list
+    })
+  }
+  const req = {
+    owner: args.requisites?.owner?.trim() || null,
+    client: args.requisites?.client?.trim() || null,
+  }
   const includeOvertime = r.options.includeOvertime === true
   const over = sprints.filter((s) => s.group === 'over')
   return {
@@ -104,8 +126,11 @@ export function buildClientSnapshot(args: {
     color: args.color ?? null,
     plan: sprints.reduce((sum, s) => sum + s.plan, 0),
     days: (r.days ?? []).map((d) => ({ date: d.date, day: d.day, weekend: d.weekend, hours: byDay.get(d.date) ?? 0 })),
-    journal,
+    journal: args.withJournal === false ? [] : journal,
     withNotes: args.withNotes === true,
+    ...(req.owner || req.client ? { requisites: req } : {}),
+    ...(args.number?.trim() ? { number: args.number.trim() } : {}),
+    ...(Object.keys(subs).length ? { subs } : {}),
   }
 }
 

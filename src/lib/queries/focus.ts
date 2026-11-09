@@ -45,6 +45,7 @@ function invalidateFocus(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['tasks'] })
   qc.invalidateQueries({ queryKey: ['time_entries'] })
   qc.invalidateQueries({ queryKey: ['time_entries_range'] })
+  qc.invalidateQueries({ queryKey: ['report_raw'] })
 }
 
 type FocusAction =

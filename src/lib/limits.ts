@@ -116,6 +116,8 @@ export function planLimitMessage(code: string): string | null {
       return '«Работа с клиентами» — на тарифе «Про». Тарифы — в Профиле.'
     case 'logo':
       return 'Свой логотип в отчёте — на тарифе «Про». Тарифы — в Профиле.'
+    case 'requisites':
+      return 'Реквизиты в отчёте — на тарифе «Про». Тарифы — в Профиле.'
     case 'share_links':
       return 'Ссылка для клиента — на тарифе «Про».'
     case 'file_mb':

@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs'
 import type { ReportData } from './report'
+import type { ClientSnapshot } from './clientReport'
 
 /*
  * Excel — для своего анализа. Те же числа, что в PDF, но живые: настоящие даты и часы,
@@ -494,4 +495,115 @@ export async function exportExcel(r: ReportData) {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
   triggerDownload(blob, `Отчёт_${r.from}_${r.to}.xlsx`)
+}
+
+/* ── отчёт для клиента (0.66): задачи — часы — ставка — сумма ─────── */
+
+/** Книга для клиента: лист «Отчёт» как документ и лист «Что сделано» по дням. */
+export function buildClientWorkbook(s: ClientSnapshot): ExcelJS.Workbook {
+  const wb = new ExcelJS.Workbook()
+  wb.creator = s.owner || 'Semternity'
+  wb.created = new Date(s.generatedAt)
+  const ws = wb.addWorksheet('Отчёт')
+  ws.columns = [{ width: 46 }, { width: 12 }, { width: 14 }, { width: 16 }, { width: 8 }]
+  let line = 1
+  const put = (text: string, font: Partial<ExcelJS.Font> = {}) => {
+    const cell = ws.getCell(`A${line}`)
+    cell.value = text
+    cell.font = font
+    cell.alignment = { wrapText: true, vertical: 'top' }
+    line += 1
+    return cell
+  }
+  put(`Отчёт о работе${s.number ? ` № ${s.number}` : ''}`, { bold: true, size: 14 })
+  put(`Период: ${s.label}`)
+  put(`Сформирован ${new Date(s.generatedAt).toLocaleString('ru-RU')}`, { color: { argb: MUTED } })
+  line += 1
+  // стороны: название и реквизиты построчно
+  const party = (role: string, name: string, body?: string | null) => {
+    put(role, { color: { argb: MUTED } })
+    put(name, { bold: true })
+    for (const row of (body ?? '').split(/\r?\n/).filter((x) => x.trim())) put(row.trim())
+    line += 1
+  }
+  party('Исполнитель', s.owner || '—', s.requisites?.owner)
+  party('Заказчик', s.client, s.requisites?.client)
+
+  const head = ws.getRow(line)
+  head.values = ['Задача', 'Часы', 'Ставка', 'Сумма', 'Валюта']
+  head.font = { bold: true }
+  head.eachCell((cell) => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD_FILL } }
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FFD6D2C8' } } }
+  })
+  line += 1
+  const first = line
+  for (const sp of s.sprints) {
+    const b = sp.bill
+    const hours = b ? b.hours + (s.includeOvertime ? b.overHours : 0) : sp.factPeriod
+    const row = ws.getRow(line)
+    row.values = [sp.name, round2(hours), b ? b.rate : null, null, b ? b.currency : null]
+    row.getCell(2).numFmt = HOURS
+    row.getCell(3).numFmt = MONEY
+    // сумма — формулой: клиент видит, из чего она сложилась, и может проверить
+    if (b) row.getCell(4).value = { formula: `ROUND(B${line}*C${line},2)`, result: b.amount + (s.includeOvertime ? b.overAmount : 0) }
+    row.getCell(4).numFmt = MONEY
+    line += 1
+    if (b && b.overHours > 0.004) {
+      const note = ws.getRow(line)
+      note.values = [`   сверх плана ${round2(b.overHours)} ч — ${s.includeOvertime ? 'в сумме' : 'не в сумме'}`]
+      note.font = { color: { argb: TERRA }, size: 9 }
+      line += 1
+    }
+    for (const sub of s.subs?.[sp.id] ?? []) {
+      const r = ws.getRow(line)
+      r.values = [`   ${sub.name}`, round2(sub.hours)]
+      r.font = { color: { argb: MUTED }, size: 9 }
+      r.getCell(2).numFmt = HOURS
+      line += 1
+    }
+  }
+  const last = line - 1
+  line += 1
+  for (const t of s.billing) {
+    const row = ws.getRow(line)
+    row.values = [`Итого к оплате, ${t.currency}`, round2(t.hours + (s.includeOvertime ? t.overHours : 0)), null, null, t.currency]
+    // итог по валюте — суммой по строкам этой валюты
+    row.getCell(4).value = { formula: `SUMIF(E${first}:E${last},"${t.currency}",D${first}:D${last})`, result: t.due }
+    row.font = { bold: true }
+    row.getCell(2).numFmt = HOURS
+    row.getCell(4).numFmt = MONEY
+    row.eachCell((cell) => {
+      cell.border = { top: { style: 'thin', color: { argb: 'FF6B6860' } } }
+    })
+    line += 1
+  }
+  if (!s.billing.length) {
+    const row = ws.getRow(line)
+    row.values = ['Итого часов', round2(s.hours)]
+    row.font = { bold: true }
+    row.getCell(2).numFmt = HOURS
+  }
+
+  const journal = s.journal ?? []
+  if (journal.length) {
+    const j = sheet(wb, 'Что сделано', [
+      { header: 'Дата', key: 'date', width: 12, fmt: 'dd.mm.yyyy' },
+      { header: 'Задача', key: 'title', width: 50 },
+      { header: 'Часы', key: 'hours', width: 10, fmt: HOURS },
+      ...(s.withNotes ? [{ header: 'Комментарий', key: 'note', width: 60 }] : []),
+    ])
+    for (const day of journal) {
+      for (const row of day.rows) {
+        j.addRow({ date: excelDate(day.date), title: row.title, hours: round2(row.hours), note: row.notes.join(' · ') })
+      }
+    }
+    filter(j, s.withNotes ? 4 : 3)
+  }
+  return wb
+}
+
+export async function exportClientExcel(s: ClientSnapshot, filename: string) {
+  const buffer = await buildClientWorkbook(s).xlsx.writeBuffer()
+  triggerDownload(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename)
 }

@@ -49,6 +49,8 @@ export interface GroupItem {
   /** ставка в час (обычно у клиента); null — не задана */
   hourly_rate: number | null
   rate_currency: string | null
+  /** реквизиты клиента для отчёта (0.66, «Про»): название, УНП/ИНН, счёт — свободным текстом */
+  requisites?: string | null
   workspace_id: string
   created_at: string
   updated_at: string
@@ -247,6 +249,8 @@ export interface UserSettings {
   onboarded_at: string | null
   /** свой логотип в отчёте — PNG data URL (0.41, «Про») */
   report_logo?: string | null
+  /** свои реквизиты в отчёте для клиента (0.66, «Про») */
+  report_requisites?: string | null
   /** закрытые подсказки 0.43: {id: когда}; одни на все устройства */
   tips?: Record<string, string>
   /** «Показывать подсказки» в справке */

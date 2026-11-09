@@ -105,11 +105,28 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
         )}
         <h1 className="text-2xl font-semibold tracking-[-0.02em] text-balance text-text">{snap.client}</h1>
         <p className="text-base text-text-secondary">
-          Отчёт за {snap.label}
+          Отчёт{snap.number ? ` № ${snap.number}` : ''} за {snap.label}
           {snap.owner ? ` · от ${snap.owner}` : ''}
         </p>
         <p className="text-sm text-text-tertiary">Сформирован {stamp}. Цифры на этот момент.</p>
       </header>
+
+      {(snap.requisites?.owner || snap.requisites?.client) && (
+        <Card className="grid gap-4 p-4 sm:grid-cols-2">
+          {(
+            [
+              ['Исполнитель', snap.owner, snap.requisites.owner],
+              ['Заказчик', snap.client, snap.requisites.client],
+            ] as const
+          ).map(([role, name, body]) => (
+            <div key={role} className="flex min-w-0 flex-col gap-1">
+              <Overline>{role}</Overline>
+              <span className="text-base font-semibold text-text">{name}</span>
+              {body && <span className="text-sm leading-[1.5] whitespace-pre-line text-text-secondary">{body}</span>}
+            </div>
+          ))}
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card className="flex min-w-0 flex-col gap-2 p-4">

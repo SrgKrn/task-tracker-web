@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { buildReport, previousPeriod, type FocusSessionInput, type ReportData, type ReportOptions } from '../report'
 import { supabase } from '../supabaseClient'
 import { activeWorkspaceId } from '../workspace'
@@ -27,19 +28,25 @@ async function fetchAll<T>(
   }
 }
 
-/** Всё, что нужно отчёту за период, — одним заходом при нажатии «Скачать». */
-export async function loadReport(args: {
+/** Сырые данные отчёта за период — то, что лежит в базе; считает buildReport. */
+export interface ReportRaw {
   from: string
   to: string
-  tasks: Task[]
-  groups: Group[]
-  items: GroupItem[]
-  statuses: Status[]
-  options: ReportOptions
-  /** свой логотип в шапке — только если тариф позволяет («Про») */
-  withLogo?: boolean
-}): Promise<ReportData> {
-  const { from, to, options } = args
+  /** записи за [начало прошлого периода, конец текущего] */
+  entries: TimeEntry[]
+  comments: Comment[]
+  closedTaskIds: string[]
+  firstEntryDate: string | null
+  perDay: number | null
+  perMonth: number | null
+  workDays: number
+  clientWork: boolean
+  priorityMethod: PriorityMethod
+  focusSessions: FocusSessionInput[]
+  meetingEntryIds: string[]
+}
+
+export async function fetchReportRaw(from: string, to: string, withComments: boolean): Promise<ReportRaw> {
   const prev = previousPeriod(from, to)
   const ws = activeWorkspaceId()
   const start = localMidnightIso(from)
@@ -56,7 +63,7 @@ export async function loadReport(args: {
         .order('id')
         .range(a, b),
     ),
-    options.includeComments
+    withComments
       ? fetchAll<Comment>((a, b) =>
           supabase.from('comments').select('*').eq('workspace_id', ws).gte('created_at', start).lt('created_at', end).order('id').range(a, b),
         )
@@ -104,35 +111,94 @@ export async function loadReport(args: {
   ])
   if (first.error) throw first.error
   if (settings.error) throw settings.error
-
-  // без «Работы с клиентами» ставок в отчёте нет: ни «К оплате», ни колонок суммы
-  const clientWork = (settings.data as { client_work?: boolean } | null)?.client_work === true
-  const noRate = { hourly_rate: null, rate_currency: null }
-  // логотип — из настроек профиля; без него в шапке знак Semternity
-  let logo: string | null = null
-  if (args.withLogo) {
-    const { data } = await supabase.from('user_settings').select('report_logo').maybeSingle()
-    logo = (data as { report_logo?: string | null } | null)?.report_logo ?? null
-  }
-  const report = buildReport({
+  const s = settings.data as {
+    planned_hours_per_day?: number | null
+    planned_hours_per_month?: number | null
+    client_work?: boolean
+    priority_method?: PriorityMethod
+  } | null
+  return {
     from,
     to,
-    tasks: clientWork ? args.tasks : args.tasks.map((t) => ({ ...t, ...noRate })),
-    groups: args.groups,
-    items: clientWork ? args.items : args.items.map((i) => ({ ...i, ...noRate })),
-    statuses: args.statuses,
     entries,
     comments,
     closedTaskIds: [...new Set(closed.map((c) => c.task_id))],
     firstEntryDate: (first.data as { effective_date: string } | null)?.effective_date ?? null,
-    perDay: settings.data?.planned_hours_per_day != null ? Number(settings.data.planned_hours_per_day) : null,
-    perMonth: settings.data?.planned_hours_per_month != null ? Number(settings.data.planned_hours_per_month) : null,
+    perDay: s?.planned_hours_per_day != null ? Number(s.planned_hours_per_day) : null,
+    perMonth: s?.planned_hours_per_month != null ? Number(s.planned_hours_per_month) : null,
     workDays: normSettingsOf(settings.data).workDays,
-    generatedAt: new Date(),
-    options,
+    clientWork: s?.client_work === true,
+    priorityMethod: s?.priority_method ?? 'none',
     focusSessions: focus,
     meetingEntryIds: meetings.map((m) => m.entry_id).filter((id): id is string => !!id),
-    priorityMethod: ((settings.data as { priority_method?: PriorityMethod } | null)?.priority_method ?? 'none') as PriorityMethod,
+  }
+}
+
+/**
+ * Отчёт из сырых данных. Без «Работы с клиентами» ставок в отчёте нет: ни «К оплате»,
+ * ни колонок суммы. tasks/entries можно передать уже отфильтрованными (срез «Сводки»).
+ */
+export function reportFromRaw(
+  raw: ReportRaw,
+  args: { tasks: Task[]; groups: Group[]; items: GroupItem[]; statuses: Status[]; options: ReportOptions; entries?: TimeEntry[] },
+): ReportData {
+  const noRate = { hourly_rate: null, rate_currency: null }
+  const cw = raw.clientWork
+  return buildReport({
+    from: raw.from,
+    to: raw.to,
+    tasks: cw ? args.tasks : args.tasks.map((t) => ({ ...t, ...noRate })),
+    groups: args.groups,
+    items: cw ? args.items : args.items.map((i) => ({ ...i, ...noRate })),
+    statuses: args.statuses,
+    entries: args.entries ?? raw.entries,
+    comments: args.options.includeComments ? raw.comments : [],
+    closedTaskIds: raw.closedTaskIds,
+    firstEntryDate: raw.firstEntryDate,
+    perDay: raw.perDay,
+    perMonth: raw.perMonth,
+    workDays: raw.workDays,
+    generatedAt: new Date(),
+    options: args.options,
+    focusSessions: raw.focusSessions,
+    meetingEntryIds: raw.meetingEntryIds,
+    priorityMethod: raw.priorityMethod,
   })
+}
+
+/** свой логотип из настроек профиля; null — в шапке знак Semternity */
+export async function fetchReportLogo(): Promise<string | null> {
+  const { data } = await supabase.from('user_settings').select('report_logo').maybeSingle()
+  return (data as { report_logo?: string | null } | null)?.report_logo ?? null
+}
+
+/** Всё, что нужно отчёту за период, — одним заходом при нажатии «Скачать». */
+export async function loadReport(args: {
+  from: string
+  to: string
+  tasks: Task[]
+  groups: Group[]
+  items: GroupItem[]
+  statuses: Status[]
+  options: ReportOptions
+  /** свой логотип в шапке — только если тариф позволяет («Про») */
+  withLogo?: boolean
+}): Promise<ReportData> {
+  const raw = await fetchReportRaw(args.from, args.to, args.options.includeComments)
+  const report = reportFromRaw(raw, args)
+  const logo = args.withLogo ? await fetchReportLogo() : null
   return { ...report, logo }
+}
+
+/**
+ * Данные «Сводки» за период (0.66) — с комментариями: экран для себя. Держим прошлый
+ * результат, пока грузится новый период, — графики не мигают.
+ */
+export function useReportRaw(from: string, to: string) {
+  return useQuery({
+    queryKey: ['report_raw', activeWorkspaceId(), from, to],
+    queryFn: () => fetchReportRaw(from, to, true),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  })
 }

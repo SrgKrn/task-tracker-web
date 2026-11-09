@@ -1236,7 +1236,7 @@ function billingPage(p: Pdf, r: ReportData) {
 
 function clientPages(p: Pdf, s: ClientSnapshot) {
   const color = labelHex(s.color)
-  p.page(`Отчёт для «${s.client}»`, s.label)
+  p.page(`Отчёт для «${s.client}»${s.number ? ` № ${s.number}` : ''}`, s.label)
   p.y += 2
   p.text(
     [s.owner ? `Подготовил: ${s.owner}` : '', `сформирован ${formatStamp(new Date(s.generatedAt))}`].filter(Boolean).join(' · '),
@@ -1244,6 +1244,21 @@ function clientPages(p: Pdf, s: ClientSnapshot) {
     p.y,
     { s: 7.8, c: C.ink2 },
   )
+  // реквизиты сторон (0.66, «Про»): две колонки под шапкой
+  const req = s.requisites
+  if (req?.owner || req?.client) {
+    const colW = (CW - 24) / 2
+    const y0 = p.y + 20
+    const block = (x: number, role: string, name: string, body: string | null | undefined): number => {
+      p.text(role, x, y0, { s: 6.8, c: C.muted })
+      p.text(name, x, y0 + 13, { b: true, s: 9.4, w: colW })
+      return body ? 13 + p.para(body, x, y0 + 26, colW, { s: 7.6, c: C.ink2 }, 1.4) + 8 : 20
+    }
+    const hOwner = block(MX, 'Исполнитель', s.owner || 'Исполнитель', req.owner)
+    const hClient = block(MX + colW + 24, 'Заказчик', s.client, req.client)
+    p.y = y0 + Math.max(hOwner, hClient) + 6
+    p.rule(p.y, MX, PW - MX, C.rule)
+  }
   const top = p.y + 22
 
   // часы и план
@@ -1344,6 +1359,18 @@ function clientPages(p: Pdf, s: ClientSnapshot) {
     }
     if (billLine) p.text(billLine, PW - MX, yy + 17, { f: 'mono', s: 7.2, c: C.ink2, a: 'right' })
     p.y += billLine ? 42 : 36
+    // подзадачи с часами за период — если их показали клиенту
+    const subs = s.subs?.[sp.id] ?? []
+    if (subs.length) {
+      p.y -= 12
+      for (const sub of subs) {
+        p.ensure(14)
+        p.text(sub.name, MX + 12, p.y, { s: 7.6, c: C.ink2, w: 300 })
+        p.text(`${h2(sub.hours)} ч`, PW - MX, p.y, { f: 'mono', s: 7.4, c: C.ink2, a: 'right' })
+        p.y += 11.5
+      }
+      p.y += 12
+    }
   }
   if (s.billing.length) {
     p.ensure(30)
