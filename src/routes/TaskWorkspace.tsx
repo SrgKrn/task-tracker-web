@@ -11,6 +11,7 @@ import { entryMinutes, formatHoursRu } from '../lib/time'
 import { TaskList } from './TaskList'
 import { useNavDirection } from '../lib/navMotion'
 import { useMediaQuery } from '../lib/device'
+import { useTaskView } from '../lib/taskView'
 import { clampListWidth, LIST_WIDTH_DEFAULT, loadListWidth, saveListWidth } from '../lib/paneWidth'
 
 const DEFAULT_DAY_NORM = 8
@@ -134,17 +135,21 @@ export function TaskWorkspace() {
   const dir = useNavDirection(location.pathname)
   const desktop = useMediaQuery('(min-width: 1024px)')
   const [listWidth, setListWidth] = useState(loadListWidth)
+  // доска и календарь (0.64) — во всю ширину, карточка открывается справа своей ширины
+  const wide = useTaskView()[0] !== 'list'
 
   return (
     <div className="lg:flex lg:items-start" style={desktop ? ({ '--list-w': `${listWidth}px` } as React.CSSProperties) : undefined}>
       <div
         className={`${hasDetail ? 'hidden lg:block' : 'block'} task-list-pane sc lg:sc-fade`}
+        data-wide={wide || undefined}
       >
         <TaskList />
       </div>
       <PaneSplitter width={listWidth} onChange={setListWidth} />
       <div
-        className={`${hasDetail ? 'block' : 'hidden lg:flex lg:items-center lg:justify-center'} task-detail-pane min-w-0 flex-1`}
+        className={`${hasDetail ? 'block' : wide ? 'hidden' : 'hidden lg:flex lg:items-center lg:justify-center'} task-detail-pane min-w-0 flex-1`}
+        data-wide={wide || undefined}
       >
         {hasDetail ? (
           // карточка въезжает справа, как экран в iOS; соседняя — тоже, «назад» — слева

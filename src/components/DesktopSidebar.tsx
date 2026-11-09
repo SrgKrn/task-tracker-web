@@ -4,6 +4,7 @@ import { NAV_TABS } from './navTabs'
 import { Avatar } from './Avatar'
 import { SidebarWorkspace } from './Workspaces'
 import { ActiveTimerBar } from './ActiveTimerBar'
+import { SidebarFolders } from './SidebarFolders'
 import { useProfile } from '../lib/profile'
 import { LogOut, PanelLeft, Plus, Search } from './Icon'
 import { Kbd, Logo, MOD_KEY } from './ui'
@@ -111,7 +112,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         <SidebarWorkspace collapsed={collapsed} />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-2">
+      <nav className="sc flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
         {NAV_TABS.map((link) => {
           const active = link.match(location.pathname)
           return (
@@ -121,6 +122,8 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
             </Link>
           )
         })}
+        {/* папки задач — разделом, как папки чатов в Telegram Desktop (0.64) */}
+        {!collapsed && <SidebarFolders />}
       </nav>
 
       <div className={`flex items-center gap-2 border-t border-divider p-2 ${collapsed ? 'flex-col' : ''}`}>

@@ -108,3 +108,15 @@ export function buildFolders(settings: FolderSettings, ctx: FolderContext, tasks
       match: (t: Task) => (t.item_ids ?? []).includes(item.id),
     }))
 }
+
+/**
+ * Свой порядок папок (0.64): ключи из `order` — первыми и по нему, новые папки — следом в
+ * исходном порядке. Ключи удалённых папок просто не находятся.
+ */
+export function orderFolders<T extends { key: string }>(folders: T[], order: string[]): T[] {
+  const rank = new Map(order.map((key, i) => [key, i]))
+  return folders
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => (rank.get(a.f.key) ?? order.length + a.i) - (rank.get(b.f.key) ?? order.length + b.i))
+    .map(({ f }) => f)
+}

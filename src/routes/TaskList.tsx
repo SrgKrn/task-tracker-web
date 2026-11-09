@@ -11,15 +11,15 @@ import { DatePicker } from '../components/DatePicker'
 import { ROW_RENAME_EVENT, TaskListItem } from '../components/TaskListItem'
 import { BulkBar, type BulkPanel } from '../components/BulkBar'
 import { useListSelection, type ListAction } from '../components/useListSelection'
-import { ArrowUp, Check, ChevronDown, Close, Plus, Search, Settings2, SortArrows } from '../components/Icon'
+import { ArrowUp, Check, ChevronDown, Close, Search, Settings2, SortArrows } from '../components/Icon'
 import { usePopoverMode } from '../components/Popover'
 import { DENSITY_LABEL, useDensity, type Density } from '../lib/density'
-import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton, fieldClass } from '../components/ui'
+import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { formatDueDate, overlapsPeriod, todayStr } from '../lib/period'
 import { PriorityBadge } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
-import { setGroupValue, useGroupModel, type GroupModel } from '../lib/groups'
+import { setGroupValue, useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import {
   useBulkUpdateTasks,
@@ -30,7 +30,6 @@ import {
   useUpdateTask,
   type TaskFieldsInput,
 } from '../lib/queries/tasks'
-import { useTimeEntriesInRange } from '../lib/queries/dashboard'
 import { TASK_SORT_LABEL, effectiveSort, setTaskSort, sortHeads, useTaskSort, type TaskSort } from '../lib/taskSort'
 import { useMoveTask } from '../components/useMoveTask'
 import { useToggleDone } from '../components/useToggleDone'
@@ -38,18 +37,13 @@ import { useDragSort } from '../components/useDragSort'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
 import { ACTIVE_TASKS, TASKS, elapsedHours, formatHoursRu, plural, useTicker } from '../lib/time'
 import { autoNextSprint, childrenByParent, rollupFact, runningWithin } from '../lib/tree'
-import { isInDay } from '../lib/dayPlan'
 import { usePref } from '../lib/prefs'
 import { useActiveWorkspaceId } from '../lib/workspace'
-import {
-  DEFAULT_FOLDERS,
-  SPECIAL_LABEL,
-  buildFolders,
-  condLabel,
-  sourceGroupId,
-  type FolderCond,
-  type FolderSettings,
-} from '../lib/taskFolders'
+import { FoldersSheet } from '../components/FoldersSheet'
+import { TASK_VIEW_LABEL, moveDueFields, useActiveFolder, useTaskView, type TaskView } from '../lib/taskView'
+import { useTaskFolders } from '../components/useTaskFolders'
+import { TaskBoard } from '../components/TaskBoard'
+import { TaskCalendar } from '../components/TaskCalendar'
 import type { ActiveTimer, Task } from '../lib/types'
 
 /** значение «не указано» в фильтрах и группировке */
@@ -107,10 +101,16 @@ export function TaskList() {
   const [periodFrom, setPeriodFrom] = useState('')
   const [periodTo, setPeriodTo] = useState('')
   const [sheet, setSheet] = useState<'filter' | 'sort' | 'folders' | null>(null)
-  const [folderKey, setFolderKey] = useState('all')
-  // папки и вид — у каждого пространства свои: группы в пространствах разные
-  const [folderSettings, setFolderSettings] = usePref<FolderSettings>(`semternity.taskFolders.${workspaceId}`, DEFAULT_FOLDERS)
+  // папки — общие с боковой панелью (0.64); на компьютере выбранная папка тоже общая с ней
+  const { settings: folderSettings, setSettings: setFolderSettings, folders } = useTaskFolders()
+  const [localFolder, setLocalFolder] = useState('all')
+  const [sharedFolder, setSharedFolder] = useActiveFolder()
+  const folderKey = table ? sharedFolder : localFolder
+  const setFolderKey = table ? setSharedFolder : setLocalFolder
+  // вид — у каждого пространства свой: группы в пространствах разные
   const [view, setView] = usePref<ListView>(`semternity.taskView.${workspaceId}`, DEFAULT_VIEW)
+  // список, доска или календарь — у каждой папки свой (0.64, компьютер)
+  const [taskView, setTaskView] = useTaskView()
 
   /** порядок: по сроку, по созданию, по методике или свой (перетаскиванием); запоминается */
   const sortMode = useTaskSort()
@@ -128,24 +128,6 @@ export function TaskList() {
   const childrenOf = useMemo(() => childrenByParent(tasks, sort === 'manual'), [tasks, sort])
   const heads = useMemo(() => tasks.filter((t) => !t.parent_id), [tasks])
 
-  // «На сегодня» в папках — то же, что в «Сегодня»: план дня и всё, по чему сегодня шёл учёт
-  const { data: todayEntries = [] } = useTimeEntriesInRange(today, today)
-  const trackedToday = useMemo(() => new Set(todayEntries.map((e) => e.task_id)), [todayEntries])
-
-  const folders = useMemo(
-    () =>
-      buildFolders(
-        folderSettings,
-        {
-          model,
-          today,
-          inDay: (t) => isInDay(t, today, activeTimer?.task_id, trackedToday) || (childrenOf.get(t.id) ?? []).some((c) => isInDay(c, today, activeTimer?.task_id, trackedToday)),
-          isDone: (t) => !!(t.status_id && statusById.get(t.status_id)?.is_final),
-        },
-        heads,
-      ),
-    [folderSettings, model, today, activeTimer?.task_id, trackedToday, childrenOf, statusById, heads],
-  )
   const folder = folders.find((f) => f.key === folderKey) ?? null
 
   const query = search.trim().toLowerCase()
@@ -241,7 +223,7 @@ export function TaskList() {
    */
   const [bulkPanel, setBulkPanel] = useState<BulkPanel | null>(null)
   const selection = useListSelection({
-    enabled: table,
+    enabled: table && taskView === 'list',
     sections: visibleSections,
     openId,
     onOpen: (id) => navigate(`/tasks/${id}`),
@@ -307,8 +289,7 @@ export function TaskList() {
     const label = date ? `срок ${formatDueDate(date, today).toLowerCase()}` : 'без срока'
     applyBulk(
       list,
-      (t) =>
-        t.end_date === date ? null : { end_date: date, ...(date && t.start_date && t.start_date > date ? { start_date: date } : {}) },
+      (t) => (t.end_date === date ? null : moveDueFields(t, date)),
       (changed) => (changed.length === 1 ? `${changed[0].name}: ${label}` : `${plural(changed.length, TASKS)}: ${label}`),
     )
   }
@@ -484,15 +465,24 @@ export function TaskList() {
   return (
     <div className="mx-auto flex max-w-lg flex-col lg:mx-0 lg:w-full lg:max-w-none">
       <div className="safe-top">
-        <div className="flex items-end justify-between gap-3 px-5 pt-3.5 pb-2">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 px-5 pt-3.5 pb-2">
+          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
             <WorkspaceTag className="mb-1 self-start" />
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">Задачи</h1>
+            <h1 className="truncate text-2xl font-semibold tracking-[-0.02em] text-text">{table && folder ? folder.name : 'Задачи'}</h1>
             <Overline>
               {plural(activeHeads.length, ACTIVE_TASKS)} ·{' '}
               <FactSum tasks={activeHeads} childrenOf={childrenOf} activeTimer={activeTimer} plan={totalPlan} />
             </Overline>
           </div>
+          {/* вид — у заголовка, а не в строке поиска: в узком списке поиску нужно место (0.64) */}
+          {table && (
+            <Segmented<TaskView>
+              value={taskView}
+              onChange={setTaskView}
+              className="mb-0.5 shrink-0"
+              options={(['list', 'board', 'calendar'] as const).map((v) => ({ value: v, label: TASK_VIEW_LABEL[v] }))}
+            />
+          )}
           <ProfileButton />
         </div>
       </div>
@@ -541,7 +531,7 @@ export function TaskList() {
       </div>
 
       {/* папки: источник выбирает человек — группа, свои папки или ничего */}
-      {folderSettings.source !== 'off' && (
+      {folderSettings.source !== 'off' && !table && (
         <div className="sc -my-1 flex gap-2 overflow-x-auto px-5 py-1 pb-3.5">
           <Chip active={!folder} onClick={() => setFolderKey('all')}>
             Все <span className="tabular ml-1 font-mono text-xs opacity-70">{base.length}</span>
@@ -578,8 +568,37 @@ export function TaskList() {
         </div>
       )}
 
+      {taskView === 'board' && !isLoading && (
+        <div className="px-5 pt-1">
+          <TaskBoard
+            tasks={sorted}
+            statuses={statuses}
+            model={model}
+            childrenOf={childrenOf}
+            activeTimer={activeTimer}
+            openId={openId}
+            onMoveStage={(task, statusId) => bulkStage([task], statusId)}
+            onStartTimer={(task) => startTimer.mutate(task.id, { onError })}
+            onStopTimer={() => stopTimer.mutate(undefined, { onError })}
+          />
+        </div>
+      )}
+      {taskView === 'calendar' && !isLoading && (
+        <div className="px-5 pt-1">
+          <TaskCalendar
+            tasks={sorted}
+            model={model}
+            isDone={isDone}
+            activeTimer={activeTimer}
+            openId={openId}
+            onMoveDue={(task, date) => bulkDue([task], date)}
+          />
+        </div>
+      )}
+
       <div
         ref={listRef}
+        hidden={taskView !== 'list'}
         className={`flex flex-col gap-3 px-5 pb-2 ${table ? 'task-table' : ''}`}
         data-density={table ? density : undefined}
       >
@@ -701,7 +720,7 @@ export function TaskList() {
         )}
       </div>
 
-      {table && pickedTasks.length > 0 && (
+      {table && taskView === 'list' && pickedTasks.length > 0 && (
         <BulkBar
           tasks={pickedTasks}
           statuses={statuses}
@@ -866,122 +885,6 @@ export function TaskList() {
       />
 
     </div>
-  )
-}
-
-/** Что стоит в папках: значения любой группы, свои папки с условием или ничего. */
-function FoldersSheet({
-  open,
-  onClose,
-  settings,
-  onChange,
-  model,
-}: {
-  open: boolean
-  onClose: () => void
-  settings: FolderSettings
-  onChange: (next: FolderSettings) => void
-  model: GroupModel
-}) {
-  const [name, setName] = useState('')
-  const [cond, setCond] = useState<FolderCond | null>(null)
-  const groupId = sourceGroupId(settings, model)
-  const source = settings.source === 'custom' || settings.source === 'off' ? settings.source : groupId ? `group:${groupId}` : 'off'
-
-  const options = [
-    ...model.groups.map((g) => ({ value: `group:${g.id}`, label: g.name, hint: 'папка на каждое значение' })),
-    { value: 'custom', label: 'Свои папки', hint: 'название и условие — какие задачи в ней' },
-    { value: 'off', label: 'Без папок', hint: 'только поиск и фильтр' },
-  ]
-  const add = () => {
-    if (!name.trim() || !cond) return
-    onChange({ ...settings, source: 'custom', custom: [...settings.custom, { id: crypto.randomUUID(), name: name.trim(), cond }] })
-    setName('')
-    setCond(null)
-  }
-  const condKey = (c: FolderCond | null) => (c ? (c.kind === 'item' ? `item:${c.itemId}` : c.kind) : '')
-
-  return (
-    <Sheet anchored open={open} onClose={onClose} title="Папки">
-      <ListGroup>
-        {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange({ ...settings, source: o.value })}
-            className="flex min-h-13 items-center gap-3 px-3.5 py-2 text-left"
-          >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-base text-text">{o.label}</span>
-              <span className="text-sm text-text-secondary">{o.hint}</span>
-            </span>
-            {source === o.value && <Check size={16} className="shrink-0 text-accent" />}
-          </button>
-        ))}
-      </ListGroup>
-
-      {source === 'custom' && (
-        <>
-          {settings.custom.length > 0 && (
-            <ListGroup>
-              {settings.custom.map((f) => (
-                <div key={f.id} className="flex min-h-12 items-center gap-3 px-3.5">
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-base text-text">{f.name}</span>
-                    <span className="truncate text-sm text-text-secondary">{condLabel(f.cond, model)}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...settings, custom: settings.custom.filter((x) => x.id !== f.id) })}
-                    aria-label={`Удалить папку «${f.name}»`}
-                    className="hit-44 flex shrink-0 text-text-secondary"
-                  >
-                    <Close size={16} />
-                  </button>
-                </div>
-              ))}
-            </ListGroup>
-          )}
-          <div className="flex flex-col gap-2.5 rounded-md border border-dashed border-border-strong p-3">
-            <Overline>Новая папка</Overline>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название" aria-label="Название папки" className={fieldClass} />
-            <span className="text-sm text-text-secondary">Какие задачи в ней</span>
-            <div className="flex flex-wrap gap-2">
-              {(['today', 'hot', 'noplan'] as const).map((k) => (
-                <Chip key={k} active={condKey(cond) === k} onClick={() => setCond({ kind: k })}>
-                  {SPECIAL_LABEL[k]}
-                </Chip>
-              ))}
-            </div>
-            {model.groups.map((g) => (
-              <div key={g.id} className="flex flex-col gap-1.5">
-                <span className="text-xs text-text-secondary">{g.name}</span>
-                <div className="flex flex-wrap gap-2">
-                  {model
-                    .itemsOf(g.id)
-                    .filter((i) => !i.archived)
-                    .map((i) => (
-                      <Chip
-                        key={i.id}
-                        active={condKey(cond) === `item:${i.id}`}
-                        onClick={() => {
-                          setCond({ kind: 'item', itemId: i.id })
-                          if (!name.trim()) setName(i.name)
-                        }}
-                      >
-                        {i.name}
-                      </Chip>
-                    ))}
-                </div>
-              </div>
-            ))}
-            <Button variant="secondary" onClick={add} disabled={!name.trim() || !cond}>
-              <Plus size={15} /> Добавить папку
-            </Button>
-          </div>
-        </>
-      )}
-    </Sheet>
   )
 }
 
