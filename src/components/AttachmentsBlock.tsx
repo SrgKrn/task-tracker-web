@@ -1,7 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { usePopoverMode } from './Popover'
+import { namePastedFiles } from '../lib/pastedFiles'
 import { ConfirmDialog } from './ConfirmDialog'
 import { Close, Drive, Paperclip, Plus } from './Icon'
-import { FieldLabel } from './ui'
+import { FieldLabel, MOD_KEY } from './ui'
 import { describeError, useToast } from '../lib/Toast'
 import { pickFromDrive, useGoogleStatus } from '../lib/google'
 import { useGate } from './Upgrade'
@@ -36,6 +39,11 @@ interface AttachmentsBlockProps {
   emptyText: string
   /** папка проекта на Диске: окно выбора откроется в ней */
   driveFolderId?: string | null
+  /**
+   * Компьютер (0.65): файлы можно бросить на всю карточку (ближайший .task-detail-pane),
+   * а снимок экрана — вставить через Ctrl+V, пока карточка открыта.
+   */
+  catchFiles?: boolean
 }
 
 function formatSize(bytes: number): string {
@@ -62,6 +70,7 @@ export function AttachmentsBlock({
   title = 'Файлы',
   emptyText,
   driveFolderId,
+  catchFiles = false,
 }: AttachmentsBlockProps) {
   const scope = taskId ? { taskIds: taskIds?.length ? taskIds : [taskId] } : { itemId, taskIds }
   const { data: files = [], isLoading } = useAttachments(scope)
@@ -76,8 +85,75 @@ export function AttachmentsBlock({
   const inputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [deleting, setDeleting] = useState<AttachmentWithUrl | null>(null)
+  const desktop = usePopoverMode()
+  const catching = catchFiles && desktop
+  const rootRef = useRef<HTMLDivElement>(null)
+  /** куда бросают файлы: рамка поверх карточки, пока их держат над ней */
+  const [dropRect, setDropRect] = useState<DOMRect | null>(null)
+  const pickRef = useRef(onPick)
+  useEffect(() => {
+    pickRef.current = onPick
+  })
 
-  function onPick(list: FileList | null) {
+  useEffect(() => {
+    if (!catching) return
+    const zone = rootRef.current?.closest<HTMLElement>('.task-detail-pane')
+    if (!zone) return
+    let depth = 0
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')
+    const reset = () => {
+      depth = 0
+      setDropRect(null)
+    }
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth += 1
+      setDropRect(zone.getBoundingClientRect())
+    }
+    const over = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    }
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth = Math.max(0, depth - 1)
+      if (depth === 0) setDropRect(null)
+    }
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      reset()
+      pickRef.current(Array.from(e.dataTransfer?.files ?? []))
+    }
+    // снимок экрана из буфера; текст в поле ввода вставляется как обычно
+    const paste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? [])
+      if (files.length === 0 || document.querySelector('[aria-modal="true"]')) return
+      const target = e.target as HTMLElement | null
+      const editable = !!target?.closest('input, textarea, [contenteditable="true"]')
+      if (editable && e.clipboardData?.types.includes('text/plain')) return
+      e.preventDefault()
+      pickRef.current(namePastedFiles(files))
+    }
+    zone.addEventListener('dragenter', enter)
+    zone.addEventListener('dragover', over)
+    zone.addEventListener('dragleave', leave)
+    zone.addEventListener('drop', drop)
+    window.addEventListener('dragend', reset)
+    document.addEventListener('paste', paste)
+    return () => {
+      zone.removeEventListener('dragenter', enter)
+      zone.removeEventListener('dragover', over)
+      zone.removeEventListener('dragleave', leave)
+      zone.removeEventListener('drop', drop)
+      window.removeEventListener('dragend', reset)
+      document.removeEventListener('paste', paste)
+    }
+  }, [catching])
+
+  function onPick(list: FileList | File[] | null) {
     const picked = Array.from(list ?? [])
     if (inputRef.current) inputRef.current.value = ''
     if (picked.length === 0) return
@@ -132,7 +208,7 @@ export function AttachmentsBlock({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={rootRef} className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <FieldLabel>
           {title}
@@ -230,6 +306,24 @@ export function AttachmentsBlock({
           </button>
         )
       )}
+      {catching && (
+        <span className="text-xs text-text-tertiary">Перетащите файлы на карточку или вставьте снимок экрана — {MOD_KEY}+V</span>
+      )}
+
+      {dropRect &&
+        createPortal(
+          <div
+            className="file-drop-overlay"
+            style={{ top: dropRect.top + 8, left: dropRect.left + 8, width: dropRect.width - 16, height: dropRect.height - 16 }}
+            aria-hidden
+          >
+            <span className="flex flex-col items-center gap-2">
+              <Paperclip size={22} />
+              <span className="text-base font-semibold">Отпустите — файлы лягут в задачу</span>
+            </span>
+          </div>,
+          document.body,
+        )}
 
       <ConfirmDialog
         open={deleting !== null}

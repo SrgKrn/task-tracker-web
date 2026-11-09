@@ -4,6 +4,7 @@ import { DensityCard, NotificationsCard, TelegramCard, ThemeCard, TimeBlockCard 
 import { CalendarCard, DriveCard } from '../components/IntegrationCards'
 import { DatePicker } from '../components/DatePicker'
 import { SettingsMenu, SettingsShell } from '../components/SettingsMenu'
+import { usePopoverMode } from '../components/Popover'
 import { ArrowLeft, Camera, Check, ChevronRight, Drive, Plus } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
 import { WorkspaceList } from '../components/Workspaces'
@@ -510,12 +511,62 @@ export function Settings() {
   const [deleting, setDeleting] = useState(false)
   const theme = useTheme()
   const push = usePush()
+  const desktop = usePopoverMode()
 
   return (
     <SettingsShell>
       <div className="safe-top-page page mx-auto flex max-w-lg flex-col px-5 pt-3.5 pb-4">
         <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">Профиль</h1>
 
+        {desktop ? (
+          <>
+            {/* компьютер (0.65): человек строкой, ниже — частые настройки строками с переключателями */}
+            <div className="mt-4 flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
+              <Avatar size={64} />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-lg font-semibold text-text">{profile.name}</span>
+                <span className="truncate text-sm text-text-secondary">{profile.email}</span>
+                {!profile.hasName && <span className="text-sm text-accent-text">Добавьте имя и фото</span>}
+              </span>
+              <Link
+                to="/settings/profile"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-sm border border-border px-3 text-sm font-medium text-text hover:bg-surface-hover"
+              >
+                <Camera size={14} />
+                Изменить
+              </Link>
+            </div>
+
+            <section className="mt-5 flex flex-col gap-2">
+              <Overline className="px-0.5">Быстро</Overline>
+              <ListGroup>
+                <div className="flex min-h-13 items-center gap-3 px-3.5 py-2">
+                  <span className="min-w-0 flex-1 text-base text-text">Тема</span>
+                  <Segmented<ThemeChoice>
+                    value={theme}
+                    onChange={setTheme}
+                    options={(['light', 'dark', 'system'] as const).map((v) => ({ value: v, label: THEME_SHORT[v] }))}
+                  />
+                </div>
+                <Link to="/settings/notifications" className="flex min-h-13 items-center gap-3 px-3.5 py-2 hover:bg-surface-hover">
+                  <span className="min-w-0 flex-1 text-base text-text">Напоминания</span>
+                  <span className={`text-sm ${push.state === 'on' ? 'text-success-text' : 'text-text-secondary'}`}>
+                    {push.state === 'on' ? 'Включены' : push.state === null ? '…' : 'Выключены'}
+                  </span>
+                  <ChevronRight size={15} className="shrink-0 text-text-secondary" />
+                </Link>
+                <Link to="/settings/tariff" className="flex min-h-13 items-center gap-3 px-3.5 py-2 hover:bg-surface-hover">
+                  <span className="min-w-0 flex-1 text-base text-text">Тариф</span>
+                  <span className={`truncate text-sm ${plan && plan.effective !== 'free' ? 'text-accent-text' : 'text-text-secondary'}`}>
+                    {plan ? (plan.plan === 'lifetime' ? 'Безлимит' : PLAN_NAME[plan.effective]) : '…'}
+                  </span>
+                  <ChevronRight size={15} className="shrink-0 text-text-secondary" />
+                </Link>
+              </ListGroup>
+            </section>
+          </>
+        ) : (
+          <>
         {/* человек — по центру, как в Telegram: фото, имя, почта и тариф */}
         <Link
           to="/settings/profile"
@@ -561,6 +612,8 @@ export function Settings() {
             </span>
           </Link>
         </div>
+          </>
+        )}
 
         <section className="mt-5 flex flex-col gap-2">
           <span className="flex items-baseline justify-between px-0.5">

@@ -44,6 +44,8 @@ export interface TipDef {
   help: HelpId
   /** вместо «Понятно» — кнопка следующего шага */
   action?: { label: string; to: string }
+  /** компьютер (0.65): там, где на телефоне касание и удержание, — мышь и клавиши */
+  desktop?: { title?: string; text: string }
 }
 
 /** первые шаги первого дня — с подписью «1 из 3» */
@@ -54,6 +56,7 @@ export const TIPS: Record<TipId, TipDef> = {
     title: 'Новая задача',
     text: 'Здесь создаются задачи. Достаточно названия, остальное можно добавить потом.',
     help: 'tasks',
+    desktop: { text: 'Здесь создаются задачи, а в любом месте — клавишей C. Достаточно названия, остальное можно добавить потом.' },
   },
   timer: {
     title: 'Учёт времени',
@@ -70,6 +73,10 @@ export const TIPS: Record<TipId, TipDef> = {
     title: 'Зажмите — и готово',
     text: 'Касание кольца запускает учёт. Если зажать кольцо, оно нальётся зелёным и задача закроется. Ещё можно смахнуть строку вправо.',
     help: 'timer',
+    desktop: {
+      title: 'Закрыть задачу',
+      text: 'Нажатие на кольцо запускает учёт. Закрыть задачу — Ctrl+Enter на выбранной строке или «Готово» в меню по правой кнопке.',
+    },
   },
   'timer-note': {
     title: 'Комментарий к учёту',
@@ -96,6 +103,7 @@ export const TIPS: Record<TipId, TipDef> = {
     title: 'Свой порядок',
     text: 'Удерживайте задачу и перетащите её на другое место — список запомнит ваш порядок.',
     help: 'tasks',
+    desktop: { text: 'Наведите на строку и тяните её за ручку слева — список запомнит ваш порядок.' },
   },
   summary: {
     title: 'Сводка',
@@ -144,6 +152,13 @@ export const TIPS: Record<TipId, TipDef> = {
 export function pickTip(candidates: ReadonlySet<TipId>, seen: Readonly<Record<string, unknown>>, enabled: boolean): TipId[] {
   if (!enabled) return []
   return TIP_IDS.filter((id) => candidates.has(id) && !(id in seen))
+}
+
+/** текст подсказки для этого устройства: на компьютере — свой, если он есть */
+export function tipText(id: TipId, desktop: boolean): { title: string; text: string } {
+  const tip = TIPS[id]
+  const alt = desktop ? tip.desktop : undefined
+  return { title: alt?.title ?? tip.title, text: alt?.text ?? tip.text }
 }
 
 /** «1 из 3 · первые шаги» — только у цепочки первого дня */

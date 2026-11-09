@@ -320,7 +320,7 @@ export function Dashboard() {
       )}
 
       {!loading && (
-        // десктоп: слева кольцо, дни и разрезы, справа темп и норма (dash-grid в index.css)
+        // десктоп: слева кольцо, дни, темп и норма; справа клиенты (dash-grid в index.css, 0.65)
         <div className="dash-grid">
           {/* кольцо периода */}
           <div className="flex items-center gap-[18px] border-b border-divider px-5 pb-[18px]">
@@ -488,6 +488,8 @@ export function Dashboard() {
 
           </div>
 
+          {/* клиенты (разрез по группе) — на компьютере правой колонкой рядом с графиком (0.65) */}
+          <div className="dash-side">
           {groupBy && model.groups.length > 1 && (
             <div className="sc flex overflow-x-auto px-5 pt-3.5 pb-2.5">
               <Segmented
@@ -547,6 +549,7 @@ export function Dashboard() {
             {rows.length === 0 && <EmptyState title="Пока пусто">
                 Здесь появятся часы по задачам за период: сколько планировали и сколько записали. Запустите учёт в любой задаче.
               </EmptyState>}
+          </div>
           </div>
         </div>
       )}

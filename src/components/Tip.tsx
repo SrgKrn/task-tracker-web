@@ -2,9 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { HELP_BY_ID, type HelpId } from '../lib/help'
-import { TIPS, pickTip, stepLabel, useTipCandidates, type TipId } from '../lib/tips'
+import { TIPS, pickTip, stepLabel, tipText, useTipCandidates, type TipId } from '../lib/tips'
+import { usePopoverMode } from './Popover'
 import { useMarkTipSeen, useUserSettings } from '../lib/queries/userSettings'
-import { Button, Chip, Sheet } from './ui'
+import { Button, Chip, MOD_KEY, Sheet } from './ui'
 
 /** сколько кнопка должна простоять на экране, прежде чем рядом появится подсказка */
 const SETTLE_MS = 600
@@ -162,18 +163,29 @@ function TipCard({
   onAction: (id: TipId, to: string) => void
 }) {
   const tip = TIPS[shown.id]
+  const desktop = usePopoverMode()
+  const words = tipText(shown.id, desktop)
   const step = stepLabel(shown.id)
   const { rect } = shown
   const vw = window.innerWidth
   const vh = window.innerHeight
   const width = Math.min(320, vw - MARGIN * 2)
   const center = rect.left + rect.width / 2
-  const left = Math.min(Math.max(center - width / 2, MARGIN), vw - width - MARGIN)
-  const arrow = Math.min(Math.max(center - left, 18), width - 18)
+  const middle = rect.top + rect.height / 2
+  // компьютер (0.65): кнопка в левой колонке (боковая панель, первая строка списка) —
+  // подсказка справа от неё, стрелкой влево, а не поверх соседних пунктов
+  const side = desktop && rect.left < vw * 0.3 && rect.right + GAP + width + MARGIN <= vw && rect.width < vw * 0.4
+  const [height, setHeight] = useState(180)
+  const sideTop = Math.min(Math.max(middle - 28, MARGIN), vh - height - MARGIN)
+  const left = side ? rect.right + GAP : Math.min(Math.max(center - width / 2, MARGIN), vw - width - MARGIN)
+  const arrow = side ? Math.min(Math.max(middle - sideTop, 18), height - 18) : Math.min(Math.max(center - left, 18), width - 18)
   // кнопка в нижней половине экрана — подсказка над ней, иначе под ней
-  const above = rect.top + rect.height / 2 > vh / 2
+  const above = middle > vh / 2
   const [ready, setReady] = useState(false)
-  useLayoutEffect(() => setReady(true), [])
+  useLayoutEffect(() => {
+    setReady(true)
+    if (cardRef.current) setHeight(cardRef.current.offsetHeight)
+  }, [cardRef, shown.id])
 
   return (
     <>
@@ -190,17 +202,17 @@ function TipCard({
         style={{
           left,
           width,
-          ...(above ? { bottom: vh - rect.top + GAP } : { top: rect.bottom + GAP }),
+          ...(side ? { top: sideTop } : above ? { bottom: vh - rect.top + GAP } : { top: rect.bottom + GAP }),
         }}
       >
         <span
           aria-hidden
           className="absolute h-3 w-3 rotate-45 rounded-xs bg-text"
-          style={{ left: arrow - 6, ...(above ? { bottom: -5 } : { top: -5 }) }}
+          style={side ? { top: arrow - 6, left: -5 } : { left: arrow - 6, ...(above ? { bottom: -5 } : { top: -5 }) }}
         />
         {step && <span className="text-xs opacity-60">{step}</span>}
-        <span className="text-md font-semibold">{tip.title}</span>
-        <span className="text-sm leading-[1.45] opacity-85">{tip.text}</span>
+        <span className="text-md font-semibold">{words.title}</span>
+        <span className="text-sm leading-[1.45] opacity-85">{words.text.replace(/Ctrl\+/g, `${MOD_KEY}+`)}</span>
         <span className="mt-1 flex items-center justify-between gap-2">
           <button
             type="button"

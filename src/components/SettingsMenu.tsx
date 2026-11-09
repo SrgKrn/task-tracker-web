@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { TabFocus } from './Icon'
 import { Book, Bell, Calendar as CalendarIcon, Check, ChevronRight, Comment as CommentIcon, Download, Drive as DriveIcon, History, Mosaic as MosaicIcon, Send, Shield, Sparkle } from './Icon'
 import { ClientDot, ListGroup, Overline } from './ui'
+import { Avatar } from './Avatar'
+import { useProfile } from '../lib/profile'
 import { LATEST_RELEASE } from '../lib/changelog'
 import { useGroupModel } from '../lib/groups'
 import { useGoogleStatus } from '../lib/google'
@@ -32,7 +34,7 @@ function Glyph({ children, small = false }: { children: ReactNode; small?: boole
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-sm text-text-secondary ${
-        small ? 'h-6 w-6' : 'h-[30px] w-[30px] bg-surface-sunken'
+        small ? 'h-7 w-7 bg-surface-sunken' : 'h-[30px] w-[30px] bg-surface-sunken'
       }`}
     >
       {children}
@@ -277,21 +279,27 @@ export function SettingsMenu() {
 }
 
 /**
- * Колонка «Ещё» слева на десктопе: пункты без значений, открытый подсвечен — как настройки
- * в Linear. Ходить между пунктами можно, не возвращаясь в меню.
+ * Колонка «Ещё» слева на десктопе, как настройки Telegram Desktop (0.65): сверху человек —
+ * фото, имя, почта; ниже разделы со значками, открытый подсвечен. Ходить между пунктами
+ * можно, не возвращаясь в меню.
  */
 function SettingsNav() {
   const groups = useMenu()
+  const profile = useProfile()
   const { pathname } = useLocation()
+  const home = pathname === '/settings'
   return (
     <nav className="flex flex-col gap-4" aria-label="Разделы профиля">
       <Link
         to="/settings"
-        className={`flex h-8 items-center rounded-sm px-2 text-sm font-medium ${
-          pathname === '/settings' ? 'bg-surface-selected text-accent-text' : 'text-text-secondary hover:bg-surface-sunken hover:text-text'
-        }`}
+        aria-current={home ? 'page' : undefined}
+        className={`flex items-center gap-3 rounded-md p-2 ${home ? 'bg-surface-selected' : 'hover:bg-surface-sunken'}`}
       >
-        Профиль
+        <Avatar size={40} />
+        <span className="flex min-w-0 flex-col">
+          <span className={`truncate text-sm font-semibold ${home ? 'text-accent-text' : 'text-text'}`}>{profile.name}</span>
+          <span className="truncate text-xs text-text-secondary">{profile.email}</span>
+        </span>
       </Link>
       {groups.map((g) => (
         <section key={g.title} className="flex flex-col gap-0.5">
@@ -302,7 +310,8 @@ function SettingsNav() {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex h-8 items-center gap-2 rounded-sm px-2 text-sm font-medium ${
+                aria-current={active ? 'page' : undefined}
+                className={`flex h-9 items-center gap-2.5 rounded-sm px-1.5 text-sm font-medium ${
                   active ? 'bg-surface-selected text-accent-text' : 'text-text-secondary hover:bg-surface-sunken hover:text-text'
                 }`}
               >

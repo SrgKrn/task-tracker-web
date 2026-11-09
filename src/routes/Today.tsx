@@ -12,7 +12,7 @@ import { TodayTile } from '../components/DayTile'
 import { MeetingsBlock } from '../components/MeetingsBlock'
 import { NewTaskSheet } from '../components/NewTaskSheet'
 import { Ring } from '../components/Ring'
-import { ArrowRight, ChevronDown, ChevronUp, History, Settings2 } from '../components/Icon'
+import { ArrowRight, Check, ChevronDown, ChevronUp, EyeOff, Grip, History, Settings2 } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
 import { useToggleDone } from '../components/useToggleDone'
 import { Button, ClientDot, EmptyState, ListGroup, Overline, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
@@ -44,25 +44,23 @@ import { usePref } from '../lib/prefs'
 import { useTaskSort } from '../lib/taskSort'
 import { childrenByParent, rollupFact } from '../lib/tree'
 import type { Task } from '../lib/types'
+import { usePopoverMode } from '../components/Popover'
+import {
+  DEFAULT_WIDGETS,
+  WIDGET_LABEL,
+  moveWidget,
+  normalizeWidgets,
+  stepWidget,
+  widgetSize,
+  type TodayWidget,
+  type WidgetPrefs,
+  type WidgetSize,
+} from '../lib/todayWidgets'
 
 const METHOD_SHORT = { eisenhower: 'Эйзенхауэр', frog: 'Лягушка', '135': '1-3-5', abcde: 'ABCDE' } as const
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 /** готовые названия первой задачи: касание открывает окно, где название уже вписано */
 const FIRST_TASKS = ['Разобрать почту', 'Спланировать неделю', 'Позвонить']
-
-/** виджеты «Сегодня» (0.57): что на экране и в каком порядке — на устройстве */
-type TodayWidget = 'day' | 'tile' | 'week' | 'overdue' | 'meetings' | 'plan' | 'recent'
-const WIDGET_LABEL: Record<TodayWidget, { title: string; hint: string }> = {
-  day: { title: 'День', hint: 'кольцо нормы, сколько осталось' },
-  tile: { title: 'Плитка дня', hint: 'в карточке дня, справа' },
-  week: { title: 'Неделя', hint: 'столбики по дням' },
-  overdue: { title: 'Просрочено', hint: 'перенести срок в одно касание' },
-  meetings: { title: 'Встречи', hint: 'из Google Календаря' },
-  plan: { title: 'План дня', hint: 'задачи на сегодня' },
-  recent: { title: 'Недавние', hint: 'продолжить начатое' },
-}
-const ALL_WIDGETS: TodayWidget[] = ['day', 'tile', 'overdue', 'meetings', 'plan', 'week', 'recent']
-const DEFAULT_WIDGETS = { order: ALL_WIDGETS, on: ALL_WIDGETS }
 
 export function Today() {
   const today = todayStr()
@@ -131,12 +129,14 @@ export function Today() {
   const ringPct = hasNorm ? (dayFact / dayNorm) * 100 : dayFact > 0 ? ((dayFact % 1) || 1) * 100 : 0
   const [firstTask, setFirstTask] = useState<string | null>(null)
   const [widgetsOpen, setWidgetsOpen] = useState(false)
-  const [storedWidgets, setWidgets] = usePref<{ order: TodayWidget[]; on: TodayWidget[] }>('semternity.todayWidgets', DEFAULT_WIDGETS)
+  const [storedWidgets, setWidgets] = usePref<WidgetPrefs>('semternity.todayWidgets', DEFAULT_WIDGETS)
   // новые виджеты из будущих версий дописываются в конец, неизвестные отбрасываются
-  const widgets = {
-    order: [...storedWidgets.order.filter((w) => ALL_WIDGETS.includes(w)), ...ALL_WIDGETS.filter((w) => !storedWidgets.order.includes(w))],
-    on: storedWidgets.on.filter((w) => ALL_WIDGETS.includes(w)),
-  }
+  const widgets = normalizeWidgets(storedWidgets)
+  // компьютер (0.65): сетка виджетов, настройка прямо на экране — порядок, ширина, скрыть
+  const desktop = usePopoverMode()
+  const [editing, setEditing] = useState(false)
+  const [dragW, setDragW] = useState<TodayWidget | null>(null)
+  const [overW, setOverW] = useState<TodayWidget | null>(null)
 
   // плитка дня: идущий учёт дорисовывается раз в минуту, а не каждую секунду
   const { data: settings, isLoading: settingsLoading } = useUserSettings()
@@ -346,7 +346,7 @@ export function Today() {
   )
 
   const weekWidget = (
-    <div className="px-5 pt-5 lg:sticky lg:top-6 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4">
+    <div className={`px-5 pt-5 ${desktop ? 'mx-5 mt-5 rounded-md border border-border bg-surface p-4' : 'lg:sticky lg:top-6 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4'}`}>
       <div className="mb-3 flex items-baseline justify-between">
         <Overline>Неделя</Overline>
         <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
@@ -645,16 +645,139 @@ export function Today() {
           <h1 className="text-2xl font-semibold tracking-[-0.02em] text-text">Сегодня</h1>
           <button
             type="button"
-            onClick={() => setWidgetsOpen(true)}
-            className="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-text-secondary"
+            onClick={() => (desktop ? setEditing((v) => !v) : setWidgetsOpen(true))}
+            aria-pressed={desktop ? editing : undefined}
+            className={`flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors ${
+              editing ? 'border-accent bg-accent text-on-accent' : 'border-border bg-surface text-text-secondary lg:hover:bg-surface-hover lg:hover:text-text'
+            }`}
           >
-            <Settings2 size={14} />
-            Виджеты
+            {editing ? <Check size={14} /> : <Settings2 size={14} />}
+            {editing ? 'Готово' : 'Виджеты'}
           </button>
         </div>
       </div>
 
-      {/* десктоп: неделя — справа и остаётся на месте при прокрутке, остальное — слева */}
+      {desktop ? (
+        <>
+          {editing && (
+            <div className="mx-5 mb-1 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed border-border-strong bg-surface-sunken px-3 py-2.5" role="group" aria-label="Какие виджеты показывать">
+              <span className="mr-1 text-sm text-text-secondary">Показывать:</span>
+              {widgets.order.map((id) => {
+                const on = widgets.on.includes(id)
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={on}
+                    title={WIDGET_LABEL[id].hint}
+                    onClick={() => setWidgets({ ...widgets, on: on ? widgets.on.filter((x) => x !== id) : [...widgets.on, id] })}
+                    className={`flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors ${
+                      on ? 'border-accent bg-surface-selected text-accent-text' : 'border-border bg-surface text-text-secondary hover:text-text'
+                    }`}
+                  >
+                    {on && <Check size={12} />}
+                    {WIDGET_LABEL[id].title}
+                  </button>
+                )
+              })}
+              <span className="ml-auto text-xs text-text-tertiary">Порядок — за ручку или стрелками</span>
+            </div>
+          )}
+          {/* сетка в две колонки: половинки встают парами, пустые места добирают следующие */}
+          <div className="grid grid-flow-row-dense grid-cols-2 items-start pb-6">
+            {shown.map((id) => {
+              const size = widgetSize(widgets, id)
+              const canDrop = !!dragW && dragW !== id
+              return (
+                <section
+                  key={id}
+                  data-today-widget={id}
+                  aria-label={WIDGET_LABEL[id].title}
+                  data-editing={editing || undefined}
+                  data-dragging={dragW === id || undefined}
+                  data-drop-over={canDrop && overW === id ? '' : undefined}
+                  className={`today-cell min-w-0 pb-1 ${size === 'full' ? 'col-span-2' : ''}`}
+                  onDragOver={(e) => {
+                    if (!canDrop) return
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    if (overW !== id) setOverW(id)
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOverW((o) => (o === id ? null : o))
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    if (dragW && dragW !== id) setWidgets({ ...widgets, order: moveWidget(widgets.order, dragW, id) })
+                    setDragW(null)
+                    setOverW(null)
+                  }}
+                >
+                  {editing && (
+                    <div className="mx-5 mt-4 -mb-2 flex h-8 items-center gap-1 rounded-sm bg-surface-sunken pr-1">
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/x-semternity-widget', id)
+                          e.dataTransfer.effectAllowed = 'move'
+                          const cell = e.currentTarget.closest('section')
+                          if (cell) e.dataTransfer.setDragImage(cell, 24, 16)
+                          setDragW(id)
+                        }}
+                        onDragEnd={() => {
+                          setDragW(null)
+                          setOverW(null)
+                        }}
+                        onKeyDown={(e) => {
+                          const step = e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : 0
+                          if (!step) return
+                          e.preventDefault()
+                          setWidgets({ ...widgets, order: stepWidget(widgets.order, shown, id, step) })
+                        }}
+                        aria-label={`Переставить «${WIDGET_LABEL[id].title}»: тяните или стрелки`}
+                        title="Тяните, чтобы переставить"
+                        className="flex h-8 w-7 shrink-0 cursor-grab items-center justify-center rounded-sm text-text-tertiary hover:text-text active:cursor-grabbing"
+                      >
+                        <Grip size={14} />
+                      </button>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">{WIDGET_LABEL[id].title}</span>
+                      <span className="flex rounded-xs bg-surface p-0.5" role="group" aria-label="Ширина">
+                        {(['half', 'full'] as WidgetSize[]).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            aria-pressed={size === s}
+                            onClick={() => setWidgets({ ...widgets, size: { ...widgets.size, [id]: s } })}
+                            className={`h-6 rounded-xs px-2 text-xs font-medium ${size === s ? 'bg-surface-selected text-accent-text' : 'text-text-secondary hover:text-text'}`}
+                          >
+                            {s === 'half' ? '½' : 'Вся строка'}
+                          </button>
+                        ))}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setWidgets({ ...widgets, on: widgets.on.filter((x) => x !== id) })}
+                        aria-label={`Скрыть «${WIDGET_LABEL[id].title}»`}
+                        title="Скрыть"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-text-tertiary hover:bg-surface hover:text-text"
+                      >
+                        <EyeOff size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {blocks[id]}
+                </section>
+              )
+            })}
+            {shown.length === 0 && (
+              <div className="col-span-2 px-5 pt-4">
+                <EmptyState title="Все виджеты выключены">Нажмите «Виджеты» и включите нужные — день, план, встречи.</EmptyState>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-10">
         <div className="min-w-0">
           {shown.map((id) => (
@@ -670,6 +793,7 @@ export function Today() {
         </div>
         {shown.includes('week') && <div className="hidden lg:block">{weekWidget}</div>}
       </div>
+      )}
       <NewTaskSheet open={firstTask !== null} onClose={() => setFirstTask(null)} preset={{ title: firstTask ?? '', planDate: today }} />
 
       <Sheet anchored open={widgetsOpen} onClose={() => setWidgetsOpen(false)} title="Виджеты">

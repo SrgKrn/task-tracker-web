@@ -531,6 +531,7 @@ export function TaskDetail() {
             taskIds={[task.id, ...subtasks.map((c) => c.id)]}
             taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
             emptyText="Договор, ТЗ, скриншоты — откроются прямо отсюда"
+            catchFiles
           />
         </section>
 
