@@ -207,6 +207,10 @@ export function Popover({
     e.stopPropagation()
   }
 
+  // окно выбора внутри диалога (поле группы в «Новой задаче») — над ним, а не под подложкой:
+  // слой выпадающих ниже слоя диалогов, и клик по полю будто ничего не делал (0.66.3)
+  const overModal = anchor instanceof HTMLElement && !!anchor.closest('[aria-modal="true"]')
+
   return createPortal(
     <div
       ref={ref}
@@ -219,7 +223,14 @@ export function Popover({
       className={`popover-in sc fixed z-[var(--z-dropdown)] flex flex-col overflow-y-auto rounded-md border border-border bg-surface shadow-popover outline-none ${className}`}
       style={
         pos
-          ? { top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight, transformOrigin: pos.origin }
+          ? {
+              top: pos.top,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              transformOrigin: pos.origin,
+              ...(overModal && { zIndex: 'calc(var(--z-modal) + 1)' }),
+            }
           : { top: 0, left: 0, width: minWidth, visibility: 'hidden' }
       }
     >

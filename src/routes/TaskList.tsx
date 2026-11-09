@@ -166,8 +166,12 @@ export function TaskList() {
   )
   const moveTask = useMoveTask()
   const toggleDone = useToggleDone()
-  // подсказки 0.43: перетаскивание — когда задач стало пять; группы — когда задач три, а групп ещё нет
-  const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 1
+  // подсказки 0.43: перетаскивание — когда задач две; группы — когда есть задача, а значений в группах нет.
+  // 0.66.3: у нового аккаунта из шаблона группа «Клиенты» уже есть, но пустая — раньше подсказка
+  // ждала, пока групп не будет вовсе, и новичку не показывалась никогда
+  const groupsEmpty = model.groups.every((g) => !model.itemsOf(g.id).some((i) => !i.archived))
+  const suggestGroups = !isLoading && groupsEmpty && heads.length >= 1
+  const firstGroup = model.groups.length === 1 ? model.groups[0] : undefined
   useTip('drag', sorted.length >= 2)
   useTip('ring-done', sorted.length > 0)
   useTip('groups', suggestGroups)
@@ -559,11 +563,11 @@ export function TaskList() {
       {suggestGroups && (
         <div className="px-5 pb-2.5">
           <Link
-            to="/groups"
+            to={firstGroup ? `/groups/${firstGroup.id}` : '/groups'}
             data-tip="groups"
             className="flex min-h-11 items-center gap-2 rounded-md border border-dashed border-border-strong px-3.5 text-sm font-medium text-accent-text active:bg-surface-sunken lg:hover:bg-surface-hover"
           >
-            + Разложить по проектам
+            {firstGroup ? `+ Заполнить «${firstGroup.name}»` : '+ Разложить по проектам'}
           </Link>
         </div>
       )}
