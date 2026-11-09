@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search } from '../Icon'
 import { Chip, EmptyState, Segmented, StageChip, fieldClass } from '../ui'
 import { HBars, Heatmap, Kpi, Legend, Panel, SplitBar, TimeBars, seriesColor } from './charts'
 import type { GroupModel } from '../../lib/groups'
+import { useMediaQuery } from '../../lib/device'
 import { formatDayMonth } from '../../lib/period'
 import { formatMoney, type RateCurrency } from '../../lib/rate'
 import { dayMonth, f1, fh, hm, type ReportData } from '../../lib/report'
@@ -127,12 +128,18 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
   const delta = r.total - r.prevTotal
   const planned = r.sprints.filter((s) => s.plan > 0)
   const moneyDue = r.billing.map((b) => formatMoney(b.due, b.currency as RateCurrency)).join(' · ')
+  // телефон: всё важное — в два экрана, остальное раскрывается по нажатию
+  const wide = useMediaQuery('(min-width: 1024px)')
+  const rowLimit = wide ? 8 : 5
+  const planLimit = wide ? 8 : 4
   const [allRows, setAllRows] = useState(false)
-  const shownRows = allRows ? rows.list : rows.list.slice(0, 8)
+  const [allInsights, setAllInsights] = useState(false)
+  const shownRows = allRows ? rows.list : rows.list.slice(0, rowLimit)
+  const insights = wide || allInsights ? r.insights : r.insights.slice(0, 2)
 
   return (
-    <div className="flex flex-col gap-3 lg:gap-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:gap-3 xl:grid-cols-6">
+    <div className="flex flex-col gap-2.5 lg:gap-4">
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-divider lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent xl:grid-cols-6">
         <Kpi
           label="Часы"
           value={f1(r.total)}
@@ -145,7 +152,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
         />
         {r.target && !filtered ? (
           <Kpi
-            label="Норма периода"
+            label="Норма"
             value={`${Math.round((r.total / Math.max(r.target.hours, 0.001)) * 100)}`}
             unit="%"
             progress={r.total / Math.max(r.target.hours, 0.001)}
@@ -155,7 +162,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           <Kpi label="Дней с учётом" value={String(r.daysWithEntries)} sub={`из ${r.days.length} в периоде`} />
         )}
         <Kpi
-          label="В рабочий день"
+          label="В раб. день"
           value={r.avgPerWeekday !== null ? f1(r.avgPerWeekday) : '—'}
           unit="ч"
           sub={r.forecast ? `прогноз на месяц ≈ ${f1(r.forecast.hours)} ч` : `рабочих дней: ${r.weekdays}`}
@@ -189,6 +196,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           buckets={chart.buckets}
           series={chart.series}
           today={today}
+          height={wide ? 200 : 116}
           onPick={r.from === r.to ? undefined : onDrill}
           titleOf={(b) =>
             b.from === b.to
@@ -197,13 +205,13 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           }
         />
         {r.from !== r.to && (
-          <span className="text-xs text-text-tertiary">
+          <span className="hidden text-xs text-text-tertiary lg:block">
             Нажмите на столбик — откроется этот {chart.grain === 'day' ? 'день' : chart.grain === 'week' ? 'отрезок' : 'месяц'}.
           </span>
         )}
       </Panel>
 
-      <div className="grid gap-3 lg:grid-cols-5 lg:gap-4">
+      <div className="grid gap-2.5 lg:grid-cols-5 lg:gap-4">
         <Panel
           className="lg:col-span-3"
           title="Куда ушло время"
@@ -238,8 +246,8 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
                 />
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-tertiary">
-                <span>Нажмите на строку — весь отчёт пересчитается по ней. Справа: часы и доля; «+/−» — к {r.prevDative}.</span>
-                {rows.list.length > 8 && (
+                <span className="hidden lg:inline">Нажмите на строку — весь отчёт пересчитается по ней. Справа: часы и доля; «+/−» — к {r.prevDative}.</span>
+                {rows.list.length > rowLimit && (
                   <button type="button" className="font-medium text-accent-text" onClick={() => setAllRows(!allRows)}>
                     {allRows ? 'Свернуть' : `Показать все ${rows.list.length}`}
                   </button>
@@ -249,17 +257,22 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           )}
         </Panel>
 
-        <div className="flex flex-col gap-3 lg:col-span-2 lg:gap-4">
+        <div className="flex flex-col gap-2.5 lg:col-span-2 lg:gap-4">
           {r.insights.length > 0 && (
             <Panel title="Что видно в цифрах">
-              <ul className="flex flex-col gap-2">
-                {r.insights.map((s) => (
-                  <li key={s} className="flex gap-2 text-base leading-[1.45] text-text">
+              <ul className="flex flex-col gap-1.5 lg:gap-2">
+                {insights.map((s) => (
+                  <li key={s} className="flex gap-2 text-sm leading-[1.45] text-text lg:text-base">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
                     {s}
                   </li>
                 ))}
               </ul>
+              {!wide && r.insights.length > 2 && (
+                <button type="button" className="self-start text-sm font-medium text-accent-text" onClick={() => setAllInsights(!allInsights)}>
+                  {allInsights ? 'Свернуть' : `Ещё ${r.insights.length - 2}`}
+                </button>
+              )}
               {r.prevIncompleteSince && (
                 <p className="text-xs text-text-tertiary">
                   Учёт начат {dayMonth(r.prevIncompleteSince)} — прошлый период записан не целиком, рост завышен.
@@ -269,7 +282,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           )}
           {r.forecast && !filtered && (
             <Panel title="Темп">
-              <p className="text-base leading-[1.45] text-text">
+              <p className="text-sm leading-[1.45] text-text lg:text-base">
                 {f1(r.forecast.pace)} ч в рабочий день — к концу месяца выйдет{' '}
                 <span className="tabular font-mono font-medium">≈{f1(r.forecast.hours)} ч</span>
                 {r.forecast.monthNorm ? (
@@ -295,14 +308,14 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
           }
         >
           <div className="flex flex-col divide-y divide-divider">
-            {planned.slice(0, 8).map((s) => {
+            {planned.slice(0, planLimit).map((s) => {
               const pctv = s.pct ?? 0
               const client = r.clients.find((c) => c.key === s.clientKey)
               return (
                 <Link
                   key={s.id}
                   to={`/tasks/${s.id}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-2.5 hover:bg-surface-hover lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_3.5rem]"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 hover:bg-surface-hover lg:gap-y-1.5 lg:py-2.5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_3.5rem]"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     {client?.color && (
@@ -331,7 +344,11 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
               )
             })}
           </div>
-          {planned.length > 8 && <span className="text-xs text-text-tertiary">Показаны первые 8 из {planned.length}.</span>}
+          {planned.length > planLimit && (
+            <span className="text-xs text-text-tertiary">
+              Показаны первые {planLimit} из {planned.length}.
+            </span>
+          )}
         </Panel>
       )}
     </div>

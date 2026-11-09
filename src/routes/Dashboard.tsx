@@ -7,8 +7,9 @@ import { UpgradeNote, useGate } from '../components/Upgrade'
 import { WorkspaceTag } from '../components/Workspaces'
 import { ClientReport } from '../components/report/ClientReport'
 import { PeriodControl } from '../components/report/PeriodControl'
-import { ReportFilters } from '../components/report/ReportFilters'
+import { FilterButton, ReportFilters } from '../components/report/ReportFilters'
 import { SELF_TABS, SelfReport, type SelfTab } from '../components/report/SelfReport'
+import { useMediaQuery } from '../lib/device'
 import { useGroupModel } from '../lib/groups'
 import { addDays, todayStr } from '../lib/period'
 import { useGroupItems, useGroups } from '../lib/queries/groups'
@@ -150,75 +151,138 @@ export function Dashboard() {
     .filter(Boolean)
     .join(', ')
 
+  const wide = useMediaQuery('(min-width: 1024px)')
+  const taskName = (id: string) => tasks.find((t) => t.id === id)?.name.trim() ?? 'Задача'
+  const drillBack = trail.length > 0 && (
+    <button
+      type="button"
+      onClick={back}
+      className="inline-flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-accent-text hover:underline"
+    >
+      <ArrowLeft size={14} />
+      Назад: {periodTitle(trail[trail.length - 1], today)}
+    </button>
+  )
+  const historyNote = historyCut && historyDays !== null && (
+    <UpgradeNote need="plus" what={`История старше ${historyDays === 365 ? 'года' : historyDays + ' дней'}`} />
+  )
+
   return (
     <div className="page page-wide mx-auto flex max-w-lg flex-col">
       <div className="safe-top">
-        <div className="flex flex-col gap-3 px-5 pt-3.5 pb-3 lg:gap-4 lg:pb-4">
-          <div className="flex flex-col gap-1">
-            <WorkspaceTag full className="self-start" />
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-              <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сводка</h1>
-              <div className="flex items-center gap-2">
-                {canClientMode && (
-                  <Segmented<Mode>
-                    value={mode}
-                    onChange={(m) => setParam('mode', m === 'client' ? 'client' : null)}
-                    options={[
-                      { value: 'self', label: 'Для себя' },
-                      { value: 'client', label: 'Для клиента' },
-                    ]}
-                  />
-                )}
+        {wide ? (
+          <div className="flex flex-col gap-4 px-5 pt-3.5 pb-4">
+            <div className="flex flex-col gap-1">
+              <WorkspaceTag full className="self-start" />
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сводка</h1>
+                <div className="flex items-center gap-2">
+                  {canClientMode && (
+                    <Segmented<Mode>
+                      value={mode}
+                      onChange={(m) => setParam('mode', m === 'client' ? 'client' : null)}
+                      options={[
+                        { value: 'self', label: 'Для себя' },
+                        { value: 'client', label: 'Для клиента' },
+                      ]}
+                    />
+                  )}
+                  {mode === 'self' && (
+                    <Button data-tip="export" onClick={() => setExportOpen(true)}>
+                      <Download size={15} />
+                      Выгрузить
+                    </Button>
+                  )}
+                  <ProfileButton />
+                </div>
+              </div>
+            </div>
+            <PeriodControl period={period} onChange={(p) => setPeriod(p)} today={today} tip="summary" />
+            {drillBack}
+            {historyNote}
+            {mode === 'self' && (
+              <>
+                <ReportFilters model={model} filter={filter} onChange={setFilter} taskName={taskName} />
+                <Segmented<SelfTab> className="self-start" value={tab} onChange={(t) => setParam('tab', t === 'overview' ? null : t)} options={SELF_TABS} />
+              </>
+            )}
+          </div>
+        ) : (
+          /*
+           * Телефон: три строки разного вида, чтобы не сливались, — заголовок с действиями,
+           * период рамкой во всю ширину, вкладки подчёркиванием. Готовые периоды — в окне по
+           * названию периода, срез — за кнопкой-воронкой, «Для клиента» — пятой вкладкой.
+           */
+          <div className="flex flex-col gap-2 px-5 pt-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Сводка</h1>
+                <WorkspaceTag />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
                 {mode === 'self' && (
-                  <Button data-tip="export" onClick={() => setExportOpen(true)}>
-                    <Download size={15} />
-                    <span className="hidden sm:inline">Выгрузить</span>
-                  </Button>
+                  <button
+                    type="button"
+                    data-tip="export"
+                    aria-label="Выгрузить отчёт"
+                    onClick={() => setExportOpen(true)}
+                    className="inline-flex h-[var(--tap)] w-10 items-center justify-center rounded-sm text-text-secondary active:bg-surface-sunken"
+                  >
+                    <Download size={18} />
+                  </button>
                 )}
                 <ProfileButton />
               </div>
             </div>
+            <PeriodControl
+              compact
+              period={period}
+              onChange={(p) => setPeriod(p)}
+              today={today}
+              tip="summary"
+              trailing={mode === 'self' ? <FilterButton model={model} filter={filter} onChange={setFilter} /> : undefined}
+            />
+            {drillBack}
+            {historyNote}
+            {mode === 'self' && <ReportFilters compact model={model} filter={filter} onChange={setFilter} taskName={taskName} />}
+            <div className="-mx-5 flex border-b border-divider px-3" role="tablist">
+              {[...SELF_TABS, ...(canClientMode ? [{ value: 'client' as const, label: 'Клиенту' }] : [])].map((o) => {
+                const active = o.value === 'client' ? mode === 'client' : mode === 'self' && tab === o.value
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      if (o.value === 'client') setParam('mode', 'client')
+                      else
+                        setSearchParams(
+                          (prev) => {
+                            const next = new URLSearchParams(prev)
+                            next.delete('mode')
+                            if (o.value === 'overview') next.delete('tab')
+                            else next.set('tab', o.value)
+                            return next
+                          },
+                          { replace: true },
+                        )
+                    }}
+                    className={`-mb-px h-10 min-w-0 flex-1 border-b-2 text-base ${
+                      active ? 'border-accent font-medium text-text' : 'border-transparent text-text-secondary'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-
-          <PeriodControl period={period} onChange={(p) => setPeriod(p)} today={today} tip="summary" />
-          {trail.length > 0 && (
-            <button
-              type="button"
-              onClick={back}
-              className="inline-flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-accent-text hover:underline"
-            >
-              <ArrowLeft size={14} />
-              Назад: {periodTitle(trail[trail.length - 1], today)}
-            </button>
-          )}
-          {historyCut && historyDays !== null && (
-            <UpgradeNote need="plus" what={`История старше ${historyDays === 365 ? 'года' : historyDays + ' дней'}`} />
-          )}
-
-          {mode === 'self' && (
-            <>
-              <ReportFilters
-                model={model}
-                filter={filter}
-                onChange={setFilter}
-                taskName={(id) => tasks.find((t) => t.id === id)?.name.trim() ?? 'Задача'}
-              />
-              <div className="sc -mx-5 flex overflow-x-auto px-5 lg:mx-0 lg:px-0">
-                <Segmented<SelfTab>
-                  stretch
-                  className="lg:w-auto"
-                  value={tab}
-                  onChange={(t) => setParam('tab', t === 'overview' ? null : t)}
-                  options={SELF_TABS}
-                />
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
       <div
-        className="px-5 pb-6 transition-opacity duration-200"
+        className="px-5 pt-2.5 pb-6 transition-opacity duration-200 lg:pt-0"
         style={{ opacity: rawQuery.isPlaceholderData ? 0.55 : 1 }}
         aria-busy={loading || rawQuery.isPlaceholderData}
       >
@@ -226,11 +290,7 @@ export function Dashboard() {
           <p className="py-8 text-center text-sm text-danger-text">Не получилось загрузить данные: {describeError(rawQuery.error)}</p>
         ) : loading || !raw || !report ? (
           <div className="flex flex-col gap-3" aria-label="Сводка загружается">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
+            <Skeleton className="h-28 w-full" />
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-48 w-full" />
           </div>

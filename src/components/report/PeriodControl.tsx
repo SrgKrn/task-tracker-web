@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Calendar, Check, ChevronLeft, ChevronRight } from '../Icon'
 import { Button, Chip, Sheet, fieldClass } from '../ui'
 import {
@@ -21,12 +21,18 @@ export function PeriodControl({
   onChange,
   today,
   tip,
+  compact = false,
+  trailing,
 }: {
   period: ReportPeriod
   onChange: (p: ReportPeriod) => void
   today: string
   /** якорь подсказки (data-tip) */
   tip?: string
+  /** телефон: одна строка без чипов — все готовые периоды открывает название */
+  compact?: boolean
+  /** справа от стрелок — например кнопка среза */
+  trailing?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState(period.from)
@@ -59,7 +65,9 @@ export function PeriodControl({
         <button type="button" className={arrow} aria-label="Следующий период" onClick={() => onChange(shiftPeriod(period, 1))}>
           <ChevronRight size={18} />
         </button>
+        {trailing}
       </div>
+      {!compact && (
       <div className="sc -mx-5 flex gap-1.5 overflow-x-auto px-5 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
         {QUICK_PRESETS.map((key) => {
           const def = PRESETS.find((p) => p.key === key)!
@@ -70,6 +78,7 @@ export function PeriodControl({
           )
         })}
       </div>
+      )}
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Период" anchored>
         <div className="flex flex-col gap-3">

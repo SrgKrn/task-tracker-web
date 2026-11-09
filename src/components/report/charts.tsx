@@ -327,7 +327,7 @@ export function HBars({
             </span>
           </>
         )
-        const cls = `flex flex-col gap-1.5 rounded-sm px-2 py-2 text-left ${dim ? 'opacity-55' : ''}`
+        const cls = `flex flex-col gap-1 rounded-sm px-2 py-1.5 text-left lg:gap-1.5 lg:py-2 ${dim ? 'opacity-55' : ''}`
         return onPick && r.id ? (
           <button
             key={r.id || 'none'}
@@ -475,15 +475,15 @@ export function Kpi({
   compact?: boolean
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-border bg-surface p-3.5">
-      <span className="truncate text-sm font-medium text-text-secondary">{label}</span>
+    <div className="flex min-w-0 flex-col gap-0.5 bg-surface px-2.5 py-2 lg:gap-1 lg:rounded-md lg:border lg:border-border lg:p-3.5">
+      <span className="truncate text-xs font-medium text-text-secondary lg:text-sm">{label}</span>
       <span className="flex items-baseline gap-1">
         <span
-          className={`tabular font-mono font-medium ${compact ? 'text-md leading-7' : 'text-xl'} ${tone === 'danger' ? 'text-danger-text' : 'text-text'}`}
+          className={`tabular font-mono font-medium ${compact ? 'text-sm leading-6 lg:text-md lg:leading-7' : 'text-md lg:text-xl'} ${tone === 'danger' ? 'text-danger-text' : 'text-text'}`}
         >
           {value}
         </span>
-        {unit && <span className="text-sm text-text-secondary">{unit}</span>}
+        {unit && <span className="text-xs text-text-secondary lg:text-sm">{unit}</span>}
       </span>
       {progress !== undefined && (
         <span className="block h-1 overflow-hidden rounded-full bg-surface-sunken">
@@ -493,7 +493,7 @@ export function Kpi({
           />
         </span>
       )}
-      {sub && <span className="truncate text-xs text-text-secondary">{sub}</span>}
+      {sub && <span className="text-xs leading-4 text-text-secondary max-lg:line-clamp-2 lg:truncate">{sub}</span>}
     </div>
   )
 }
@@ -511,7 +511,7 @@ export function Panel({
   className?: string
 }) {
   return (
-    <section className={`flex min-w-0 flex-col gap-3 rounded-md border border-border bg-surface p-3.5 lg:p-4 ${className}`}>
+    <section className={`flex min-w-0 flex-col gap-2 rounded-md border border-border bg-surface p-3 lg:gap-3 lg:p-4 ${className}`}>
       <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h2 className="text-md font-semibold text-text">{title}</h2>
         {aside}
