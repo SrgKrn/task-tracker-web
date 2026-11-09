@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { NAV_TABS } from './navTabs'
-import { Avatar } from './Avatar'
+import { AttentionDot, Avatar } from './Avatar'
+import { useProfileAttention } from '../lib/profileAttention'
 import { SidebarWorkspace } from './Workspaces'
 import { ActiveTimerBar } from './ActiveTimerBar'
 import { SidebarFolders } from './SidebarFolders'
 import { useProfile } from '../lib/profile'
-import { LogOut, PanelLeft, Plus, Search } from './Icon'
+import { PanelLeft, Plus, Search, Settings2 } from './Icon'
 import { Kbd, Logo, MOD_KEY } from './ui'
 import { useAuth } from '../lib/AuthContext'
 import { openCommandPalette } from '../lib/commands'
-import { supabase } from '../lib/supabaseClient'
 
 const COLLAPSED_KEY = 'semternity.sidebarCollapsed'
 
@@ -45,6 +45,10 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
 
   const email = session?.user.email ?? ''
   const profile = useProfile()
+  const attention = useProfileAttention()
+  const inSettings = ['/settings', '/groups', '/items', '/statuses', '/changelog', '/history', '/mosaic', '/admin'].some((p) =>
+    location.pathname.startsWith(p),
+  )
   const item = (active: boolean) =>
     `flex h-8 items-center gap-2.5 rounded-sm text-sm font-medium transition-colors ${
       collapsed ? 'justify-center px-0' : 'px-2.5'
@@ -126,29 +130,38 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         {!collapsed && <SidebarFolders />}
       </nav>
 
-      <div className={`flex items-center gap-2 border-t border-divider p-2 ${collapsed ? 'flex-col' : ''}`}>
+      {/* профиль и настройки — кнопкой (0.65.2): подпись говорит, что внутри, шестерёнка справа;
+          «Выйти» — на странице профиля, а не в одном клике отсюда */}
+      <div className="border-t border-divider p-2">
         <Link
           to="/settings"
-          className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-sm p-1.5 hover:bg-surface-sunken ${collapsed ? 'justify-center' : ''}`}
-          title={`Профиль · ${email}`}
+          data-tip="profile"
+          aria-current={inSettings ? 'page' : undefined}
+          aria-label={`Профиль и настройки: ${profile.name}${attention ? `. ${attention}` : ''}`}
+          className={`group flex min-w-0 items-center gap-2.5 rounded-md p-1.5 transition-colors ${collapsed ? 'justify-center' : ''} ${
+            inSettings ? 'bg-surface-selected' : 'hover:bg-surface-sunken'
+          }`}
+          title={`Профиль и настройки · ${email} · ${MOD_KEY}+,`}
         >
-          <Avatar size={28} />
+          <span className="relative shrink-0">
+            <Avatar size={32} />
+            {attention && <AttentionDot />}
+          </span>
           {!collapsed && (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-text">{profile.name}</span>
-              <span className="block truncate text-xs text-text-secondary">{email}</span>
-            </span>
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-text">{profile.name}</span>
+                <span className={`block truncate text-xs ${attention ? 'text-accent-text' : 'text-text-secondary'}`}>
+                  {attention ?? 'Профиль и настройки'}
+                </span>
+              </span>
+              <Settings2
+                size={16}
+                className={`shrink-0 transition-colors ${inSettings ? 'text-accent-text' : 'text-text-tertiary group-hover:text-text'}`}
+              />
+            </>
           )}
         </Link>
-        <button
-          type="button"
-          onClick={() => supabase.auth.signOut()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-text-secondary hover:bg-surface-sunken hover:text-text"
-          aria-label="Выйти"
-          title="Выйти"
-        >
-          <LogOut size={16} />
-        </button>
       </div>
     </aside>
   )

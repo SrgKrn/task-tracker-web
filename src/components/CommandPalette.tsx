@@ -234,6 +234,7 @@ const SHORTCUTS: { title: string; items: Shortcut[] }[] = [
     title: 'Везде',
     items: [
       [[MOD_KEY, 'K'], 'Поиск и команды'],
+      [[MOD_KEY, ','], 'Профиль и настройки'],
       [['/'], 'Поиск'],
       [['C'], 'Новая задача'],
       [['1', '2', '3', '4'], 'Сегодня, Задачи, Сводка, Фокус'],
@@ -347,6 +348,12 @@ export function AppCommands({ onCreate }: { onCreate: () => void }) {
       if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
         e.preventDefault()
         setPaletteOpen((o) => !o)
+        return
+      }
+      // Ctrl+, — настройки, как в настольных программах (0.65.2)
+      if ((e.metaKey || e.ctrlKey) && e.code === 'Comma' && !document.querySelector('[aria-modal="true"]')) {
+        e.preventDefault()
+        navigate('/settings')
         return
       }
       if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return

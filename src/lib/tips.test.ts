@@ -17,7 +17,7 @@ describe('подсказки 0.43', () => {
     for (const id of TIP_IDS) expect(HELP_BY_ID.has(TIPS[id].help)).toBe(true)
     for (const a of HELP) for (const r of a.related) expect(HELP_BY_ID.has(r)).toBe(true)
     expect(new Set(HELP.map((a) => a.id)).size).toBe(HELP.length)
-    expect(HELP).toHaveLength(16)
+    expect(HELP).toHaveLength(17)
   })
 
   it('очередь: по порядку списка, без закрытых, без лимита в день', () => {

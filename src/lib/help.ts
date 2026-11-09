@@ -19,6 +19,7 @@ export type HelpId =
   | 'history'
   | 'workspaces'
   | 'integrations'
+  | 'profile'
 
 export interface HelpArticle {
   id: HelpId
@@ -254,6 +255,21 @@ export const HELP: HelpArticle[] = [
     note: 'Что доступно, зависит от тарифа — это видно на экранах подключения.',
     related: ['timer-note', 'summary'],
     open: { label: 'Подключить Telegram', to: '/settings/telegram' },
+  },
+  {
+    id: 'profile',
+    section: 'Начало',
+    title: 'Профиль и настройки',
+    intro: 'Все настройки — в профиле: на телефоне это кружок с фото справа вверху, на компьютере — строка с вашим именем внизу боковой панели.',
+    steps: [
+      'Структура: пространства, группы, этапы, методика и фокус.',
+      'Норма и план часов, оформление, уведомления.',
+      'Telegram, Google Календарь и Диск, экспорт отчёта, справка и «Написать нам».',
+      'Точка на фото — внутри новое: ответ на ваше обращение или новая версия приложения.',
+    ],
+    note: 'На компьютере профиль открывается из любого места клавишами Ctrl+, (на Mac — ⌘,).',
+    related: ['plan', 'workspaces', 'integrations'],
+    open: { label: 'Открыть профиль', to: '/settings' },
   },
 ]
 

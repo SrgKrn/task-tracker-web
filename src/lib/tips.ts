@@ -33,7 +33,7 @@ export const TIP_IDS_043 = [
   'export',
 ] as const
 
-export const TIP_IDS = [...TIP_IDS_043, 'ring-done'] as const
+export const TIP_IDS = [...TIP_IDS_043, 'ring-done', 'profile'] as const
 
 export type TipId = (typeof TIP_IDS)[number]
 
@@ -140,6 +140,12 @@ export const TIPS: Record<TipId, TipDef> = {
     title: 'Пространства',
     text: 'Держите личное отдельно от работы: у каждого пространства свои задачи, группы, этапы и норма.',
     help: 'workspaces',
+  },
+  profile: {
+    title: 'Профиль и настройки',
+    text: 'Норма, этапы, группы, Telegram, календарь, экспорт отчёта — всё здесь.',
+    help: 'profile',
+    desktop: { text: 'Норма, этапы, группы, Telegram, календарь, экспорт отчёта — всё здесь. Открыть из любого места — Ctrl+,' },
   },
   export: {
     title: 'Отчёт',

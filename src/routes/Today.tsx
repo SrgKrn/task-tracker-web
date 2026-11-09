@@ -159,6 +159,7 @@ export function Today() {
   useTip('tile', showTile && !!todayTile && dayFact >= 1)
   useTip('method', method === 'none' && useDays >= 3 && tasks.length > 0)
   useTip('history', useDays >= 5)
+  useTip('profile', useDays >= 3)
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
