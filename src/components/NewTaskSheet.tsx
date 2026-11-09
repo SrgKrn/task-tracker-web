@@ -274,22 +274,27 @@ export function NewTaskSheet({
         )}
 
         {/* у окна «из встречи» подпись длиннее («Создать и засчитать 1 ч 30 мин») — кнопки
-            друг под другом, главная сверху во всю ширину */}
-        <div className={`mt-1 flex shrink-0 gap-2 ${onCreated ? 'flex-col-reverse' : ''}`}>
-          <Button size="lg" className={onCreated ? 'w-full' : 'flex-1'} onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
-            Создать
-          </Button>
-          <Button
-            size="lg"
-            variant="primary"
-            className={onCreated ? 'w-full' : 'flex-[1.4]'}
-            onClick={() => create(true)}
-            disabled={!canCreate}
-            title={whyDisabled}
-          >
-            {primaryLabel}
-          </Button>
-        </div>
+            друг под другом, главная сверху во всю ширину. В обычном окне главная — «Создать»
+            справа, «Создать и начать» — дополнительная слева */}
+        {onCreated ? (
+          <div className="mt-1 flex shrink-0 flex-col-reverse gap-2">
+            <Button size="lg" className="w-full" onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
+              Создать
+            </Button>
+            <Button size="lg" variant="primary" className="w-full" onClick={() => create(true)} disabled={!canCreate} title={whyDisabled}>
+              {primaryLabel}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-1 flex shrink-0 gap-2">
+            <Button size="lg" className="flex-1" onClick={() => create(true)} disabled={!canCreate} title={whyDisabled}>
+              {primaryLabel}
+            </Button>
+            <Button size="lg" variant="primary" className="flex-1" onClick={() => create(false)} disabled={!canCreate} title={whyDisabled}>
+              Создать
+            </Button>
+          </div>
+        )}
         {whyDisabled && title.trim() && <p className="-mt-1.5 text-center text-xs text-text-secondary">{whyDisabled}</p>}
 
         {/* внутри содержимого листа, а не рядом: клик по подложке этого окна не должен

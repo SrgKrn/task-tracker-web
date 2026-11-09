@@ -410,7 +410,7 @@ function DialogSheet({ open, onClose, title, children, headerAction }: SheetProp
         tabIndex={-1}
         onKeyDown={onDialogKey}
         data-closing={closing || undefined}
-        className="sheet-in safe-bottom flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 pb-6 shadow-modal outline-none lg:max-h-[85vh] lg:max-w-120 lg:rounded-lg lg:p-6"
+        className="sheet-in sheet-pad flex max-h-[92dvh] w-full flex-col gap-3.5 overflow-y-auto rounded-t-lg bg-surface px-5 pt-3 shadow-modal outline-none lg:max-h-[85vh] lg:max-w-120 lg:rounded-lg lg:px-6 lg:pt-6"
         style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
