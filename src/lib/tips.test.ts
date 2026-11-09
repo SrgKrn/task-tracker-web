@@ -20,19 +20,20 @@ describe('подсказки 0.43', () => {
     expect(HELP).toHaveLength(17)
   })
 
-  it('очередь: по порядку списка, без закрытых, без лимита в день', () => {
-    const c = new Set<TipId>(['ring', 'new-task', 'groups', 'summary', 'focus'])
-    expect(pickTip(c, {}, true)).toEqual(['new-task', 'ring', 'groups', 'summary', 'focus'])
-    expect(pickTip(c, { 'new-task': '2026-10-24', ring: '2026-10-24' }, true)).toEqual(['groups', 'summary', 'focus'])
+  it('очередь: сначала знакомство по порядку, потом остальные; без закрытых и без лимита в день', () => {
+    const c = new Set<TipId>(['ring', 'new-task', 'groups', 'summary', 'focus', 'method'])
+    expect(pickTip(c, {}, true)).toEqual(['new-task', 'ring', 'summary', 'focus', 'groups', 'method'])
+    expect(pickTip(c, { 'new-task': '2026-10-24', ring: '2026-10-24' }, true)).toEqual(['summary', 'focus', 'groups', 'method'])
   })
 
   it('выключенные подсказки не показываются', () => {
     expect(pickTip(new Set<TipId>(['timer']), {}, false)).toEqual([])
   })
 
-  it('первые шаги подписаны «1 из 3», остальные — нет', () => {
-    expect(FIRST_STEPS).toEqual(['new-task', 'timer', 'ring'])
-    expect(stepLabel('timer')).toBe('2 из 3 · первые шаги')
+  it('знакомство подписано «1 из 8», остальные — нет', () => {
+    expect(FIRST_STEPS).toEqual(['new-task', 'timer', 'ring', 'ring-done', 'stage', 'summary', 'focus', 'profile'])
+    expect(stepLabel('timer')).toBe('2 из 8 · первые шаги')
+    expect(stepLabel('profile')).toBe('8 из 8 · первые шаги')
     expect(stepLabel('groups')).toBeNull()
   })
 })

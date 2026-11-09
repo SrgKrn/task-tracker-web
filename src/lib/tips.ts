@@ -48,8 +48,20 @@ export interface TipDef {
   desktop?: { title?: string; text: string }
 }
 
-/** первые шаги первого дня — с подписью «1 из 3» */
-export const FIRST_STEPS: TipId[] = ['new-task', 'timer', 'ring']
+/**
+ * Знакомство в первый день (0.65.3) — с подписью «1 из 8». Идут первыми в очереди: пока
+ * шаг знакомства может показаться, остальные подсказки ждут. Сводка, Фокус и профиль
+ * показываются у своих вкладок — заходить на экраны не нужно.
+ */
+export const FIRST_STEPS: TipId[] = ['new-task', 'timer', 'ring', 'ring-done', 'stage', 'summary', 'focus', 'profile']
+
+/** после этого шага знакомство пройдено — дальше подсказки к остальным функциям */
+export const INTRO_LAST: TipId = 'profile'
+
+/** пауза между подсказками: следующая — не сразу после «Понятно», чтобы не было «стены» */
+export const TIP_GAP_MS = 3500
+
+const QUEUE_ORDER: TipId[] = [...FIRST_STEPS, ...TIP_IDS.filter((id) => !FIRST_STEPS.includes(id))]
 
 export const TIPS: Record<TipId, TipDef> = {
   'new-task': {
@@ -107,7 +119,7 @@ export const TIPS: Record<TipId, TipDef> = {
   },
   summary: {
     title: 'Сводка',
-    text: 'Часы за неделю, месяц или свой период: по задачам и группам, план рядом с фактом. Отсюда же — отчёт.',
+    text: 'Часы за неделю, месяц или свой период: по задачам и группам, план рядом с фактом. Отсюда же — отчёт для себя и клиента.',
     help: 'summary',
   },
   focus: {
@@ -154,10 +166,13 @@ export const TIPS: Record<TipId, TipDef> = {
   },
 }
 
-/** Что показывать: первая по порядку подсказка, чьё условие выполнено и которую ещё не закрыли. */
+/**
+ * Что показывать: подсказки, чьё условие выполнено и которые ещё не закрыли, — сначала шаги
+ * знакомства по порядку, потом остальные.
+ */
 export function pickTip(candidates: ReadonlySet<TipId>, seen: Readonly<Record<string, unknown>>, enabled: boolean): TipId[] {
   if (!enabled) return []
-  return TIP_IDS.filter((id) => candidates.has(id) && !(id in seen))
+  return QUEUE_ORDER.filter((id) => candidates.has(id) && !(id in seen))
 }
 
 /** текст подсказки для этого устройства: на компьютере — свой, если он есть */

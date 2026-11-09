@@ -120,7 +120,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
         {NAV_TABS.map((link) => {
           const active = link.match(location.pathname)
           return (
-            <Link key={link.to} to={link.to} className={item(active)} title={collapsed ? link.label : undefined}>
+            <Link key={link.to} to={link.to} data-tip={link.tip} className={item(active)} title={collapsed ? link.label : undefined}>
               <link.Icon size={18} className={active ? 'text-accent' : ''} />
               {!collapsed && link.label}
             </Link>

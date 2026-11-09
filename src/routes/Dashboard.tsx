@@ -129,7 +129,7 @@ export function Dashboard() {
 
   // подсказки 0.43: сама «Сводка» — при первом заходе; отчёт — когда набралось 10 ч учёта
   useTip('summary', true)
-  useTip('export', totalFactHours >= 10)
+  useTip('export', totalFactHours > 0)
   const sumPct = totalPlanHours > 0 ? Math.round((totalFactHours / totalPlanHours) * 100) : 0
 
   const rows = useMemo(() => {

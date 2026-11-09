@@ -167,8 +167,8 @@ export function TaskList() {
   const moveTask = useMoveTask()
   const toggleDone = useToggleDone()
   // подсказки 0.43: перетаскивание — когда задач стало пять; группы — когда задач три, а групп ещё нет
-  const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 3
-  useTip('drag', sorted.length >= 5)
+  const suggestGroups = !isLoading && model.groups.length === 0 && heads.length >= 1
+  useTip('drag', sorted.length >= 2)
   useTip('ring-done', sorted.length > 0)
   useTip('groups', suggestGroups)
 

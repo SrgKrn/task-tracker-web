@@ -15,7 +15,7 @@ import { METHODS } from '../lib/priority'
 import { useActiveWorkspace, useWorkspaces } from '../lib/workspace'
 import { TIP_IDS, TIPS, TipWhen, type TipId } from '../lib/tips'
 import { useTasks } from '../lib/queries/tasks'
-import { useUseDays, useUserSettings } from '../lib/queries/userSettings'
+import { useTipsIntroDone, useUserSettings } from '../lib/queries/userSettings'
 import { useTelegramStatus } from '../lib/telegram'
 import { useTheme, type ThemeChoice } from '../lib/theme'
 import { formatHoursRu } from '../lib/time'
@@ -105,7 +105,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
   const { data: telegram } = useTelegramStatus()
   const { data: calendars = [] } = useCalendarSources()
   const { data: google } = useGoogleStatus()
-  const useDays = useUseDays()
+  const introDone = useTipsIntroDone()
   const { data: workspaces = [] } = useWorkspaces()
   const { data: tasks = [] } = useTasks()
   const { data: settings } = useUserSettings()
@@ -144,7 +144,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
           title: 'Пространства',
           value: ws?.name,
           tip: 'workspaces',
-          tipWhen: workspaces.length === 1 && (useDays >= 14 || tasks.length >= 15),
+          tipWhen: introDone && workspaces.length === 1 && tasks.length > 0,
         },
         {
           to: '/groups',
@@ -183,7 +183,7 @@ function useMenu(): { title: string; items: MenuItem[] }[] {
     {
       title: 'Интеграции',
       items: [
-        { to: '/settings/telegram', glyph: <Send size={15} />, title: 'Telegram', value: tg, tip: 'telegram', tipWhen: useDays >= 5 && !!telegram && !telegram.linked },
+        { to: '/settings/telegram', glyph: <Send size={15} />, title: 'Telegram', value: tg, tip: 'telegram', tipWhen: introDone && !!telegram && !telegram.linked },
         {
           to: '/settings/calendar',
           glyph: <CalendarIcon size={15} />,

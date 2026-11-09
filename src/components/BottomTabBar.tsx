@@ -27,6 +27,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
       <Link
         key={tab.to}
         to={tab.to}
+        data-tip={tab.tip}
         aria-current={active ? 'page' : undefined}
         className={`relative z-10 flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full text-xs font-medium ${
           active ? 'text-accent-text' : 'text-text-secondary'

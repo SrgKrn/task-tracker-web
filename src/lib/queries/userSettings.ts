@@ -195,6 +195,15 @@ export function useResetTips() {
 }
 
 /** Дни пользования: условия подсказок «на 3-й день». До миграции — 0. */
+/**
+ * Знакомство с подсказками пройдено (0.65.3): закрыта последняя подсказка цепочки — «Профиль
+ * и настройки». После неё в тот же день идут подсказки к остальным функциям, без ожидания дней.
+ */
+export function useTipsIntroDone(): boolean {
+  const { data } = useUserSettings()
+  return !!data?.tips && 'profile' in data.tips
+}
+
 export function useUseDays(): number {
   const { data } = useUserSettings()
   return data?.use_days ?? 0

@@ -115,8 +115,9 @@ export function TaskDetail() {
   // подсказки 0.43: учёт — пока ничего не идёт; этап — когда по задаче уже есть факт;
   // состав — у большой задачи или когда задач стало много
   useTip('timer', !!task && !activeTimer)
-  useTip('stage', !!task && task.fact_hours > 0)
-  useTip('subtasks', !!task && !task.parent_id && (task.planned_hours >= 4 || allTasks.length >= 5))
+  // 0.65.3: этап и подзадачи — в первой же открытой задаче
+  useTip('stage', !!task)
+  useTip('subtasks', !!task && !task.parent_id)
   useTicker(isRunning || runningInside)
   const notePreview = useTimerNotePreview(isRunning ? activeTimer : null)
 

@@ -64,10 +64,10 @@ function TimerBar({ placement, collapsed }: { placement: 'top' | 'bottom'; colla
   const notePreview = useTimerNotePreview(liveTimer)
   const focus = run?.state === 'running' && run.phase_kind === 'work' && run.task_id === liveTimer?.task_id ? run : null
 
-  // подсказка о комментарии — когда учёт идёт уже пару минут: человек точно занят делом
+  // подсказка о комментарии — когда учёт идёт уже полминуты: человек занят делом
   useTip(
     'timer-note',
-    placement === 'bottom' && !!liveTimer && !!liveTask && Date.now() - new Date(liveTimer.started_at).getTime() >= 120_000,
+    placement === 'bottom' && !!liveTimer && !!liveTask && Date.now() - new Date(liveTimer.started_at).getTime() >= 30_000,
   )
 
   // в карточке идущей задачи свой закреп под шапкой — вторая плашка не нужна

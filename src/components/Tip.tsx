@@ -2,9 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { HELP_BY_ID, type HelpId } from '../lib/help'
-import { TIPS, pickTip, stepLabel, tipText, useTipCandidates, type TipId } from '../lib/tips'
+import { TIPS, TIP_GAP_MS, pickTip, stepLabel, tipText, useTip, useTipCandidates, type TipId } from '../lib/tips'
 import { usePopoverMode } from './Popover'
-import { useMarkTipSeen, useUserSettings } from '../lib/queries/userSettings'
+import { useMarkTipSeen, useSetTipsEnabled, useUserSettings } from '../lib/queries/userSettings'
+import { useTasks } from '../lib/queries/tasks'
 import { Button, Chip, MOD_KEY, Sheet } from './ui'
 
 /** сколько кнопка должна простоять на экране, прежде чем рядом появится подсказка */
@@ -35,8 +36,22 @@ function visibleAnchor(id: TipId): Element | null {
  * подсказку можно не читать. «Понятно», «Подробнее», касание мимо или переход на другой
  * экран закрывают её навсегда. Пока открыто любое окно, подсказка ждёт.
  */
+/**
+ * Шаги знакомства у вкладок (0.65.3): Сводка, Фокус и профиль — как только появилась первая
+ * задача; якоря — сами вкладки и кнопка профиля, экраны открывать не нужно.
+ */
+function IntroTips() {
+  const { data: tasks = [], isLoading } = useTasks()
+  const ready = !isLoading && tasks.length > 0
+  useTip('summary', ready)
+  useTip('focus', ready)
+  useTip('profile', ready)
+  return null
+}
+
 export function TipHost() {
   const candidates = useTipCandidates()
+  const setEnabled = useSetTipsEnabled()
   const { data: settings } = useUserSettings()
   const mark = useMarkTipSeen()
   const navigate = useNavigate()
@@ -46,6 +61,8 @@ export function TipHost() {
   // закрытые в этом запуске — на случай, если отметка в базу не дошла
   const closed = useRef(new Set<string>())
   const pending = useRef<{ id: TipId; since: number } | null>(null)
+  // когда закрыли прошлую: следующая — не раньше чем через TIP_GAP_MS
+  const lastClosed = useRef(0)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const queue = settings
@@ -57,6 +74,7 @@ export function TipHost() {
     (id: TipId) => {
       closed.current.add(id)
       pending.current = null
+      lastClosed.current = Date.now()
       setShown(null)
       mark.mutate(id)
     },
@@ -76,6 +94,7 @@ export function TipHost() {
         setShown(null)
         return
       }
+      if (Date.now() - lastClosed.current < TIP_GAP_MS) return
       for (const id of ids) {
         const el = visibleAnchor(id)
         if (!el) continue
@@ -137,7 +156,11 @@ export function TipHost() {
 
   return (
     <>
-      {shown && tip && createPortal(<TipCard shown={shown} cardRef={cardRef} onClose={close} onMore={(id) => {
+      <IntroTips />
+      {shown && tip && createPortal(<TipCard shown={shown} cardRef={cardRef} onClose={close} onOff={(id) => {
+        close(id)
+        setEnabled.mutate(false)
+      }} onMore={(id) => {
         close(id)
         setHelp(TIPS[id].help)
       }} onAction={(id, to) => {
@@ -153,12 +176,15 @@ function TipCard({
   shown,
   cardRef,
   onClose,
+  onOff,
   onMore,
   onAction,
 }: {
   shown: Shown
   cardRef: React.RefObject<HTMLDivElement | null>
   onClose: (id: TipId) => void
+  /** больше не показывать подсказки — включить снова можно в «Справке» */
+  onOff: (id: TipId) => void
   onMore: (id: TipId) => void
   onAction: (id: TipId, to: string) => void
 }) {
@@ -229,11 +255,21 @@ function TipCard({
             {tip.action?.label ?? 'Понятно'}
           </button>
         </span>
-        {tip.action && (
-          <button type="button" onClick={() => onClose(shown.id)} className="self-end text-xs opacity-60">
-            Не сейчас
+        <span className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => onOff(shown.id)}
+            title="Включить снова — в «Профиль → Справка»"
+            className="-ml-1 min-h-7 rounded-sm px-1 text-xs opacity-60 hover:opacity-90"
+          >
+            Выключить подсказки
           </button>
-        )}
+          {tip.action && (
+            <button type="button" onClick={() => onClose(shown.id)} className="min-h-7 rounded-sm px-1 text-xs opacity-60 hover:opacity-90">
+              Не сейчас
+            </button>
+          )}
+        </span>
       </div>
     </>
   )

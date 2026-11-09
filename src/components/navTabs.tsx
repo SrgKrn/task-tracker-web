@@ -8,6 +8,8 @@ import { TabFocus, TabSummary, TabTasks, TabToday } from './Icon'
 export interface NavTab {
   to: string
   label: string
+  /** подсказка знакомства у вкладки (0.65.3) */
+  tip?: 'summary' | 'focus'
   match: (pathname: string) => boolean
   Icon: typeof TabToday
 }
@@ -18,7 +20,7 @@ export const PROFILE_SECTIONS = ['/settings', '/groups', '/items', '/statuses', 
 export const NAV_TABS: NavTab[] = [
   { to: '/', label: 'Сегодня', match: (p) => p === '/', Icon: TabToday },
   { to: '/tasks', label: 'Задачи', match: (p) => p.startsWith('/tasks'), Icon: TabTasks },
-  { to: '/dashboard', label: 'Сводка', match: (p) => p === '/dashboard', Icon: TabSummary },
+  { to: '/dashboard', label: 'Сводка', match: (p) => p === '/dashboard', Icon: TabSummary, tip: 'summary' },
   // «Фокус» встал на место «Ещё»; настройки — в профиле (кружок справа вверху)
-  { to: '/focus', label: 'Фокус', match: (p) => p === '/focus', Icon: TabFocus },
+  { to: '/focus', label: 'Фокус', match: (p) => p === '/focus', Icon: TabFocus, tip: 'focus' },
 ]

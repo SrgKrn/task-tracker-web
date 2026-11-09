@@ -33,7 +33,7 @@ import { useGroupModel } from '../lib/groups'
 import { useStatuses } from '../lib/queries/statuses'
 import { useDuplicateTask, useSetPlanDate, useTasks, useUpdateTask } from '../lib/queries/tasks'
 import { useActiveTimer, useStartTimer, useStopTimer } from '../lib/queries/timer'
-import { usePriorityMethod, useUseDays, useUserSettings } from '../lib/queries/userSettings'
+import { usePriorityMethod, useTipsIntroDone, useUserSettings } from '../lib/queries/userSettings'
 import { useDayTiles, useMinuteClock } from '../lib/dayTile'
 import { useActiveWorkspace } from '../lib/workspace'
 import { useMediaQuery } from '../lib/device'
@@ -151,15 +151,15 @@ export function Today() {
    * после первого записанного времени (если нормы нет), плитка с первого часа; методика и
    * хронология — с 3-го и 5-го дня пользования.
    */
-  const useDays = useUseDays()
   useTip('new-task', !isLoading && tasks.length === 0)
   useTip('timer', !isLoading && tasks.length > 0 && !activeTimer)
   useTip('ring-done', !isLoading && tasks.length > 0)
   useTip('ring', !hasNorm && !activeTimer && (factByDay.get(today) ?? 0) > 0)
-  useTip('tile', showTile && !!todayTile && dayFact >= 1)
-  useTip('method', method === 'none' && useDays >= 3 && tasks.length > 0)
-  useTip('history', useDays >= 5)
-  useTip('profile', useDays >= 3)
+  // 0.65.3: всё — в первый день; методика и хронология — после знакомства, плитка — после любого учёта
+  const introDone = useTipsIntroDone()
+  useTip('tile', showTile && !!todayTile && dayFact > 0)
+  useTip('method', introDone && method === 'none' && tasks.length > 0)
+  useTip('history', introDone)
 
   /*
    * День — это то, что выбрано на сегодня (plan_date), ежедневные задачи и всё, по чему идёт
