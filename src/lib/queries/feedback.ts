@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
+import { UserError, describeError } from '../Toast'
 
 /**
  * «Написать нам» и админка (0.41). Обращения пользователь видит только свои (RLS), админ —
@@ -217,6 +218,11 @@ export interface AdminUser {
   telegram: boolean
   google: boolean
   push: boolean
+  /** 0.66 */
+  last_sign_in: string | null
+  /** заблокирован до (только действующая блокировка) */
+  banned_until: string | null
+  is_admin: boolean
 }
 
 export function useAdminUsers(enabled: boolean) {
@@ -283,11 +289,79 @@ export function useAdminSystem(enabled: boolean) {
 export function useAdminSetPlan() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { user: string; plan: string; days: number | null }) => {
-      const { error } = await supabase.rpc('admin_set_plan', { p_user: input.user, p_plan: input.plan, p_days: input.days })
-      if (error) throw error
+    /** until — до какого момента (ISO), null — бессрочно; trial — пробный период (нужна дата) */
+    mutationFn: async (input: { user: string; plan: string; until: string | null; trial?: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_plan', {
+        p_user: input.user,
+        p_plan: input.plan,
+        p_until: input.until,
+        p_trial: input.trial ?? false,
+      })
+      if (error) throw new UserError(ADMIN_ERROR[error.message] ?? describeError(error))
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+/* ── управление аккаунтами (0.66) ───────────────────────────────────── */
+
+/** коды ошибок базы и функции account → по-русски */
+const ADMIN_ERROR: Record<string, string> = {
+  forbidden: 'Нет прав админа.',
+  'admin_target:self': 'Со своим аккаунтом так нельзя.',
+  'admin_target:admin': 'Это админ — его удалять и блокировать нельзя.',
+  'admin_target:not_found': 'Такого пользователя уже нет.',
+  confirm_mismatch: 'Почта для подтверждения не совпала.',
+  bad_until: 'Дата окончания должна быть в будущем.',
+  trial_needs_until: 'Для пробного периода нужна дата окончания.',
+  bad_plan: 'Неизвестный тариф.',
+}
+
+export type AdminAccountAction = 'admin_delete' | 'admin_ban' | 'admin_unban' | 'admin_reset_password'
+
+/** удаление, блокировка, сброс пароля — серверная функция account (сервисный ключ) */
+export function useAdminAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { action: AdminAccountAction; user: string; confirm?: string }) => {
+      const { data, error } = await supabase.functions.invoke('account', {
+        body: { ...input, redirect: window.location.origin + '/login' },
+      })
+      if (error) {
+        // у ошибок функции текст лежит в теле ответа — достаём его, а не «non-2xx status code»
+        const ctx = (error as { context?: Response }).context
+        const body = ctx ? await ctx.json().catch(() => null) : null
+        const code = typeof body?.error === 'string' ? body.error : ''
+        throw new UserError(ADMIN_ERROR[code] ?? (code ? `Не получилось: ${code}` : describeError(error)))
+      }
+      return data as { deleted?: boolean; banned?: boolean; sent?: boolean; files?: number }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+export type AdminLogAction = 'delete' | 'ban' | 'unban' | 'reset_password' | 'set_plan' | 'reset_trial'
+
+export interface AdminLogEntry {
+  id: number
+  created_at: string
+  action: AdminLogAction
+  admin_email: string | null
+  target_id: string | null
+  target_email: string | null
+  details: { plan?: string; until?: string | null; trial?: boolean; files?: number; before?: { plan?: string; until?: string | null; trial?: boolean } | null }
+}
+
+/** журнал действий админов; user — только по одному человеку */
+export function useAdminLog(user: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ['admin', 'log', user],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_log_list', { p_user: user, p_limit: user ? 30 : 200 })
+      if (error) throw error
+      return (data ?? []) as AdminLogEntry[]
+    },
   })
 }
 
