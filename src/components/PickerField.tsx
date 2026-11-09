@@ -63,6 +63,14 @@ export function PickerField({
   const [creating, setCreating] = useState(false)
 
   const selected = items.find((i) => i.id === value) ?? null
+  // значений ещё нет (0.66.2): поле зовёт добавить первое, окно открывается сразу с вводом —
+  // раньше там было «Ничего не нашлось» и маленькая кнопка «Новый» внизу
+  const empty = items.length === 0 && !!onCreate
+
+  function openPicker() {
+    setOpen(true)
+    if (empty) setCreating(true)
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -85,7 +93,7 @@ export function PickerField({
     })
   }
 
-  const shown = selected?.name ?? noneLabel ?? emptyLabel ?? placeholder
+  const shown = selected?.name ?? (empty ? 'Добавить' : (noneLabel ?? emptyLabel ?? placeholder))
   const dot = (id: string | null) => {
     const color = id && dotOf ? dotOf(id) : null
     return color ? <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden /> : null
@@ -96,12 +104,17 @@ export function PickerField({
       {row ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openPicker}
           className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
         >
           <span className="shrink-0 text-text-secondary">{label}</span>
-          <span className={`flex min-w-0 flex-1 items-center justify-end gap-1.5 ${selected ? 'text-text' : 'text-text-tertiary'}`}>
+          <span
+            className={`flex min-w-0 flex-1 items-center justify-end gap-1.5 ${
+              selected ? 'text-text' : empty ? 'text-accent-text' : 'text-text-tertiary'
+            }`}
+          >
             {dot(value)}
+            {empty && <Plus size={14} className="shrink-0" />}
             <span className="truncate">{shown}</span>
           </span>
           <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
@@ -109,7 +122,7 @@ export function PickerField({
       ) : chip ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openPicker}
           className={`flex max-w-full items-center gap-1 ${
             chipLarge ? 'min-h-9 rounded-sm px-3 py-2 text-sm' : 'rounded-sm px-2 py-[3px] text-xs'
           }`}
@@ -127,21 +140,25 @@ export function PickerField({
           <FieldLabel>{label}</FieldLabel>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={openPicker}
             className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left text-base"
             style={{
               background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: selected ? 'var(--text)' : 'var(--text-tertiary)',
+              border: `1px ${empty ? 'dashed' : 'solid'} ${empty ? 'var(--border-strong)' : 'var(--border)'}`,
+              color: selected ? 'var(--text)' : empty ? 'var(--accent-text)' : 'var(--text-tertiary)',
             }}
           >
-            <span className="truncate">{shown}</span>
-            <ChevronDown size={14} className="text-text-secondary" />
+            <span className="flex min-w-0 items-center gap-1.5">
+              {empty && <Plus size={14} className="shrink-0" />}
+              <span className="truncate">{shown}</span>
+            </span>
+            {!empty && <ChevronDown size={14} className="text-text-secondary" />}
           </button>
         </>
       )}
 
       <Sheet anchored open={open} onClose={close} title={label}>
+        {!empty && (
         <div
           className="flex h-11 items-center gap-2 rounded-sm bg-surface-sunken px-2.5 text-text-secondary"
         >
@@ -156,7 +173,13 @@ export function PickerField({
             style={{ outline: 'none', boxShadow: 'none' }}
           />
         </div>
+        )}
 
+        {empty ? (
+          <p className="text-sm leading-[1.45] text-text-secondary">
+            Пока ни одного значения. Впишите первое — оно сохранится в списке и сразу выберется.
+          </p>
+        ) : (
         <div className="sc -mx-1 flex max-h-[46vh] flex-col overflow-y-auto px-1">
           {noneLabel && !query.trim() && (
             <button
@@ -194,6 +217,7 @@ export function PickerField({
             <p className="py-4 text-center text-sm text-text-secondary">Ничего не нашлось</p>
           )}
         </div>
+        )}
 
         {hint && <p className="-mt-1 text-sm leading-[1.45] text-text-secondary">{hint}</p>}
         {footer}
@@ -233,7 +257,7 @@ export function PickerField({
             }}
           >
             <Plus size={13} />
-            {query.trim() ? `Создать «${query.trim()}»` : 'Новый'}
+            {query.trim() ? `Создать «${query.trim()}»` : 'Добавить'}
           </Chip>
         )}
       </Sheet>

@@ -226,7 +226,7 @@ export function NewTaskSheet({
             hint="Группы подзадача берёт у своей задачи"
           />
         ) : (
-          <GroupFields model={model} value={effectiveItems} onChange={setItemIds} />
+          <GroupFields model={model} value={effectiveItems} onChange={setItemIds} offerGroup />
         )}
 
         <div className="flex items-center justify-between gap-3">
