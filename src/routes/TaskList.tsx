@@ -11,7 +11,7 @@ import { DatePicker } from '../components/DatePicker'
 import { ROW_RENAME_EVENT, TaskListItem } from '../components/TaskListItem'
 import { BulkBar, type BulkPanel } from '../components/BulkBar'
 import { useListSelection, type ListAction } from '../components/useListSelection'
-import { ArrowUp, Check, ChevronDown, Close, Search, Settings2, SortArrows } from '../components/Icon'
+import { ArrowUp, Check, ChevronDown, ChevronRight, Close, Search, Settings2, SortArrows } from '../components/Icon'
 import { usePopoverMode } from '../components/Popover'
 import { DENSITY_LABEL, useDensity, type Density } from '../lib/density'
 import { Button, Chip, ClientDot, Collapse, EmptyState, ListGroup, Overline, Segmented, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
@@ -40,6 +40,7 @@ import { autoNextSprint, childrenByParent, rollupFact, runningWithin } from '../
 import { usePref } from '../lib/prefs'
 import { useActiveWorkspaceId } from '../lib/workspace'
 import { FoldersSheet } from '../components/FoldersSheet'
+import { foldersEnabled } from '../lib/taskFolders'
 import { TASK_VIEW_LABEL, moveDueFields, useActiveFolder, useTaskView, type TaskView } from '../lib/taskView'
 import { useTaskFolders } from '../components/useTaskFolders'
 import { TaskBoard } from '../components/TaskBoard'
@@ -102,7 +103,8 @@ export function TaskList() {
   const [periodTo, setPeriodTo] = useState('')
   const [sheet, setSheet] = useState<'filter' | 'sort' | 'folders' | null>(null)
   // папки — общие с боковой панелью (0.64); на компьютере выбранная папка тоже общая с ней
-  const { settings: folderSettings, setSettings: setFolderSettings, folders } = useTaskFolders()
+  const { settings: folderSettings, folders } = useTaskFolders()
+  const showFolders = foldersEnabled(folderSettings)
   const [localFolder, setLocalFolder] = useState('all')
   const [sharedFolder, setSharedFolder] = useActiveFolder()
   const folderKey = table ? sharedFolder : localFolder
@@ -234,7 +236,7 @@ export function TaskList() {
     onRename: (id) => document.querySelector(`.task-list-pane [data-row-id="${id}"]`)?.dispatchEvent(new Event(ROW_RENAME_EVENT)),
     onAction: (action, ids) => runAction(action, ids),
     onFolder: (index) => {
-      if (folderSettings.source === 'off') return
+      if (!showFolders) return
       if (index === 0) setFolderKey('all')
       else if (folders[index - 1]) setFolderKey(folders[index - 1].key)
     },
@@ -535,7 +537,7 @@ export function TaskList() {
       </div>
 
       {/* папки: источник выбирает человек — группа, свои папки или ничего */}
-      {folderSettings.source !== 'off' && !table && (
+      {showFolders && !table && (
         <div className="sc -my-1 flex gap-2 overflow-x-auto px-5 py-1 pb-3.5">
           <Chip active={!folder} onClick={() => setFolderKey('all')}>
             Все <span className="tabular ml-1 font-mono text-xs opacity-70">{base.length}</span>
@@ -813,6 +815,22 @@ export function TaskList() {
           </div>
         </div>
         <Switch on={view.showDone} onChange={(v) => setView({ ...view, showDone: v })} label="Показывать готовые" />
+        {!table && (
+          // вход в папки и тогда, когда они выключены: строки чипов с шестерёнкой тогда нет
+          <ListGroup>
+            <button
+              type="button"
+              onClick={() => setSheet('folders')}
+              className="flex min-h-12 items-center gap-3 px-3.5 text-left active:bg-surface-sunken"
+            >
+              <span className="flex-1 text-base text-text">Папки</span>
+              <span className="truncate text-sm text-text-secondary">
+                {showFolders ? plural(folders.length, ['папка', 'папки', 'папок']) : 'выключены'}
+              </span>
+              <ChevronRight size={16} className="shrink-0 text-text-tertiary" />
+            </button>
+          </ListGroup>
+        )}
         {table && (
           <div className="flex flex-col gap-1.5">
             <Overline>Плотность</Overline>
@@ -880,12 +898,7 @@ export function TaskList() {
       <FoldersSheet
         open={sheet === 'folders'}
         onClose={() => setSheet(null)}
-        settings={folderSettings}
-        onChange={(next) => {
-          setFolderSettings(next)
-          setFolderKey('all')
-        }}
-        model={model}
+        onPick={setFolderKey}
       />
 
     </div>

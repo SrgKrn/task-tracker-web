@@ -6,6 +6,7 @@ import { useDragSort } from './useDragSort'
 import { useTaskFolders } from './useTaskFolders'
 import { FoldersSheet } from './FoldersSheet'
 import { useActiveFolder } from '../lib/taskView'
+import { foldersEnabled } from '../lib/taskFolders'
 
 /**
  * Папки «Задач» разделом боковой панели (0.64), как папки чатов в Telegram Desktop:
@@ -13,7 +14,7 @@ import { useActiveFolder } from '../lib/taskView'
  * Выбор папки открывает «Задачи», если были на другом экране; открытая карточка остаётся.
  */
 export function SidebarFolders() {
-  const { settings, setSettings, folders, heads, isDone, ready, model, setOrder } = useTaskFolders()
+  const { settings, folders, heads, isDone, ready, setOrder } = useTaskFolders()
   const [active, setActive] = useActiveFolder()
   const location = useLocation()
   const navigate = useNavigate()
@@ -58,7 +59,7 @@ export function SidebarFolders() {
         </button>
       </div>
 
-      {settings.source === 'off' ? (
+      {!foldersEnabled(settings) ? (
         <p className="px-2.5 text-xs text-text-tertiary">Папки выключены</p>
       ) : (
         <>
@@ -93,12 +94,7 @@ export function SidebarFolders() {
       <FoldersSheet
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        settings={settings}
-        onChange={(next) => {
-          setSettings(next)
-          setActive('all')
-        }}
-        model={model}
+        onPick={(key) => choose(key)}
       />
     </div>
   )
