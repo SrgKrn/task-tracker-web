@@ -19,6 +19,7 @@ import { formatRate, type RateCurrency } from '../lib/rate'
 import { PriorityField } from '../components/Priority'
 import { usePriorityMethod } from '../lib/queries/userSettings'
 import { CommentBar, TaskTimeline } from '../components/TaskTimeline'
+import { TaskDescription } from '../components/TaskDescription'
 import { useTip } from '../lib/tips'
 import { Button, ClientDot, ListGroup, Sheet } from '../components/ui'
 import { Menu, usePopoverMode, type MenuItem } from '../components/Popover'
@@ -508,6 +509,11 @@ export function TaskDetail() {
 
       {/* разделы друг под другом вместо вкладок: всё видно одной прокруткой */}
       <div className="flex flex-col gap-6 px-5 pt-6 pb-4 lg:flex-1">
+        <section className="flex flex-col gap-2.5">
+          <h2 className="text-md font-semibold text-text">Описание</h2>
+          <TaskDescription task={task} />
+        </section>
+
         {!isSubtask && (
           <section data-tip="subtasks" className="flex flex-col gap-2.5">
             <h2 className="flex items-baseline gap-2 text-md font-semibold text-text">

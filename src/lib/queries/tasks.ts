@@ -58,6 +58,8 @@ export interface NewTaskInput {
   /** своя ставка спринта — копия и следующий спринт берут её с собой */
   hourly_rate?: number | null
   rate_currency?: string | null
+  /** описание (0.66.6); не указано — пустое */
+  description?: string
 }
 
 export function useCreateTask() {
@@ -92,6 +94,7 @@ export type TaskFieldsInput = Partial<
     | 'abc_letter'
     | 'abc_rank'
     | 'delegated_to'
+    | 'description'
     | 'hourly_rate'
     | 'rate_currency'
   >
@@ -286,6 +289,7 @@ export function useDuplicateTask() {
         workspace_id: task.workspace_id,
         hourly_rate: task.hourly_rate,
         rate_currency: task.rate_currency,
+        description: task.description ?? '',
       }
       const { data, error } = await supabase.from('tasks').insert(input).select().single()
       if (error) throw error
@@ -326,6 +330,7 @@ export function useCreateNextSprint() {
         workspace_id: input.from.workspace_id,
         hourly_rate: input.from.hourly_rate,
         rate_currency: input.from.rate_currency,
+        description: input.from.description ?? '',
       }
       const { data, error } = await supabase.from('tasks').insert(head).select().single()
       if (error) throw error
