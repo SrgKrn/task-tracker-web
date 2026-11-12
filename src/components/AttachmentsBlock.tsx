@@ -35,7 +35,8 @@ interface AttachmentsBlockProps {
   taskIds?: string[]
   /** подписи задач — в карточке значения видно, откуда файл */
   taskNames?: Map<string, string>
-  title?: string
+  /** null — без подписи: заголовок у раздела снаружи */
+  title?: string | null
   emptyText: string
   /** папка проекта на Диске: окно выбора откроется в ней */
   driveFolderId?: string | null
@@ -210,10 +211,15 @@ export function AttachmentsBlock({
   return (
     <div ref={rootRef} className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <FieldLabel>
-          {title}
-          {files.length > 0 ? ` · ${files.length}` : ''}
-        </FieldLabel>
+        {title !== null ? (
+          <FieldLabel>
+            {title}
+            {files.length > 0 ? ` · ${files.length}` : ''}
+          </FieldLabel>
+        ) : (
+          // заголовок — у раздела карточки (0.67); здесь только сколько файлов
+          <span className="tabular font-mono text-xs text-text-secondary">{files.length > 0 ? files.length : ''}</span>
+        )}
         <span className="flex items-center gap-3">
           {driveReady && (
             <button

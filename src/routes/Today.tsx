@@ -142,6 +142,8 @@ export function Today() {
   const { data: settings, isLoading: settingsLoading } = useUserSettings()
   const showTile = !settingsLoading && settings?.show_time_block !== false
   const narrow = useMediaQuery('(max-width: 359px)')
+  // телефон: рядом с плиткой кольцо поменьше, чтобы подписи дня шли одной строкой (0.67)
+  const phone = useMediaQuery('(max-width: 479px)')
   const minute = useMinuteClock(!!activeTimer)
   const { tiles: todayTiles } = useDayTiles(today, today, today, minute)
   const todayTile = todayTiles.get(today)
@@ -183,9 +185,11 @@ export function Today() {
   const todayRows = [...openToday, ...todayTasks.filter(isDone)]
   const todayCountLabel =
     openToday.length > 0
-      ? `${plural(openToday.length, TASKS)} на день${doneToday ? ` · ${doneToday} готово` : ''}`
+      ? doneToday
+        ? `${plural(openToday.length, TASKS)} · ${doneToday} готово`
+        : `${plural(openToday.length, TASKS)} на день`
       : doneToday > 0
-        ? `всё на день готово · ${doneToday}`
+        ? `всё готово · ${doneToday}`
         : 'задач на день нет'
 
   /*
@@ -303,9 +307,9 @@ export function Today() {
 
   /* ── виджеты экрана (0.57): включаются и переставляются в «Виджетах» ── */
   const dayWidget = (
-    <div className="mx-5 mt-1 flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
+    <div className="mx-5 mt-1 flex items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-4 lg:p-4">
       <span data-tip="ring" className="shrink-0 rounded-full">
-        <Ring size={88} pct={ringPct} state="running" centerBg="var(--surface)" marker={hasNorm}>
+        <Ring size={tileOn && phone ? 72 : 88} pct={ringPct} state="running" centerBg="var(--surface)" marker={hasNorm}>
           <span className="flex flex-col items-center gap-0.5">
             <span className="tabular font-mono text-lg font-medium text-text">{formatHoursRu(dayFact)}</span>
             <span className="text-xs text-text-secondary">{hasNorm ? `из ${formatHoursRu(dayNorm)} ч` : 'без нормы'}</span>
@@ -313,29 +317,39 @@ export function Today() {
         </Ring>
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
-        <span className="flex items-center gap-2 text-text">
+        <span className="flex items-center gap-1.5 text-text">
           <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent" />
           {hasNorm ? (
-            <span>
-              {dayFact >= dayNorm ? 'Норма дня выполнена' : `Осталось ${formatHoursMinutes(dayNorm - dayFact)}`}
-              {dayOver >= 0.05 && <span className="text-danger-text"> · +{formatHoursMinutes(dayOver)}</span>}
+            <span className="min-w-0 truncate">
+              {dayOver >= 0.05 ? (
+                <>
+                  Норма · <span className="text-danger-text">+{formatHoursMinutes(dayOver)}</span>
+                </>
+              ) : dayFact >= dayNorm ? (
+                'Норма выполнена'
+              ) : (
+                `Ещё ${formatHoursMinutes(dayNorm - dayFact)}`
+              )}
             </span>
           ) : (
-            <Link to="/settings/plan" className="text-accent-text underline decoration-dotted underline-offset-4">
+            <Link to="/settings/plan" className="min-w-0 truncate text-accent-text underline decoration-dotted underline-offset-4">
               Задать норму дня
             </Link>
           )}
         </span>
-        <span className="flex items-center gap-2 text-text-secondary">
+        <span className="flex items-center gap-1.5 text-text-secondary">
           <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ring-idle)]" />
-          <span className="first-letter:uppercase">{todayCountLabel}</span>
+          <span className="min-w-0 truncate first-letter:uppercase">{todayCountLabel}</span>
         </span>
-        <span className="flex items-center gap-2 text-text-secondary">
-          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--bar-past)]" />
-          <span>
-            за неделю <span className="tabular font-mono text-xs">{formatHoursRu(weekTotal)} ч</span>
+        {/* неделя — здесь, только если её виджет выключен: одна цифра дважды на экране сбивает (0.67) */}
+        {!widgets.on.includes('week') && (
+          <span className="flex items-center gap-1.5 text-text-secondary">
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--bar-past)]" />
+            <span className="min-w-0 truncate">
+              за неделю <span className="tabular font-mono text-xs">{formatHoursRu(weekTotal)} ч</span>
+            </span>
           </span>
-        </span>
+        )}
       </div>
       {/* плитка дня — квадратом справа; на узких телефонах (до 360 px) меньше */}
       {tileOn && todayTile && (

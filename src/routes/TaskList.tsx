@@ -1,7 +1,7 @@
 import { ProfileButton } from '../components/Avatar'
 import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMediaQuery } from '../lib/device'
 import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
@@ -133,15 +133,20 @@ export function TaskList() {
   const folder = folders.find((f) => f.key === folderKey) ?? null
 
   const query = search.trim().toLowerCase()
+  /** запрос в названии или описании задачи (описание — с 0.67) */
+  const hit = useCallback(
+    (t: Task) => t.name.toLowerCase().includes(query) || (t.description ?? '').toLowerCase().includes(query),
+    [query],
+  )
   /** спринты, у которых запрос нашёлся в подзадаче: их состав показываем раскрытым */
   const matchedInside = useMemo(() => {
     const ids = new Set<string>()
     if (!query) return ids
     for (const [parentId, children] of childrenOf) {
-      if (children.some((c) => c.name.toLowerCase().includes(query))) ids.add(parentId)
+      if (children.some(hit)) ids.add(parentId)
     }
     return ids
-  }, [childrenOf, query])
+  }, [childrenOf, query, hit])
 
   // всё, кроме папки, — из этого же набора считаются цифры на чипах папок
   const base = useMemo(() => {
@@ -150,7 +155,7 @@ export function TaskList() {
       .filter(
         (t) =>
           !q ||
-          t.name.toLowerCase().includes(q) ||
+          hit(t) ||
           matchedInside.has(t.id) ||
           model.valuesOf(t).some((v) => v.item.name.toLowerCase().includes(q)),
       )
@@ -159,7 +164,7 @@ export function TaskList() {
       .filter((t) =>
         Object.entries(selected).every(([groupId, ids]) => ids.has(model.valueOf(t, groupId)?.id ?? NONE)),
       )
-  }, [heads, query, matchedInside, periodFrom, periodTo, view.showDone, statusById, model, selected])
+  }, [heads, query, hit, matchedInside, periodFrom, periodTo, view.showDone, statusById, model, selected])
 
   const filtered = useMemo(() => (folder ? base.filter(folder.match) : base), [base, folder])
   const sorted = useMemo(
@@ -500,7 +505,7 @@ export function TaskList() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по названию"
+            placeholder="Поиск по задачам"
             aria-label="Поиск задач"
             className="min-w-0 flex-1 bg-transparent text-[length:var(--input-size)] text-text placeholder:text-text-tertiary"
             style={{ outline: 'none', boxShadow: 'none' }}

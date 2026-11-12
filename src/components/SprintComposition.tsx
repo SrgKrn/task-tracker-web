@@ -1,6 +1,5 @@
 import { SubtaskList } from './SubtaskList'
 import { ArrowRight } from './Icon'
-import { Overline } from './ui'
 import { formatHoursMinutes, formatHoursRu } from '../lib/time'
 import { suggestedStatus } from '../lib/tree'
 import type { Status, Task } from '../lib/types'
@@ -27,14 +26,12 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-baseline justify-between">
-        <Overline>Подзадачи</Overline>
-        {subtasks.length > 0 && (
-          <span className="tabular font-mono text-xs text-text-secondary">
-            закрыто {doneCount} из {subtasks.length}
-          </span>
-        )}
-      </div>
+      {/* заголовок «Подзадачи» — у раздела карточки; здесь только счёт закрытых (0.67) */}
+      {subtasks.length > 0 && (
+        <span className="tabular -mt-1 font-mono text-xs text-text-secondary">
+          закрыто {doneCount} из {subtasks.length}
+        </span>
+      )}
 
       {subtasks.length > 0 && <PlanAllocation task={task} subtasks={subtasks} isDone={isDone} />}
 

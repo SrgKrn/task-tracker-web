@@ -110,7 +110,7 @@ function BudgetForm() {
           День — для кольца на «Сегодня». Месяц — норма периода в сводке и отчёте; без него норма — день × рабочие дни.
         </span>
       </div>
-      <div className="flex gap-[9px]">
+      <div className="flex gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="text-sm font-medium text-text-secondary">В день</span>
           <input
@@ -144,8 +144,9 @@ function BudgetForm() {
         />
         <span className="text-xs text-text-secondary">{WORK_DAY_HINT[workDays] ?? ''}</span>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        loading={saveSettings.isPending}
         onClick={() =>
           saveSettings.mutate(
             {
@@ -156,11 +157,9 @@ function BudgetForm() {
             { onError: (e) => showError(describeError(e)), onSuccess: () => showSuccess('Сохранено') },
           )
         }
-        className="h-11 rounded-sm text-base font-semibold"
-        style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
       >
         Сохранить
-      </button>
+      </Button>
     </div>
   )
 }
@@ -446,35 +445,21 @@ function ExportSection() {
           </label>
         ))}
       </div>
-      <div className="flex gap-[9px]">
+      <div className="flex gap-2">
         {(['excel', 'pdf'] as const).map((format) => (
-          <button
-            key={format}
-            type="button"
-            onClick={() => handleExport(format)}
-            disabled={generating !== null}
-            className="h-11 flex-1 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
-            style={{ border: '1px solid var(--border-strong)' }}
-          >
+          <Button key={format} className="flex-1" onClick={() => handleExport(format)} disabled={generating !== null}>
             {generating === format ? 'Готовим…' : format === 'excel' ? 'Скачать Excel' : 'Скачать PDF'}
-          </button>
+          </Button>
         ))}
       </div>
       {google?.linked?.drive && canDrive && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex gap-[9px]">
+          <div className="flex gap-2">
             {(['excel', 'pdf'] as const).map((format) => (
-              <button
-                key={format}
-                type="button"
-                onClick={() => saveToDrive(format)}
-                disabled={generating !== null}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-sm text-base font-medium text-text-secondary disabled:opacity-50"
-                style={{ border: '1px solid var(--border-strong)' }}
-              >
+              <Button key={format} className="flex-1" onClick={() => saveToDrive(format)} disabled={generating !== null}>
                 <Drive size={14} />
                 {generating === `drive-${format}` ? 'Кладём на Диск…' : format === 'excel' ? 'Excel на Диск' : 'PDF на Диск'}
-              </button>
+              </Button>
             ))}
           </div>
           <span className="text-center text-xs text-text-secondary">

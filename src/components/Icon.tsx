@@ -32,6 +32,7 @@ function svg(path: React.ReactNode, { size = 16, className = '' }: IconProps) {
 export const ArrowLeft = (p: IconProps) => svg(<><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></>, p)
 export const ArrowRight = (p: IconProps) => svg(<><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></>, p)
 export const ArrowUp = (p: IconProps) => svg(<><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></>, p)
+export const ExternalLink = (p: IconProps) => svg(<><path d="M7 17 17 7" /><path d="M8 7h9v9" /></>, p)
 export const ChevronLeft = (p: IconProps) => svg(<path d="m15 18-6-6 6-6" />, p)
 export const ChevronRight = (p: IconProps) => svg(<path d="m9 18 6-6-6-6" />, p)
 export const ChevronDown = (p: IconProps) => svg(<path d="m6 9 6 6 6-6" />, p)

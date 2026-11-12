@@ -33,6 +33,8 @@ const PAGES: { to: string; title: string; keywords?: string }[] = [
   { to: '/settings/export', title: 'Экспорт отчёта', keywords: 'pdf excel' },
   { to: '/settings/appearance', title: 'Оформление', keywords: 'тема' },
   { to: '/focus', title: 'Фокус', keywords: 'помидор pomodoro 90/30 таймер' },
+  { to: '/history', title: 'Хронология', keywords: 'история журнал учёт что было записи' },
+  { to: '/mosaic', title: 'Мозаика', keywords: 'плитка дня учёт месяц год' },
   { to: '/settings/method', title: 'Методика', keywords: 'приоритет эйзенхауэр лягушка abcde 1-3-5' },
   { to: '/settings/profile', title: 'Личные данные', keywords: 'имя фото почта пароль' },
   { to: '/settings', title: 'Профиль', keywords: 'настройки аккаунт ещё' },

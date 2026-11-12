@@ -537,6 +537,7 @@ export function TaskDetail() {
             driveFolderId={values.find((v) => v.item.drive_folder_id)?.item.drive_folder_id ?? null}
             taskIds={[task.id, ...subtasks.map((c) => c.id)]}
             taskNames={subtasks.length ? new Map(subtasks.map((c) => [c.id, c.name])) : undefined}
+            title={null}
             emptyText="Договор, ТЗ, скриншоты — откроются прямо отсюда"
             catchFiles
           />
