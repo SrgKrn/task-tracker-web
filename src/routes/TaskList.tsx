@@ -647,6 +647,7 @@ export function TaskList() {
                       {section.items.map((task, i) => (
                         <div key={task.id} data-sort-row data-tip={i === 0 ? 'drag' : undefined}>
                           <TaskListItem
+                            quietRing
                             task={task}
                             badge={<PriorityBadge task={task} method={method} today={today} />}
                             status={task.status_id ? statusById.get(task.status_id) : undefined}

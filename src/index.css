@@ -137,6 +137,14 @@ input[type="number"] {
   bottom: calc(var(--tabbar-bottom) + 66px + 8px);
 }
 
+/* «Фокус» во время рабочего отрезка (0.71): плашка повторяла бы те же часы, что в кольце */
+@media (max-width: 1023.98px) {
+  :root:has(.tabbar[data-immersive]) .mini-bar,
+  :root:has(.tabbar[data-immersive]) .mini-bridge {
+    display: none;
+  }
+}
+
 .mini-bar-pill {
   background: color-mix(in srgb, var(--surface) 70%, var(--timer-bg));
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -196,7 +204,8 @@ input[type="number"] {
 
 /* пока открыта клавиатура и в карточке задачи — панель уезжает вниз */
 .tabbar[data-hidden],
-.tabbar[data-away] {
+.tabbar[data-away],
+.tabbar[data-immersive] {
   translate: 0 calc(100% + var(--tabbar-bottom) + 16px);
   opacity: 0;
   pointer-events: none;

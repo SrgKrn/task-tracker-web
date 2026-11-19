@@ -353,6 +353,7 @@ function ItemTasks({
 
   const row = (task: Task) => (
     <TaskListItem
+      quietRing
       key={task.id}
       task={task}
       status={task.status_id ? statusById.get(task.status_id) : undefined}

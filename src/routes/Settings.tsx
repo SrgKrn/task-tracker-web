@@ -552,20 +552,25 @@ export function Settings() {
           </>
         ) : (
           <>
-        {/* человек — по центру, как в Telegram: фото, имя, почта и тариф */}
+        {/*
+         * Человек — строкой (0.71): карточка по центру с крупным фото занимала полэкрана,
+         * и «Пространство» со структурой уезжали на второй экран. Имя меняют редко.
+         */}
         <Link
           to="/settings/profile"
-          className="mt-4 flex flex-col items-center gap-1 rounded-lg border border-border bg-surface px-4 pt-5 pb-4 text-center active:bg-surface-sunken lg:hover:bg-surface-hover"
+          className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 active:bg-surface-sunken"
         >
-          <span className="relative mb-1.5">
-            <Avatar size={76} />
-            <span className="absolute -right-0.5 -bottom-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-text-secondary">
-              <Camera size={14} />
+          <span className="relative shrink-0">
+            <Avatar size={48} />
+            <span className="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface text-text-secondary">
+              <Camera size={11} />
             </span>
           </span>
-          <span className="block max-w-full truncate text-lg font-semibold text-text">{profile.name}</span>
-          <span className="block max-w-full truncate text-sm text-text-secondary">{profile.email}</span>
-          {!profile.hasName && <span className="block text-sm text-accent-text">Добавьте имя и фото</span>}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-md font-semibold text-text">{profile.name}</span>
+            <span className="truncate text-sm text-text-secondary">{profile.hasName ? profile.email : 'Добавьте имя и фото'}</span>
+          </span>
+          <ChevronRight size={15} className="shrink-0 text-text-secondary" />
         </Link>
 
         {/* быстрые плитки: то, что переключают чаще всего, — без захода в разделы */}

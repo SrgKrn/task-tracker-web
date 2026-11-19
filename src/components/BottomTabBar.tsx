@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useFocusRun } from '../lib/queries/focus'
 import { useActiveTimer } from '../lib/queries/timer'
 import { useScrollCompact } from '../lib/scrollCompact'
 import { useKeyboardOpen } from '../lib/viewport'
@@ -24,6 +25,10 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   // пока идёт учёт, «+» связан с плашкой жидким перешейком — кружок не сжимаем, иначе
   // перешеек съезжает; плашка и «+» и так одна связка с главным действием «стоп»
   const { data: timer } = useActiveTimer()
+  // идёт рабочий отрезок фокуса и он на экране — на экране только время, кнопки и задача
+  // (0.71); панель возвращается на паузе и в перерыве
+  const { data: run } = useFocusRun()
+  const immersive = location.pathname === '/focus' && run?.state === 'running' && run.phase_kind === 'work'
   const activeIndex = NAV_TABS.findIndex((t) => t.match(location.pathname))
   // каждый переезд подложки — новая «капля»: анимация растяжения начинается заново
   const [prevIndex, setPrevIndex] = useState(activeIndex)
@@ -58,6 +63,7 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
       className="tabbar fixed inset-x-0 z-40 px-3 lg:hidden"
       data-hidden={keyboard || undefined}
       data-away={away || undefined}
+      data-immersive={immersive || undefined}
       data-compact={(compact && !away && !timer) || undefined}
     >
       <div className="mx-auto flex max-w-lg items-center gap-2">

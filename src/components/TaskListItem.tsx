@@ -69,6 +69,12 @@ interface TaskListItemProps {
   cursor?: boolean
   /** клик по строке с Ctrl или Shift — выделение; true — карточку не открывать */
   onPick?: (e: React.MouseEvent) => boolean
+  /**
+   * Кольцо без знака ▶ (0.71, проба): в «Задачах» список читается по названиям и прогрессу,
+   * а не как список воспроизведения. Касание кольца по-прежнему запускает учёт; знак
+   * появляется при наведении мыши. На «Сегодня» — экране работы — ▶ остаётся.
+   */
+  quietRing?: boolean
 }
 
 /** ширина одной кнопки в «ящике» действий, открываемом свайпом */
@@ -116,6 +122,7 @@ export function TaskListItem({
   picked = false,
   cursor = false,
   onPick,
+  quietRing = false,
 }: TaskListItemProps) {
   const runningTaskId = activeTimer?.task_id
   const isRunningSelf = runningTaskId === task.id
@@ -455,7 +462,7 @@ export function TaskListItem({
       data-no-drag
       data-tip={onToggleDone ? 'timer ring-done' : 'timer'}
       data-holding={holding || undefined}
-      className={`ring-hold relative shrink-0 rounded-full ${ringChanged ? `ring-pop ring-to-${ringKey}` : ''}`}
+      className={`ring-hold group/ring relative shrink-0 rounded-full ${ringChanged ? `ring-pop ring-to-${ringKey}` : ''}`}
       onPointerDown={holdStart}
       onPointerUp={holdEnd}
       onPointerCancel={holdEnd}
@@ -487,6 +494,10 @@ export function TaskListItem({
           <Check size={size < 28 ? 12 : 14} className="text-success" />
         ) : isRunning ? (
           <StopGlyph color="var(--on-accent)" size={size < 28 ? 7 : 8} />
+        ) : quietRing ? (
+          <span className="flex opacity-0 transition-opacity group-hover/ring:opacity-100 group-focus-within/ring:opacity-100">
+            <PlayGlyph size={size < 28 ? 7 : 8} />
+          </span>
         ) : (
           <PlayGlyph size={size < 28 ? 7 : 8} />
         )}

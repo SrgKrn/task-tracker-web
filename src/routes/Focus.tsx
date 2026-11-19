@@ -90,6 +90,12 @@ export function Focus() {
   const ringColor = isWork ? 'var(--accent)' : 'var(--success)'
   // подсказка о фокусе — пока он не запущен
   useTip('focus', !isLoading && !run)
+  /*
+   * Погружение (0.71): пока идёт рабочий отрезок, на экране одно — сколько осталось: кольцо,
+   * кнопки и задача строкой. Круг, «Сегодня», описание режима и панель вкладок уходят и
+   * возвращаются на паузе и в перерыве — всё остальное приглашало отвлечься.
+   */
+  const immersive = run?.state === 'running' && isWork
   const mainLabel = !run ? 'Начать' : run.state === 'running' ? 'Пауза' : run.state === 'ready' ? 'Начать работу' : 'Продолжить'
 
   return (
@@ -97,24 +103,33 @@ export function Focus() {
       <div className="safe-top">
         <div className="flex items-center justify-between gap-3 px-5 pt-3.5 pb-2">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <WorkspaceTag className="mb-1 self-start" />
-            <Overline>{FOCUS_INFO[mode].short}</Overline>
+            {!immersive && <WorkspaceTag className="mb-1 self-start" />}
+            {!immersive && <Overline>{FOCUS_INFO[mode].short}</Overline>}
             <h1 className="text-xl font-semibold tracking-[-0.01em] text-text">Фокус</h1>
           </div>
-          <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Длительности и режим" onClick={() => setSettingsOpen(true)}>
-            <Settings2 size={18} />
-          </Button>
-          <ProfileButton />
+          {!immersive && (
+            <>
+              <Button variant="ghost" className="w-[var(--tap)] px-0" aria-label="Длительности и режим" onClick={() => setSettingsOpen(true)}>
+                <Settings2 size={18} />
+              </Button>
+              <ProfileButton />
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 px-5 pt-2 pb-6">
+      <div
+        className={`flex flex-col gap-4 px-5 pt-2 pb-6 ${immersive ? 'flex-1 justify-center' : ''}`}
+        style={immersive ? { minHeight: 'calc(100dvh - 140px)' } : undefined}
+      >
+        {!immersive && (
         <div className="flex items-center justify-between gap-2">
           <span className="text-base font-medium text-text">{FOCUS_INFO[mode].name}</span>
           <button type="button" onClick={() => setInfo(true)} className="min-h-11 text-sm font-medium text-accent-text">
             Как работает
           </button>
         </div>
+        )}
 
         {run && (!isWork || run.state === 'ready') && (
           <p className="rounded-md bg-success-soft px-3.5 py-2.5 text-sm text-success-text">
@@ -199,6 +214,8 @@ export function Focus() {
           {!(run?.state === 'running' && isWork) && <span className="text-sm font-medium text-accent-text">Сменить</span>}
         </button>
 
+        {!immersive && (
+        <>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between">
             <Overline>Круг</Overline>
@@ -245,6 +262,8 @@ export function Focus() {
             </div>
           </ListGroup>
         </div>
+        </>
+        )}
 
         {isLoading ? null : !run && dayTasks.length === 0 && (
           <p className="text-sm text-text-secondary">
