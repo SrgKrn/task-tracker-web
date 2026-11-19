@@ -25,7 +25,7 @@ interface Geometry {
 }
 
 function measure(wrap: HTMLElement, pill: HTMLElement, stop: HTMLElement): Geometry | null {
-  const fabEl = document.querySelector<HTMLElement>('.tabbar:not([data-hidden]) .fab')
+  const fabEl = document.querySelector<HTMLElement>('.tabbar:not([data-hidden]):not([data-away]) .fab')
   const row = fabEl?.parentElement
   if (!fabEl || !row || !fabEl.offsetWidth) return null
   const w = wrap.getBoundingClientRect()

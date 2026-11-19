@@ -33,6 +33,11 @@
   --bar-future: var(--surface-sunken);
   --bar-empty: var(--divider);
 
+  /* Парящие панели (таб-бар, фильтр). В светлой теме слой отделяет тень; в тёмной тени
+     не видно, поэтому панель на ступень светлее фона и с заметной рамкой (0.68). */
+  --float-surface: var(--surface);
+  --float-border: var(--border);
+
   /* Мобильный слой: палец требует 44 px, а iOS приближает страницу при вводе в поле
      мельче 16 px. На широком экране — размеры пакета. */
   --tap: var(--control-md);
@@ -72,5 +77,20 @@
 @media (min-width: 1600px) {
   :root {
     --page-gutter: 64px;
+  }
+}
+
+/* Тёмная тема: высоту слоя показывает яркость — панель светлее карточек, дорожка пустого
+   кольца светлее рамки, иначе оба сливаются с фоном. */
+:root[data-theme='dark'] {
+  --float-surface: #2a2b28;
+  --float-border: var(--border-strong);
+  --ring-track: var(--border-strong);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --float-surface: #2a2b28;
+    --float-border: var(--border-strong);
+    --ring-track: var(--border-strong);
   }
 }

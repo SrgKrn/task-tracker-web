@@ -2,9 +2,7 @@ import { ProfileButton } from '../components/Avatar'
 import { useTip } from '../lib/tips'
 import { WorkspaceTag } from '../components/Workspaces'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { useMediaQuery } from '../lib/device'
-import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
+import { Link, useMatch, useNavigate } from 'react-router-dom'
 import { useDeferredDelete } from '../components/useDeferredDelete'
 import { useRevealOnLoad } from '../lib/reveal'
 import { DatePicker } from '../components/DatePicker'
@@ -84,7 +82,6 @@ export function TaskList() {
   const { showError, showSuccess } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
   const workspaceId = useActiveWorkspaceId()
-  const desktop = useMediaQuery('(min-width: 1024px)')
   // таблица с колонками — на широком экране с мышью (0.62); на телефоне и планшете прежние строки
   const table = usePopoverMode()
   const [density, setDensity] = useDensity()
@@ -95,8 +92,6 @@ export function TaskList() {
   const navigate = useNavigate()
   const openMatch = useMatch('/tasks/:id')?.params.id
   const openId = openMatch && openMatch !== 'new' ? openMatch : undefined
-  // список на телефоне скрыт, пока открыта карточка, — панель в корне страницы прячем сами
-  const onList = useLocation().pathname === '/tasks'
 
   const [search, setSearch] = useState('')
   const [periodFrom, setPeriodFrom] = useState('')
@@ -386,28 +381,6 @@ export function TaskList() {
   // количество и часы — по одному набору: открытым головным задачам
   const activeHeads = heads.filter((t) => !isDone(t))
   const totalPlan = activeHeads.reduce((a, t) => a + t.planned_hours, 0)
-  // на телефоне панель — в корне страницы: анимация перехода экранов сдвигает их
-  // трансформацией, и закреплённое внутри на это время уезжало бы вместе с экраном
-  const floatPanel = (
-      <div className="task-float pointer-events-none fixed inset-x-0 z-30 flex justify-center px-5 lg:sticky lg:bottom-4 lg:mt-4">
-        <div className="tabbar-pill pointer-events-auto flex items-center rounded-full border border-border p-1 shadow-popover">
-          <button
-            type="button"
-            onClick={() => setSheet('filter')}
-            className={`relative flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ${filtersActive ? 'text-accent-text' : 'text-text'}`}
-          >
-            Фильтр
-            {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="есть фильтры" />}
-          </button>
-          <span className="h-5 w-px bg-divider" aria-hidden />
-          <button type="button" onClick={() => setSheet('sort')} className="flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-text">
-            <SortArrows size={15} />
-            {TASK_SORT_LABEL[sort]}
-          </button>
-        </div>
-      </div>
-  )
-
   /*
    * Строку перетащили в другую секцию (0.62): по этапам — меняется этап, по группе — значение
    * группы. В уведомлении — «Вернуть». Секции «Без секций» нет — переносить некуда.
@@ -516,29 +489,30 @@ export function TaskList() {
             </button>
           )}
         </label>
-        {desktop && (
-          <>
-            <button
-              type="button"
-              onClick={() => setSheet('filter')}
-              className={`flex h-[var(--tap)] shrink-0 items-center gap-1.5 rounded-sm border px-3 text-sm font-medium hover:bg-surface-hover ${
-                filtersActive ? 'border-accent text-accent-text' : 'border-border text-text'
-              }`}
-            >
-              Фильтр
-              {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="есть фильтры" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSheet('sort')}
-              title="Порядок"
-              className="flex h-[var(--tap)] shrink-0 items-center gap-1.5 rounded-sm border border-border px-3 text-sm font-medium text-text hover:bg-surface-hover"
-            >
-              <SortArrows size={15} />
-              {TASK_SORT_LABEL[sort]}
-            </button>
-          </>
-        )}
+        {/* фильтр и порядок — в строке поиска и на телефоне (0.68): отдельная парящая панель
+            над таб-баром закрывала две строки списка. На телефоне — значками. */}
+        <button
+          type="button"
+          onClick={() => setSheet('filter')}
+          aria-label={filtersActive ? 'Фильтр и вид: фильтры включены' : 'Фильтр и вид'}
+          className={`relative flex h-[var(--tap)] shrink-0 items-center justify-center gap-1.5 rounded-sm border text-sm font-medium lg:px-3 lg:hover:bg-surface-hover max-lg:w-[var(--tap)] ${
+            filtersActive ? 'border-accent text-accent-text' : 'border-border text-text'
+          }`}
+        >
+          <Settings2 size={16} className="lg:hidden" />
+          <span className="max-lg:hidden">Фильтр</span>
+          {filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-accent max-lg:absolute max-lg:top-2 max-lg:right-2" aria-hidden />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSheet('sort')}
+          title="Порядок"
+          aria-label={`Порядок: ${TASK_SORT_LABEL[sort]}`}
+          className="flex h-[var(--tap)] shrink-0 items-center justify-center gap-1.5 rounded-sm border border-border text-sm font-medium text-text lg:px-3 lg:hover:bg-surface-hover max-lg:w-[var(--tap)]"
+        >
+          <SortArrows size={15} />
+          <span className="max-lg:hidden">{TASK_SORT_LABEL[sort]}</span>
+        </button>
       </div>
 
       {/* папки: источник выбирает человек — группа, свои папки или ничего */}
@@ -749,7 +723,6 @@ export function TaskList() {
         />
       )}
 
-      {!desktop && onList && createPortal(floatPanel, document.body)}
 
       <Sheet anchored open={sheet === 'sort'} onClose={() => setSheet(null)} title="Порядок">
         <ListGroup>

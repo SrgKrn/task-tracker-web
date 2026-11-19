@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useActiveTimer } from '../lib/queries/timer'
+import { useScrollCompact } from '../lib/scrollCompact'
 import { useKeyboardOpen } from '../lib/viewport'
 import { Plus } from './Icon'
 import { NAV_TABS, type NavTab } from './navTabs'
@@ -8,10 +10,20 @@ import { NAV_TABS, type NavTab } from './navTabs'
  * Нижняя панель телефона — парящая «пилюля», как в Telegram: четыре вкладки, активная —
  * в мягкой подложке; «Новая задача» — отдельный кружок справа. Пока открыта клавиатура,
  * панель прячется: над клавиатурой она только закрывала поле.
+ *
+ * Панель уступает место содержимому (0.68): при прокрутке вниз сжимается до значков, а в
+ * карточке задачи уходит совсем — там внизу поле комментария с кнопкой учёта, и три
+ * плавающих слоя друг над другом закрывали пятую часть экрана.
  */
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const location = useLocation()
   const keyboard = useKeyboardOpen()
+  // карточка задачи — экран второго уровня со своей нижней строкой и кнопкой «Назад»
+  const away = /^\/tasks\/[^/]+$/.test(location.pathname)
+  const compact = useScrollCompact(location.pathname)
+  // пока идёт учёт, «+» связан с плашкой жидким перешейком — кружок не сжимаем, иначе
+  // перешеек съезжает; плашка и «+» и так одна связка с главным действием «стоп»
+  const { data: timer } = useActiveTimer()
   const activeIndex = NAV_TABS.findIndex((t) => t.match(location.pathname))
   // каждый переезд подложки — новая «капля»: анимация растяжения начинается заново
   const [prevIndex, setPrevIndex] = useState(activeIndex)
@@ -36,15 +48,20 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         <span className={`tab-icon ${active ? 'text-accent' : ''}`} data-active={active || undefined}>
           <tab.Icon size={20} />
         </span>
-        <span className="truncate">{tab.label}</span>
+        <span className="tab-label truncate">{tab.label}</span>
       </Link>
     )
   }
 
   return (
-    <nav className="tabbar fixed inset-x-0 z-40 px-3 lg:hidden" data-hidden={keyboard || undefined}>
+    <nav
+      className="tabbar fixed inset-x-0 z-40 px-3 lg:hidden"
+      data-hidden={keyboard || undefined}
+      data-away={away || undefined}
+      data-compact={(compact && !away && !timer) || undefined}
+    >
       <div className="mx-auto flex max-w-lg items-center gap-2">
-        <div className="tabbar-pill relative flex h-[var(--tabbar-h)] min-w-0 flex-1 items-stretch rounded-full border border-border p-1 shadow-popover">
+        <div className="tabbar-pill relative flex h-[var(--tabbar-h)] min-w-0 flex-1 items-stretch rounded-full border border-[var(--float-border)] p-1 shadow-popover">
           {/* подложка активной вкладки переезжает к выбранной, а не появляется на месте */}
           <span
             className="tab-indicator absolute top-1 bottom-1"

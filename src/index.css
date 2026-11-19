@@ -104,6 +104,20 @@ input[type="number"] {
   --tabbar-space: calc(var(--tabbar-bottom) + var(--tabbar-h));
 }
 
+/* листаем вниз — панель сжимается до значков и отдаёт место списку (0.68) */
+:root:has(.tabbar[data-compact]) {
+  --tabbar-h: 48px;
+}
+.tabbar[data-compact] .tab-label {
+  display: none;
+}
+.tabbar-pill,
+.tabbar .fab {
+  transition:
+    height var(--duration-base, 180ms) var(--ease-out, ease-out),
+    width var(--duration-base, 180ms) var(--ease-out, ease-out);
+}
+
 /* плашка учёта над таб-баром: --mini-space — сколько она добавляет снизу (0.57) */
 :root:has([data-mini-bar]) {
   --mini-space: 64px;
@@ -117,6 +131,10 @@ input[type="number"] {
 .tabbar[data-hidden] ~ .mini-bar,
 :root:has(.tabbar[data-hidden]) .mini-bar {
   bottom: var(--tabbar-bottom);
+}
+/* в карточке задачи панели нет: внизу поле комментария, плашка учёта — над ним (0.68) */
+:root:has(.tabbar[data-away]:not([data-hidden])) .mini-bar {
+  bottom: calc(var(--tabbar-bottom) + 66px + 8px);
 }
 
 .mini-bar-pill {
@@ -160,21 +178,12 @@ input[type="number"] {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg, 14px);
   }
+  /* панель вкладок в карточке убрана — поле встаёт на её место */
+  :root:has(.tabbar[data-away]) .compose-bar {
+    bottom: var(--tabbar-bottom);
+  }
   :root:has(.tabbar[data-hidden]) .compose-bar {
     bottom: 8px;
-  }
-}
-
-/* плавающая панель «Фильтр · Порядок» в «Задачах» — над таб-баром и плашкой учёта */
-@media (max-width: 1023.98px) {
-  .task-float {
-    bottom: calc(var(--tabbar-space) + var(--mini-space, 0px) + 12px);
-  }
-  :root:has(.task-float) .app-content {
-    padding-bottom: calc(var(--tabbar-space) + var(--mini-space, 0px) + 76px);
-  }
-  :root:has(.tabbar[data-hidden]) .task-float {
-    display: none;
   }
 }
 
@@ -185,8 +194,9 @@ input[type="number"] {
     opacity var(--duration-base, 200ms) var(--ease-out, ease-out);
 }
 
-/* пока открыта клавиатура — панель уезжает вниз */
-.tabbar[data-hidden] {
+/* пока открыта клавиатура и в карточке задачи — панель уезжает вниз */
+.tabbar[data-hidden],
+.tabbar[data-away] {
   translate: 0 calc(100% + var(--tabbar-bottom) + 16px);
   opacity: 0;
   pointer-events: none;
@@ -194,7 +204,7 @@ input[type="number"] {
 
 /* полупрозрачная подложка с размытием — то, что прокручивается, видно сквозь панель */
 .tabbar-pill {
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  background: color-mix(in srgb, var(--float-surface) 86%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   backdrop-filter: blur(20px) saturate(1.4);
 }
@@ -857,11 +867,6 @@ button:disabled {
     animation: tab-bounce 420ms var(--ease-pop);
   }
 
-  /* плавающая панель «Задач» подстраивается под плашку учёта, а не прыгает */
-  .task-float {
-    transition: bottom 420ms var(--ease-ios);
-    animation: float-in 360ms var(--ease-ios) 120ms backwards;
-  }
   .mini-bar,
   .compose-bar {
     transition: bottom 420ms var(--ease-ios);
