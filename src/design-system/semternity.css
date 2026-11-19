@@ -10,8 +10,9 @@
   --ring-idle: var(--text-secondary);
   --ring-running: var(--accent);
   --ring-done: var(--success);
-  --ring-over: var(--danger);
-  /* первый виток при переработке: терракота и малиновый одной яркости (1,1:1) и слились бы */
+  /* переработка — янтарь (0.70): это рабочая ситуация, а не авария; малиновый — только просрочке */
+  --ring-over: var(--warning);
+  /* первый виток при переработке — нейтральный: план закрыт, сверху ложится превышение */
   --ring-over-base: var(--text-secondary);
   --ring-track-danger: color-mix(in srgb, var(--danger) 22%, var(--surface));
 

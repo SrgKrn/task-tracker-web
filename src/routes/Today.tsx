@@ -323,7 +323,7 @@ export function Today() {
             <span className="min-w-0 truncate">
               {dayOver >= 0.05 ? (
                 <>
-                  Норма · <span className="text-danger-text">+{formatHoursMinutes(dayOver)}</span>
+                  Норма · <span className="text-warning-text">+{formatHoursMinutes(dayOver)}</span>
                 </>
               ) : dayFact >= dayNorm ? (
                 'Норма выполнена'

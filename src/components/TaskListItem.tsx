@@ -679,7 +679,7 @@ export function TaskListItem({
           {showClock && activeTimer ? (
             <span className="tcol-hours tabular truncate text-right font-mono text-xs font-medium text-accent-text">{formatClock(activeTimer.started_at)}</span>
           ) : (
-            <span className={`tcol-hours tabular truncate text-right text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hoursShort}</span>
+            <span className={`tcol-hours tabular truncate text-right text-xs ${over ? 'text-warning-text' : 'text-text-secondary'}`}>{hoursShort}</span>
           )}
         </div>
 
@@ -868,7 +868,7 @@ export function TaskListItem({
                 {duePill}
               </span>
             ) : (
-              <span className={`tabular shrink-0 text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hours}</span>
+              <span className={`tabular shrink-0 text-xs ${over ? 'text-warning-text' : 'text-text-secondary'}`}>{hours}</span>
             )}
           </div>
 

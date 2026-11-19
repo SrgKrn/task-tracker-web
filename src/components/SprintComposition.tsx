@@ -122,7 +122,7 @@ function PlanAllocation({
           <span
             style={{
               width: `${openWidth}%`,
-              background: over ? 'var(--danger)' : 'var(--ring-idle)',
+              background: over ? 'var(--warning)' : 'var(--ring-idle)',
             }}
           />
         </div>
@@ -131,7 +131,7 @@ function PlanAllocation({
       <p className="text-sm leading-[1.5] text-text-secondary">
         {over ? (
           // перебор не запрещаем: так бывает, но видно это должно быть сразу
-          <span className="text-danger-text">разложено на {formatHoursMinutes(-left)} больше плана</span>
+          <span className="text-warning-text">разложено на {formatHoursMinutes(-left)} больше плана</span>
         ) : (
           status
         )}

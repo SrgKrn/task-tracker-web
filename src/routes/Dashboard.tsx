@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ProfileButton } from '../components/Avatar'
-import { ArrowLeft, Download } from '../components/Icon'
+import { ArrowLeft, ChevronRight, Download } from '../components/Icon'
 import { Button, Segmented, Sheet, Skeleton } from '../components/ui'
 import { UpgradeNote, useGate } from '../components/Upgrade'
 import { WorkspaceTag } from '../components/Workspaces'
@@ -211,7 +211,7 @@ export function Dashboard() {
           /*
            * Телефон: три строки разного вида, чтобы не сливались, — заголовок с действиями,
            * период рамкой во всю ширину, вкладки подчёркиванием. Готовые периоды — в окне по
-           * названию периода, срез — за кнопкой-воронкой, «Для клиента» — пятой вкладкой.
+           * названию периода, срез — за кнопкой-воронкой, «Для клиента» — в окне выгрузки.
            */
           <div className="flex flex-col gap-2 px-5 pt-2.5">
             <div className="flex items-center justify-between gap-2">
@@ -245,29 +245,41 @@ export function Dashboard() {
             {drillBack}
             {historyNote}
             {mode === 'self' && <ReportFilters compact model={model} filter={filter} onChange={setFilter} taskName={taskName} />}
+            {/*
+             * «Клиенту» — другой режим, а не раздел отчёта (0.70): вход в него — из окна
+             * выгрузки, а пятая вкладка упиралась в край экрана. В режиме клиента вместо
+             * вкладок — строка с возвратом.
+             */}
+            {mode === 'client' ? (
+              <div className="-mx-5 flex h-10 items-center justify-between gap-2 border-b border-divider px-5">
+                <span className="text-base font-medium text-text">Отчёт для клиента</span>
+                <button type="button" onClick={() => setParam('mode', null)} className="inline-flex items-center gap-1 text-sm font-medium text-accent-text">
+                  <ArrowLeft size={14} />
+                  Для себя
+                </button>
+              </div>
+            ) : (
             <div className="-mx-5 flex border-b border-divider px-3" role="tablist">
-              {[...SELF_TABS, ...(canClientMode ? [{ value: 'client' as const, label: 'Клиенту' }] : [])].map((o) => {
-                const active = o.value === 'client' ? mode === 'client' : mode === 'self' && tab === o.value
+              {SELF_TABS.map((o) => {
+                const active = tab === o.value
                 return (
                   <button
                     key={o.value}
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    onClick={() => {
-                      if (o.value === 'client') setParam('mode', 'client')
-                      else
-                        setSearchParams(
-                          (prev) => {
-                            const next = new URLSearchParams(prev)
-                            next.delete('mode')
-                            if (o.value === 'overview') next.delete('tab')
-                            else next.set('tab', o.value)
-                            return next
-                          },
-                          { replace: true },
-                        )
-                    }}
+                    onClick={() =>
+                      setSearchParams(
+                        (prev) => {
+                          const next = new URLSearchParams(prev)
+                          next.delete('mode')
+                          if (o.value === 'overview') next.delete('tab')
+                          else next.set('tab', o.value)
+                          return next
+                        },
+                        { replace: true },
+                      )
+                    }
                     className={`-mb-px h-10 min-w-0 flex-1 border-b-2 text-base ${
                       active ? 'border-accent font-medium text-text' : 'border-transparent text-text-secondary'
                     }`}
@@ -277,6 +289,7 @@ export function Dashboard() {
                 )
               })}
             </div>
+            )}
           </div>
         )}
       </div>
@@ -339,6 +352,14 @@ export function Dashboard() {
           }
         }}
         clientWork={clientWork}
+        onClientMode={
+          canClientMode && !wide
+            ? () => {
+                setExportOpen(false)
+                setParam('mode', 'client')
+              }
+            : undefined
+        }
         canExport={!limits || limits.export}
         canExtras={!limits || limits.export_extras}
         scope={`${periodTitle(period, today)}${isFilterEmpty(filter) ? '' : ` · ${filterLabel}`}`}
@@ -367,6 +388,7 @@ function ExportSheet({
   options,
   onOptions,
   clientWork,
+  onClientMode,
   canExport,
   canExtras,
   scope,
@@ -377,6 +399,8 @@ function ExportSheet({
   options: ReportOptions
   onOptions: (o: ReportOptions) => void
   clientWork: boolean
+  /** телефон: вход в отчёт для клиента — отсюда, а не пятой вкладкой (0.70) */
+  onClientMode?: () => void
   canExport: boolean
   canExtras: boolean
   /** что выгружается: период и срез */
@@ -414,6 +438,19 @@ function ExportSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title="Выгрузить отчёт" anchored>
+      {onClientMode && (
+        <button
+          type="button"
+          onClick={onClientMode}
+          className="mb-3 flex min-h-13 w-full items-center gap-3 rounded-md border border-border px-3.5 text-left active:bg-surface-sunken"
+        >
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-base font-medium text-text">Отчёт для клиента</span>
+            <span className="text-xs text-text-secondary">задачи, часы, ставка, сумма и реквизиты</span>
+          </span>
+          <ChevronRight size={16} className="shrink-0 text-text-tertiary" />
+        </button>
+      )}
       {!canExport ? (
         <UpgradeNote need="plus" what="Отчёт PDF и Excel" />
       ) : (

@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Search } from '../Icon'
 import { Chip, EmptyState, Segmented, StageChip, fieldClass } from '../ui'
 import { HBars, Heatmap, Kpi, Legend, Panel, SplitBar, TimeBars, seriesColor } from './charts'
 import type { GroupModel } from '../../lib/groups'
 import { useMediaQuery } from '../../lib/device'
-import { formatDayMonth } from '../../lib/period'
+import { TileCanvas } from '../DayTile'
+import { useDayTiles } from '../../lib/dayTile'
+import { addDays, formatDayMonth } from '../../lib/period'
 import { formatMoney, type RateCurrency } from '../../lib/rate'
 import { dayMonth, f1, fh, hm, type ReportData } from '../../lib/report'
 import {
@@ -126,7 +128,8 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
   }, [dimKey, filter, tasks, entries, r.from, r.to, r.prevFrom, r.prevTo, model])
 
   const delta = r.total - r.prevTotal
-  const planned = r.sprints.filter((s) => s.plan > 0)
+  // перерасход — сверху, по размеру превышения: видно, где переработка больше всего (0.70)
+  const planned = r.sprints.filter((s) => s.plan > 0).sort((a, b) => b.over - a.over)
   const moneyDue = r.billing.map((b) => formatMoney(b.due, b.currency as RateCurrency)).join(' · ')
   // телефон: всё важное — в два экрана, остальное раскрывается по нажатию
   const wide = useMediaQuery('(min-width: 1024px)')
@@ -139,40 +142,25 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
 
   return (
     <div className="flex flex-col gap-2.5 lg:gap-4">
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-divider lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent xl:grid-cols-6">
-        <Kpi
-          label="Часы"
-          value={f1(r.total)}
-          unit="ч"
-          sub={
-            r.prevTotal > 0
-              ? `${delta >= 0 ? '+' : '−'}${f1(Math.abs(delta))} ч к ${r.prevDative}`
-              : 'раньше записей нет'
-          }
-        />
-        {r.target && !filtered ? (
-          <Kpi
-            label="Норма"
-            value={`${Math.round((r.total / Math.max(r.target.hours, 0.001)) * 100)}`}
-            unit="%"
-            progress={r.total / Math.max(r.target.hours, 0.001)}
-            sub={`${f1(r.total)} из ${fh(r.target.hours)} ч`}
-          />
-        ) : (
-          <Kpi label="Дней с учётом" value={String(r.daysWithEntries)} sub={`из ${r.days.length} в периоде`} />
-        )}
+      {/*
+       * Бенто (0.70): одна главная плитка — «сколько наработал к норме», крупно, с полосой
+       * нормы и прогнозом; остальные показатели — малыми плитками 2 × 2. Раньше шесть равных
+       * чисел весили одинаково, и ответ на главный вопрос был разбит между двумя плитками.
+       */}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
+        <HeroKpi report={r} filtered={filtered} delta={delta} />
         <Kpi
           label="В раб. день"
           value={r.avgPerWeekday !== null ? f1(r.avgPerWeekday) : '—'}
           unit="ч"
-          sub={r.forecast ? `прогноз на месяц ≈ ${f1(r.forecast.hours)} ч` : `рабочих дней: ${r.weekdays}`}
+          sub={`рабочих дней: ${r.weekdays}`}
         />
         <Kpi label="Закрыто задач" value={String(r.closedCount)} sub={`в работе: ${r.inWorkCount}`} />
         <Kpi
           label="Сверх плана"
           value={f1(r.overHours)}
           unit="ч"
-          tone={r.overHours > 0.05 ? 'danger' : undefined}
+          tone={r.overHours > 0.05 ? 'warning' : undefined}
           sub={r.overCount > 0 ? plural(r.overCount, SPRINTS) : 'все в плане'}
         />
         {r.billing.length > 0 ? (
@@ -186,6 +174,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
         title={chart.grain === 'day' ? 'Часы по дням' : chart.grain === 'week' ? 'Часы по неделям' : 'Часы по месяцам'}
         aside={
           <Legend
+            limit={wide ? undefined : 3}
             series={chart.series}
             activeKeys={filter.items}
             onToggle={(key) => model.itemById.has(key) && setFilter({ ...filter, items: toggleIn(filter.items, key) })}
@@ -258,6 +247,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
         </Panel>
 
         <div className="flex flex-col gap-2.5 lg:col-span-2 lg:gap-4">
+          <MonthMosaic to={r.to} today={today} />
           {r.insights.length > 0 && (
             <Panel title="Что видно в цифрах">
               <ul className="flex flex-col gap-1.5 lg:gap-2">
@@ -326,19 +316,15 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
                       <StageChip tone={s.isFinal ? 'done' : s.stageTone} label={s.isFinal ? 'Готово' : s.status} />
                     </span>
                   </span>
-                  <span className="order-3 col-span-2 block h-1.5 overflow-hidden rounded-full bg-surface-sunken lg:order-none lg:col-span-1">
-                    <span
-                      className="block h-full rounded-full"
-                      style={{ width: `${Math.min(100, pctv)}%`, background: s.over > 0.01 ? 'var(--danger)' : 'var(--accent)' }}
-                    />
-                  </span>
+                  <PlanFactBar className="order-3 col-span-2 lg:order-none lg:col-span-1" pct={pctv} over={s.over > 0.01} />
                   <span className="tabular text-right text-sm text-text">
                     {f1(s.factTotal)} / {fh(s.plan)} ч
+                    {s.over > 0.01 && <span className="ml-1.5 font-medium text-warning-text lg:hidden">+{f1(s.over)}</span>}
                   </span>
                   <span
-                    className={`tabular hidden text-right text-sm lg:block ${s.over > 0.01 ? 'text-danger-text' : 'text-text-secondary'}`}
+                    className={`tabular hidden text-right text-sm lg:block ${s.over > 0.01 ? 'font-medium text-warning-text' : 'text-text-secondary'}`}
                   >
-                    {pctv}%
+                    {s.over > 0.01 ? `+${f1(s.over)} ч` : `${pctv}%`}
                   </span>
                 </Link>
               )
@@ -352,6 +338,116 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
         </Panel>
       )}
     </div>
+  )
+}
+
+/** главная плитка обзора: учтено крупно, полоса нормы и прогноз — ответ «сколько я наработал» */
+function HeroKpi({ report: r, filtered, delta }: { report: ReportData; filtered: boolean; delta: number }) {
+  const target = r.target && !filtered ? r.target.hours : null
+  const share = target !== null ? r.total / Math.max(target, 0.001) : null
+  const forecast = r.forecast && !filtered ? ` · прогноз ≈ ${f1(r.forecast.hours)} ч` : ''
+  return (
+    <div className="col-span-2 flex min-w-0 flex-col justify-between gap-2 rounded-md border border-border bg-surface p-3.5 lg:row-span-2 lg:p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+        <span className="text-sm font-medium text-text-secondary">Учтено</span>
+        <span className="tabular text-xs text-text-secondary">
+          {r.prevTotal > 0 ? `${delta >= 0 ? '+' : '−'}${f1(Math.abs(delta))} ч к ${r.prevDative}` : 'раньше записей нет'}
+        </span>
+      </div>
+      <span className="flex items-baseline gap-1.5">
+        <span className="tabular text-2xl font-semibold tracking-[-0.02em] text-text">{f1(r.total)}</span>
+        <span className="text-md text-text-secondary">ч</span>
+      </span>
+      {share !== null && target !== null ? (
+        <div className="flex flex-col gap-1.5">
+          <span className="block h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+            <span
+              className={`block h-full rounded-full ${share >= 1 ? 'bg-success' : 'bg-accent'}`}
+              style={{ width: `${Math.min(100, Math.max(0, share * 100))}%` }}
+            />
+          </span>
+          <span className="tabular text-sm text-text-secondary">
+            {Math.round(share * 100)} % из {fh(target)} ч нормы{forecast}
+          </span>
+        </div>
+      ) : (
+        <span className="tabular text-sm text-text-secondary">
+          {plural(r.daysWithEntries, ['день', 'дня', 'дней'])} с учётом из {r.days.length}
+          {forecast}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Полоса плана и факта: в плане — терракота по доле; сверх плана — план нейтральным
+ * отрезком, превышение янтарным продолжением (0.70). Раньше перерасход заливал полосу
+ * малиновым на 100 %, и 10,9 из 4 выглядело так же, как 19 из 12.
+ */
+function PlanFactBar({ pct, over, className = '' }: { pct: number; over: boolean; className?: string }) {
+  const planShare = over && pct > 0 ? (100 / pct) * 100 : Math.min(100, Math.max(0, pct))
+  return (
+    <span className={`flex h-1.5 gap-0.5 ${className}`} aria-hidden>
+      <span className="block h-full overflow-hidden rounded-full bg-surface-sunken" style={{ flexBasis: over ? `${planShare}%` : '100%' }}>
+        <span
+          className={`block h-full rounded-full ${over ? '' : 'bg-accent'}`}
+          style={{ width: over ? '100%' : `${planShare}%`, background: over ? 'var(--ring-over-base)' : undefined }}
+        />
+      </span>
+      {over && <span className="block h-full min-w-1 flex-1 rounded-full bg-warning" />}
+    </span>
+  )
+}
+
+const MONTH_NAMES = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
+
+/**
+ * Мозаика месяца прямо в обзоре (0.70): лицо продукта — в ежедневном маршруте, а не на
+ * третьем уровне профиля. Месяц — тот, где кончается период; нажатие — полный экран.
+ */
+function MonthMosaic({ to, today }: { to: string; today: string }) {
+  const navigate = useNavigate()
+  const wide = useMediaQuery('(min-width: 1024px)')
+  const month = (to > today ? today : to).slice(0, 7)
+  const [y, m] = month.split('-').map(Number)
+  const first = `${month}-01`
+  const last = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+  const { tiles } = useDayTiles(first, last, today)
+  const days: string[] = []
+  for (let d = first; d <= last; d = addDays(d, 1)) days.push(d)
+  // клетки делят ширину карточки поровну, но не крупнее 40 px — иначе на компьютере разрастаются
+  const [box, setBox] = useState<HTMLDivElement | null>(null)
+  const [width, setWidth] = useState(0)
+  useLayoutEffect(() => {
+    if (!box) return
+    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width))
+    ro.observe(box)
+    return () => ro.disconnect()
+  }, [box])
+  const cell = width ? Math.min(wide ? 36 : 40, Math.floor((width - 4 * 6) / 7)) : 0
+  return (
+    <Panel
+      title={`Мозаика · ${MONTH_NAMES[m - 1]}`}
+      aside={
+        <button type="button" className="text-sm font-medium text-accent-text" onClick={() => navigate('/mosaic')}>
+          Открыть
+        </button>
+      }
+    >
+      <div ref={setBox}>
+        {cell > 0 && (
+          <button type="button" onClick={() => navigate('/mosaic')} aria-label="Открыть мозаику" className="grid w-fit grid-cols-7 gap-1 rounded-sm">
+            {Array.from({ length: weekdayOf(first) }, (_, i) => (
+              <span key={`e${i}`} />
+            ))}
+            {days.map((d) => (
+              <TileCanvas key={d} tile={d > today ? undefined : tiles.get(d)} size={cell} className={d > today ? 'opacity-40' : ''} />
+            ))}
+          </button>
+        )}
+      </div>
+    </Panel>
   )
 }
 
@@ -453,7 +549,7 @@ function TasksTable({ report: r, model, statuses, tasks, entries, filter, today 
           {x.plan > 0 ? `${f1(x.factTotal)} / ${fh(x.plan)}` : child ? '' : `${f1(x.factTotal)} / —`}
         </span>
         <span
-          className={`tabular hidden text-right text-sm lg:block ${pct !== null && pct > 100 ? 'text-danger-text' : 'text-text-secondary'}`}
+          className={`tabular hidden text-right text-sm lg:block ${pct !== null && pct > 100 ? 'text-warning-text' : 'text-text-secondary'}`}
         >
           {pct !== null ? `${pct}%` : ''}
         </span>

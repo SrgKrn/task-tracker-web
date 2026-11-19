@@ -464,7 +464,7 @@ function ClientDocument({
                   план {fh(sp.plan)} ч · факт {f1(sp.factTotal)} ч
                   {sp.endDate ? ` · ${sp.overdue ? 'срок был' : 'до'} ${dayMonth(sp.endDate)}` : ''}
                   {b && b.overHours > 0.004 && (
-                    <span className="text-danger-text">
+                    <span className="text-warning-text">
                       {' '}
                       · сверх плана {h2(b.overHours)} ч{s.includeOvertime ? ' — в сумме' : ' — не в сумме'}
                     </span>

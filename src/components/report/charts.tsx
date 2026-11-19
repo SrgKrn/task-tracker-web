@@ -68,16 +68,27 @@ export function Legend({
   series,
   activeKeys,
   onToggle,
+  limit,
 }: {
   series: ChartSeries[]
   /** выбранные в фильтре — остальные бледнеют */
   activeKeys?: string[]
   onToggle?: (key: string) => void
+  /** на телефоне — первые N и «ещё K»: легенда в семь цветов занимала три строки (0.70) */
+  limit?: number
 }) {
+  const [all, setAll] = useState(false)
   if (series.length < 2) return null
+  const cut = limit !== undefined && !all && series.length > limit + 1
+  const shown = cut ? series.slice(0, limit) : series
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1">
-      {series.map((s) => {
+      {cut && (
+        <button type="button" onClick={() => setAll(true)} className="order-last text-sm font-medium text-accent-text">
+          ещё {series.length - shown.length}
+        </button>
+      )}
+      {shown.map((s) => {
         const dim = !!activeKeys?.length && !activeKeys.includes(s.key)
         const clickable = !!onToggle && s.key !== 'other' && s.key !== 'none'
         const body = (
@@ -468,18 +479,19 @@ export function Kpi({
   value: string
   unit?: string
   sub?: ReactNode
-  tone?: 'danger'
+  /** перерасход — янтарь: рабочая ситуация, не авария (0.70) */
+  tone?: 'warning'
   /** доля 0…1+ — тонкая полоса под числом */
   progress?: number
   /** длинное значение (суммы в двух валютах) — кеглем меньше, с переносом по частям */
   compact?: boolean
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 bg-surface px-2.5 py-2 lg:gap-1 lg:rounded-md lg:border lg:border-border lg:p-3.5">
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-md border border-border bg-surface px-3 py-2.5 lg:gap-1 lg:p-3.5">
       <span className="truncate text-xs font-medium text-text-secondary lg:text-sm">{label}</span>
       <span className="flex items-baseline gap-1">
         <span
-          className={`tabular font-medium ${compact ? 'text-sm leading-6 lg:text-md lg:leading-7' : 'text-md lg:text-xl'} ${tone === 'danger' ? 'text-danger-text' : 'text-text'}`}
+          className={`tabular font-medium ${compact ? 'text-sm leading-6 lg:text-md lg:leading-7' : 'text-md lg:text-xl'} ${tone === 'warning' ? 'text-warning-text' : 'text-text'}`}
         >
           {value}
         </span>
