@@ -84,7 +84,7 @@ export function FocusExplainer({ mode }: { mode: FocusMode }) {
         <ol className="flex flex-col gap-2">
           {info.steps.map(([mark, text]) => (
             <li key={mark} className="flex items-start gap-2.5 text-base text-text">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-surface-sunken font-mono text-xs font-medium text-text-secondary">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-xs font-medium text-text-secondary">
                 {mark}
               </span>
               <span className="pt-0.5">{text}</span>

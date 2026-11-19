@@ -84,7 +84,7 @@ function SourceRow({ src, title, onReconnect }: { src: CalendarSource; title: st
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="min-w-0 truncate text-base font-medium text-text">{title}</span>
-        <span className="shrink-0 font-mono text-xs text-text-secondary">{when(src.last_synced_at)}</span>
+        <span className="shrink-0 text-xs text-text-secondary">{when(src.last_synced_at)}</span>
       </div>
       {src.last_error && <span className="text-xs leading-[1.45] text-danger-text">{src.last_error}</span>}
       <SourceWorkspace src={src} />
@@ -251,7 +251,7 @@ export function CalendarCard() {
               inputMode="url"
               autoCapitalize="off"
               autoCorrect="off"
-              className="h-11 min-w-0 rounded-sm px-3 font-mono text-sm text-text placeholder:text-[var(--text-tertiary)]"
+              className="h-11 min-w-0 rounded-sm px-3 text-sm text-text placeholder:text-[var(--text-tertiary)]"
               
             />
             <span className="text-xs leading-[1.45] text-text-secondary">
@@ -299,7 +299,7 @@ export function CalendarCard() {
               readOnly
               value={feedUrl}
               onFocus={(e) => e.currentTarget.select()}
-              className="h-11 min-w-0 rounded-sm px-3 font-mono text-xs text-text-secondary"
+              className="h-11 min-w-0 rounded-sm px-3 text-xs text-text-secondary"
               
             />
             <button

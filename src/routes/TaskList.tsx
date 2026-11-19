@@ -519,14 +519,14 @@ export function TaskList() {
       {showFolders && !table && (
         <div className="sc -my-1 flex gap-2 overflow-x-auto px-5 py-1 pb-3.5">
           <Chip active={!folder} onClick={() => setFolderKey('all')}>
-            Все <span className="tabular ml-1 font-mono text-xs opacity-70">{base.length}</span>
+            Все <span className="tabular ml-1 text-xs opacity-70">{base.length}</span>
           </Chip>
           {folders.map((f) => (
             <Chip key={f.key} active={folder?.key === f.key} onClick={() => setFolderKey(folder?.key === f.key ? 'all' : f.key)}>
               <span className="flex items-center gap-1.5">
                 {f.color && <ClientDot color={f.color} size={7} />}
                 {f.name}
-                <span className="tabular font-mono text-xs opacity-70">{base.filter(f.match).length}</span>
+                <span className="tabular text-xs opacity-70">{base.filter(f.match).length}</span>
               </span>
             </Chip>
           ))}
@@ -631,8 +631,8 @@ export function TaskList() {
                         <ChevronDown size={15} />
                       </span>
                       <span className="text-md font-semibold text-text">{section.title}</span>
-                      <span className="tabular font-mono text-xs text-text-secondary">{section.items.length}</span>
-                      <span className="tabular ml-auto font-mono text-xs text-text-secondary">
+                      <span className="tabular text-xs text-text-secondary">{section.items.length}</span>
+                      <span className="tabular ml-auto text-xs text-text-secondary">
                         <FactSum tasks={section.items} childrenOf={childrenOf} activeTimer={activeTimer} plan={section.plan} />
                       </span>
                     </button>
@@ -861,7 +861,7 @@ export function TaskList() {
                     }}
                   >
                     {o.name}
-                    <span className="tabular ml-1.5 font-mono text-xs opacity-70">{counts.get(`${group.id}|${o.id}`) ?? 0}</span>
+                    <span className="tabular ml-1.5 text-xs opacity-70">{counts.get(`${group.id}|${o.id}`) ?? 0}</span>
                   </Chip>
                 ))}
               </div>

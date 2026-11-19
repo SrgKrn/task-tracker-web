@@ -679,7 +679,7 @@ export function TaskListItem({
           {showClock && activeTimer ? (
             <span className="tcol-hours tabular truncate text-right font-mono text-xs font-medium text-accent-text">{formatClock(activeTimer.started_at)}</span>
           ) : (
-            <span className={`tcol-hours tabular truncate text-right font-mono text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hoursShort}</span>
+            <span className={`tcol-hours tabular truncate text-right text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hoursShort}</span>
           )}
         </div>
 
@@ -868,7 +868,7 @@ export function TaskListItem({
                 {duePill}
               </span>
             ) : (
-              <span className={`tabular shrink-0 font-mono text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hours}</span>
+              <span className={`tabular shrink-0 text-xs ${over ? 'text-danger-text' : 'text-text-secondary'}`}>{hours}</span>
             )}
           </div>
 
@@ -988,7 +988,7 @@ function CompositionToggle({
         </span>
       )}
       <span className="text-sm font-medium">Подзадачи</span>
-      <span className="tabular font-mono text-xs">
+      <span className="tabular text-xs">
         {doneCount} из {subtasks.length}
       </span>
       {/* поворот стрелки — единственная анимация раскрытия; сам состав появляется сразу */}
@@ -1008,7 +1008,7 @@ function SubCount({ subtasks }: { subtasks: Task[] }) {
   const finalIds = new Set(statuses.filter((s) => s.is_final).map((s) => s.id))
   const done = subtasks.filter((t) => !!t.status_id && finalIds.has(t.status_id)).length
   return (
-    <span className="tabular shrink-0 font-mono text-xs text-text-tertiary" title={`Подзадач закрыто: ${done} из ${subtasks.length}`}>
+    <span className="tabular shrink-0 text-xs text-text-tertiary" title={`Подзадач закрыто: ${done} из ${subtasks.length}`}>
       {done}/{subtasks.length}
     </span>
   )

@@ -120,7 +120,7 @@ function EisenhowerDay({ tasks, today, isDone, renderRow }: DayProps) {
             >
               <span className="flex w-full items-baseline justify-between gap-2">
                 <span className="text-sm font-semibold">{QUADRANT[q].title}</span>
-                <span className="tabular font-mono text-base font-medium">{n}</span>
+                <span className="tabular text-base font-medium">{n}</span>
               </span>
               <span className="text-xs opacity-80">{QUADRANT[q].hint}</span>
             </button>

@@ -138,7 +138,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
           <div className="flex items-baseline justify-between gap-3">
             <Overline className="first-letter:uppercase">{dayTitle(group.day)}</Overline>
             {group.seconds !== 0 && (
-              <span className="tabular font-mono text-xs text-text-secondary">{formatDuration(group.seconds)}</span>
+              <span className="tabular text-xs text-text-secondary">{formatDuration(group.seconds)}</span>
             )}
           </div>
           <div className="flex flex-col divide-y divide-divider rounded-md border border-border bg-surface px-3">
@@ -160,7 +160,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                         className="self-start text-left text-base leading-[1.4] text-text"
                       >
                         {row.kind === 'timer' ? 'Учёт' : 'Правка'}{' '}
-                        <span className="tabular font-mono text-sm">
+                        <span className="tabular text-sm">
                           {formatDuration(row.kind === 'adjustment' ? row.seconds : entrySeconds(entry))}
                         </span>
                         {row.kind === 'adjustment' && row.count > 1 && (
@@ -199,7 +199,7 @@ export function TaskTimeline({ taskId, isRunning }: { taskId: string; isRunning:
                       </button>
                     )}
                   </div>
-                  <span className="tabular shrink-0 pt-0.5 font-mono text-xs leading-[1.4] text-text-secondary">
+                  <span className="tabular shrink-0 pt-0.5 text-xs leading-[1.4] text-text-secondary">
                     {row.kind === 'timer' && entry?.started_at ? clock(entry.started_at) : clock(row.at)}
                   </span>
                   {entry && (
@@ -261,7 +261,7 @@ function EntryNoteSheet({ entry, onClose }: { entry: TimeEntry | null; onClose: 
       onClose={onClose}
       title={entry.entry_type === 'timer' ? 'Комментарий к сессии' : 'Комментарий к правке'}
     >
-      <span className="-mt-2 font-mono text-sm text-text-secondary">{entrySummary(entry)}</span>
+      <span className="-mt-2 text-sm text-text-secondary">{entrySummary(entry)}</span>
       <textarea
         autoFocus={focusOnOpen}
         rows={4}
@@ -388,7 +388,7 @@ function CommentSheet({ comment, onClose }: { comment: Comment | null; onClose: 
 
   return (
     <Sheet open onClose={onClose} title="Комментарий">
-      <span className="-mt-2 font-mono text-sm text-text-secondary">{formatDateTime(comment.created_at)}</span>
+      <span className="-mt-2 text-sm text-text-secondary">{formatDateTime(comment.created_at)}</span>
       <textarea
         autoFocus={focusOnOpen}
         rows={4}

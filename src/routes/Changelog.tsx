@@ -62,13 +62,13 @@ export function Changelog() {
               <Overline>Версия {release.version}</Overline>
               {ri === 0 && (
                 <span
-                  className="rounded-sm px-1.5 py-[2px] font-mono text-xs font-medium"
+                  className="rounded-sm px-1.5 py-[2px] text-xs font-medium"
                   style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
                 >
                   сейчас
                 </span>
               )}
-              <span className="ml-auto font-mono text-xs text-text-secondary">{releaseDate(release.date)}</span>
+              <span className="ml-auto text-xs text-text-secondary">{releaseDate(release.date)}</span>
             </span>
             <span role="heading" aria-level={2} className="block text-lg font-semibold leading-[1.25] text-text" style={{ textWrap: 'balance' }}>
               <span className="flex items-start justify-between gap-3">

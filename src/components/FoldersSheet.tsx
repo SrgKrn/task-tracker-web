@@ -107,7 +107,7 @@ export function FoldersSheet({
                 <span className="truncate text-base text-text">{f.name || autoFolderName(f, model) || 'Папка'}</span>
                 <span className="truncate text-sm text-text-secondary">{folderSummary(f, model)}</span>
               </span>
-              <span className="tabular shrink-0 font-mono text-xs text-text-tertiary">{countOf(f)}</span>
+              <span className="tabular shrink-0 text-xs text-text-tertiary">{countOf(f)}</span>
               <ChevronRight size={16} className="shrink-0 text-text-tertiary" />
             </button>
           ))}

@@ -42,7 +42,7 @@ export function PriorityBadge({ task, method, today }: { task: Task; method: Pri
     const label = abcLabel(task)
     if (!label || !task.abc_letter) return null
     return (
-      <span className={`${BADGE} font-mono ${ABC_TONE[task.abc_letter]}`}>
+      <span className={`${BADGE} ${ABC_TONE[task.abc_letter]}`}>
         {label}
         {task.abc_letter === 'D' && task.delegated_to ? ` → ${task.delegated_to}` : ''}
       </span>
@@ -72,7 +72,7 @@ export function MethodExplainer({ info }: { info: MethodInfo }) {
         <ol className="flex flex-col gap-2">
           {info.steps.map(([mark, text]) => (
             <li key={mark + text} className="flex items-start gap-2.5 text-base text-text">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-surface-sunken font-mono text-xs font-medium text-text-secondary">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-xs font-medium text-text-secondary">
                 {mark}
               </span>
               <span className="pt-0.5">{text}</span>
@@ -282,7 +282,7 @@ export function PriorityField({ task, method, tasks }: { task: Task; method: Pri
             >
               <Minus size={16} />
             </Button>
-            <span className="tabular w-10 text-center font-mono text-base text-text">{abcLabel(task)}</span>
+            <span className="tabular w-10 text-center text-base text-text">{abcLabel(task)}</span>
             <Button className="w-10 px-0" aria-label="Позже" onClick={() => save({ abc_rank: (task.abc_rank ?? 0) + 1 })}>
               <Plus size={16} />
             </Button>

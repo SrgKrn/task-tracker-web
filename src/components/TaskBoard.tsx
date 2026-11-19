@@ -91,8 +91,8 @@ export function TaskBoard({
                 />
               )}
               <span className="min-w-0 truncate text-sm font-semibold text-text">{col.title}</span>
-              <span className="tabular font-mono text-xs text-text-secondary">{col.items.length}</span>
-              <span className="tabular ml-auto font-mono text-xs text-text-tertiary">
+              <span className="tabular text-xs text-text-secondary">{col.items.length}</span>
+              <span className="tabular ml-auto text-xs text-text-tertiary">
                 {formatHoursRu(fact)} / {formatHoursRu(plan)}
               </span>
             </header>
@@ -195,11 +195,11 @@ function BoardCard({
           <span className={overdue ? 'font-medium text-danger-text' : 'text-text-secondary'}>{formatDueDate(task.end_date, today)}</span>
         )}
         {subtasks && subtasks.length > 0 && (
-          <span className="tabular font-mono text-text-tertiary" title="Подзадачи">
+          <span className="tabular text-text-tertiary" title="Подзадачи">
             {subDone}/{subtasks.length}
           </span>
         )}
-        <span className={`tabular ml-auto font-mono ${running ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>
+        <span className={`tabular ml-auto ${running ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>
           {running && activeTimer ? formatClock(activeTimer.started_at) : task.planned_hours > 0 ? `${formatHoursRu(fact)} / ${formatHoursRu(task.planned_hours)}` : fact > 0 ? formatHoursRu(fact) : ''}
         </span>
         {!done && (

@@ -15,7 +15,7 @@ import { Ring } from '../components/Ring'
 import { ArrowRight, Check, ChevronDown, ChevronUp, EyeOff, Grip, History, Settings2 } from '../components/Icon'
 import { TaskListItem, isOverdue } from '../components/TaskListItem'
 import { useToggleDone } from '../components/useToggleDone'
-import { Button, ClientDot, EmptyState, ListGroup, Overline, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
+import { Button, ClientDot, EmptyState, ListGroup, Overline, SectionTitle, Sheet, Switch, TaskRowSkeleton } from '../components/ui'
 import { describeError, useToast } from '../lib/Toast'
 import { tap } from '../lib/haptics'
 import { PlayGlyph } from '../components/Ring'
@@ -311,7 +311,7 @@ export function Today() {
       <span data-tip="ring" className="shrink-0 rounded-full">
         <Ring size={tileOn && phone ? 72 : 88} pct={ringPct} state="running" centerBg="var(--surface)" marker={hasNorm}>
           <span className="flex flex-col items-center gap-0.5">
-            <span className="tabular font-mono text-lg font-medium text-text">{formatHoursRu(dayFact)}</span>
+            <span className="tabular text-lg font-medium text-text">{formatHoursRu(dayFact)}</span>
             <span className="text-xs text-text-secondary">{hasNorm ? `из ${formatHoursRu(dayNorm)} ч` : 'без нормы'}</span>
           </span>
         </Ring>
@@ -346,7 +346,7 @@ export function Today() {
           <span className="flex items-center gap-1.5 text-text-secondary">
             <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--bar-past)]" />
             <span className="min-w-0 truncate">
-              за неделю <span className="tabular font-mono text-xs">{formatHoursRu(weekTotal)} ч</span>
+              за неделю <span className="tabular text-xs">{formatHoursRu(weekTotal)} ч</span>
             </span>
           </span>
         )}
@@ -363,8 +363,8 @@ export function Today() {
   const weekWidget = (
     <div className={`px-5 pt-5 ${desktop ? 'mx-5 mt-5 rounded-md border border-border bg-surface p-4' : 'lg:sticky lg:top-6 lg:mt-5 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4'}`}>
       <div className="mb-3 flex items-baseline justify-between">
-        <Overline>Неделя</Overline>
-        <span className="tabular font-mono text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
+        <SectionTitle>Неделя</SectionTitle>
+        <span className="tabular text-sm text-text">{formatHoursRu(weekTotal)} ч</span>
       </div>
       <div className="relative flex h-14 items-end gap-1.5 lg:h-24">
         {hasNorm && (
@@ -401,7 +401,7 @@ export function Today() {
             <span key={day} className="flex flex-1 flex-col items-center gap-px">
               <span className={`text-xs ${isToday ? 'font-medium text-accent-text' : 'text-text-secondary'}`}>{WEEKDAYS[i]}</span>
               <span
-                className={`tabular font-mono text-xs ${
+                className={`tabular text-xs ${
                   isToday ? 'text-accent-text' : hasNorm && fact > dayNorm ? 'text-text' : 'text-text-secondary'
                 }`}
               >
@@ -416,7 +416,7 @@ export function Today() {
 
   const overdueWidget = overdueTasks.length > 0 && (
     <div className="flex flex-col gap-2 px-5 pt-5">
-      <Overline className="text-danger-text">Просрочено · {overdueTasks.length}</Overline>
+      <SectionTitle count={overdueTasks.length} tone="danger">Просрочено</SectionTitle>
       <ListGroup className="border-[var(--danger-line)]">
         {overdueTasks.map((task) => {
           const fact = rollupFact(task, childrenOf.get(task.id))
@@ -473,10 +473,10 @@ export function Today() {
   const planWidget = (
     <div className="flex flex-col gap-2 px-5 pt-5 pb-2">
       <div className="flex min-h-11 items-center justify-between">
-        <span className="flex items-center gap-2">
-          <span data-tip="method" className="rounded-xs">
-            <span className="text-md font-semibold text-text">План дня</span>
-          </span>
+        <div className="flex items-center gap-2">
+          <div data-tip="method" className="rounded-xs">
+            <SectionTitle>План дня</SectionTitle>
+          </div>
           {method !== 'none' && (
             <button
               type="button"
@@ -487,7 +487,7 @@ export function Today() {
               {METHOD_SHORT[method]} · ?
             </button>
           )}
-        </span>
+        </div>
         {todayTasks.length > 0 && (
           <Button variant="ghost" className="-mr-2 text-accent-text" onClick={() => setPlanning(true)}>
             Изменить
@@ -588,7 +588,7 @@ export function Today() {
 
   const recentWidget = !isLoading && recentTasks.length > 0 && (
     <div className="flex flex-col gap-2 px-5 pt-3 pb-2">
-      <Overline>Недавние</Overline>
+      <SectionTitle>Недавние</SectionTitle>
       <ListGroup>
         {recentTasks.map((task) => {
           const parent = task.parent_id ? taskById.get(task.parent_id) : undefined
@@ -882,7 +882,7 @@ export function Today() {
                 onClick={() => postpone(postponing, o.date, formatDueDate(o.date, today).toLowerCase())}
               >
                 {o.title}
-                <span className="font-mono text-sm font-normal text-text-secondary">{formatShortDate(o.date)}</span>
+                <span className="text-sm font-normal text-text-secondary">{formatShortDate(o.date)}</span>
               </Button>
             ))}
           </div>

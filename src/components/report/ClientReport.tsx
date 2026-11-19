@@ -257,7 +257,7 @@ export function ClientReport({
                 readOnly
                 value={fresh}
                 onFocus={(e) => e.currentTarget.select()}
-                className={`${fieldClass} font-mono`}
+                className={`${fieldClass}`}
                 aria-label="Ссылка на отчёт"
               />
             )}
@@ -409,11 +409,11 @@ function ClientDocument({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="flex flex-col">
           <span className="text-sm text-text-secondary">Часы за период</span>
-          <span className="tabular font-mono text-xl font-medium text-text">{f1(s.hours)} ч</span>
+          <span className="tabular text-xl font-medium text-text">{f1(s.hours)} ч</span>
         </div>
         <div className="flex flex-col">
           <span className="text-sm text-text-secondary">Задач</span>
-          <span className="tabular font-mono text-xl font-medium text-text">
+          <span className="tabular text-xl font-medium text-text">
             {s.inWorkCount}
             {s.closedCount > 0 && <span className="text-sm text-text-secondary"> · закрыто {s.closedCount}</span>}
           </span>
@@ -421,7 +421,7 @@ function ClientDocument({
         {s.billing.length > 0 && (
           <div className="col-span-2 flex flex-col rounded-sm bg-accent-soft px-3 py-2 sm:col-span-1">
             <span className="text-sm text-accent-text">К оплате</span>
-            <span className="tabular font-mono text-xl font-semibold text-text">
+            <span className="tabular text-xl font-semibold text-text">
               {s.billing.map((b) => formatMoney(b.due, b.currency)).join(' · ')}
             </span>
           </div>
@@ -451,11 +451,11 @@ function ClientDocument({
                     <StageChip tone={sp.isFinal ? 'done' : (sp.stageTone ?? null)} label={sp.isFinal ? 'Готово' : (st?.label ?? sp.status)} />
                   </span>
                 </span>
-                <span className="tabular text-right font-mono text-base text-text">{h2(hours)}</span>
-                <span className="tabular hidden text-right font-mono text-sm text-text-secondary sm:block">
+                <span className="tabular text-right text-base text-text">{h2(hours)}</span>
+                <span className="tabular hidden text-right text-sm text-text-secondary sm:block">
                   {b ? formatMoney(b.rate, b.currency) : '—'}
                 </span>
-                <span className="tabular text-right font-mono text-base font-medium text-text">
+                <span className="tabular text-right text-base font-medium text-text">
                   {amount !== null && b ? formatMoney(amount, b.currency) : '—'}
                 </span>
               </div>
@@ -474,7 +474,7 @@ function ClientDocument({
               {(s.subs?.[sp.id] ?? []).map((sub) => (
                 <div key={sub.name} className="grid grid-cols-[minmax(0,1fr)_4.5rem_6rem] gap-x-3 pl-4 text-sm text-text-secondary sm:grid-cols-[minmax(0,1fr)_5rem_6.5rem_7.5rem]">
                   <span className="truncate">{sub.name}</span>
-                  <span className="tabular text-right font-mono">{h2(sub.hours)}</span>
+                  <span className="tabular text-right">{h2(sub.hours)}</span>
                 </div>
               ))}
             </div>
@@ -486,7 +486,7 @@ function ClientDocument({
               Итого к оплате{s.billing.length > 1 ? `, ${b.currency}` : ''}
               <span className="font-normal text-text-secondary"> · {h2(b.hours + (s.includeOvertime ? b.overHours : 0))} ч</span>
             </span>
-            <span className="tabular font-mono text-lg font-semibold text-text">{formatMoney(b.due, b.currency)}</span>
+            <span className="tabular text-lg font-semibold text-text">{formatMoney(b.due, b.currency)}</span>
           </div>
         ))}
         {noRate && (
@@ -511,13 +511,13 @@ function ClientDocument({
             <div key={day.date} className="flex flex-col">
               <div className="flex items-baseline justify-between gap-3 border-b border-divider pb-1">
                 <span className="text-sm font-semibold text-text first-letter:uppercase">{day.label}</span>
-                <span className="tabular font-mono text-sm text-text">{hm(day.total)}</span>
+                <span className="tabular text-sm text-text">{hm(day.total)}</span>
               </div>
               {day.rows.map((row) => (
                 <div key={row.title} className="flex flex-col py-1.5 pl-3">
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="truncate text-sm text-text">{row.title}</span>
-                    <span className="tabular shrink-0 font-mono text-sm text-text-secondary">{hm(row.hours)}</span>
+                    <span className="tabular shrink-0 text-sm text-text-secondary">{hm(row.hours)}</span>
                   </span>
                   {row.notes.length > 0 && <span className="text-sm leading-[1.45] text-text-secondary">{row.notes.join(' · ')}</span>}
                 </div>

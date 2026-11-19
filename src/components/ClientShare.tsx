@@ -149,7 +149,7 @@ export function ClientShare({
             readOnly
             value={fresh}
             onFocus={(e) => e.currentTarget.select()}
-            className="min-w-0 flex-1 bg-transparent font-mono text-sm text-text outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none"
             aria-label="Ссылка на отчёт"
           />
           <Button

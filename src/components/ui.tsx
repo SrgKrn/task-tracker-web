@@ -43,6 +43,32 @@ export function Overline({ children, className = '' }: { children: ReactNode; cl
   return <span className={`text-sm font-medium ${color} ${className}`}>{children}</span>
 }
 
+/**
+ * Заголовок раздела экрана (0.69) — один голос на всех экранах: «План дня», «Неделя»,
+ * «Просрочено», «История». Счёт — рядом, тише; у просроченного — малиновый: цвет несёт
+ * смысл только там, где он и правда нужен.
+ */
+export function SectionTitle({
+  children,
+  count,
+  tone = 'neutral',
+  className = '',
+}: {
+  children: ReactNode
+  count?: number
+  tone?: 'neutral' | 'danger'
+  className?: string
+}) {
+  return (
+    <h2 className={`flex items-baseline gap-2 text-md font-semibold text-text ${className}`}>
+      {children}
+      {count != null && (
+        <span className={`tabular text-sm font-normal ${tone === 'danger' ? 'text-danger-text' : 'text-text-secondary'}`}>{count}</span>
+      )}
+    </h2>
+  )
+}
+
 /** Подпись над полем — тем же голосом, что и заголовок группы. */
 export function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   // с htmlFor — настоящая подпись поля: диктор читает её вместе с полем, нажатие ставит фокус
@@ -647,7 +673,7 @@ export function EmptyState({
 export function Kbd({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <kbd
-      className={`inline-flex min-w-5 items-center justify-center rounded-xs border border-border bg-surface-sunken px-1 font-mono text-xs leading-4 font-normal text-text-secondary ${className}`}
+      className={`inline-flex min-w-5 items-center justify-center rounded-xs border border-border bg-surface-sunken px-1 text-xs leading-4 font-normal text-text-secondary ${className}`}
     >
       {children}
     </kbd>

@@ -124,7 +124,7 @@ export function NextSprintSheet({
           className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <span className="tabular font-mono text-base text-text">
+          <span className="tabular text-base text-text">
             {plan > 0 ? formatHoursMinutes(plan) : 'не задан'}
           </span>
           <ChevronDown size={14} className="text-text-secondary" />
@@ -135,7 +135,7 @@ export function NextSprintSheet({
         <div className="flex flex-col gap-1.5">
           <span className="flex items-baseline justify-between">
             <FieldLabel>Перенести подзадачи</FieldLabel>
-            <span className="tabular font-mono text-xs text-text-secondary">
+            <span className="tabular text-xs text-text-secondary">
               {carryIds.size} из {unfinished.length}
             </span>
           </span>
@@ -166,7 +166,7 @@ export function NextSprintSheet({
                   <span className={`min-w-0 flex-1 truncate text-base ${checked ? 'text-text' : 'text-text-secondary'}`}>
                     {t.name}
                   </span>
-                  <span className="tabular shrink-0 font-mono text-xs text-text-secondary">
+                  <span className="tabular shrink-0 text-xs text-text-secondary">
                     {t.planned_hours > 0 ? `остаток ${formatHoursMinutes(rest)}` : 'без плана'}
                   </span>
                 </button>

@@ -138,7 +138,7 @@ export function TaskCalendar({
                     {...zone(day, day)}
                   >
                     <span
-                      className={`tabular mb-0.5 flex h-5 min-w-5 items-center justify-center self-start rounded-full px-1 font-mono text-xs ${
+                      className={`tabular mb-0.5 flex h-5 min-w-5 items-center justify-center self-start rounded-full px-1 text-xs ${
                         isToday ? 'bg-accent font-semibold text-on-accent' : outside ? 'text-text-tertiary' : 'text-text-secondary'
                       }`}
                     >
@@ -169,7 +169,7 @@ export function TaskCalendar({
       >
         <span className="flex items-center gap-2 px-1 pb-1">
           <span className="text-sm font-semibold text-text">Без срока</span>
-          <span className="tabular font-mono text-xs text-text-secondary">{undated.length}</span>
+          <span className="tabular text-xs text-text-secondary">{undated.length}</span>
         </span>
         {undated.map(chip)}
         {undated.length === 0 && <p className="px-1 py-2 text-xs text-text-tertiary">Сюда — снять срок</p>}

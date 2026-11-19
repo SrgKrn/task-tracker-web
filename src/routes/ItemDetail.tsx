@@ -150,7 +150,7 @@ export function ItemDetail() {
             style={i > 0 ? { borderLeft: '1px solid var(--border)' } : undefined}
           >
             <FieldLabel>{s.label}</FieldLabel>
-            <span className="tabular font-mono text-lg font-semibold text-text">{s.value}</span>
+            <span className="tabular text-lg font-semibold text-text">{s.value}</span>
           </div>
         ))}
       </div>
@@ -236,7 +236,7 @@ function DriveFolder({ item }: { item: GroupItem }) {
         className="min-w-0 flex-1"
       >
         <span className="block truncate text-base text-text">{item.drive_folder_name || 'Папка на Диске'}</span>
-        <span className="block font-mono text-xs text-text-secondary">Google Диск · открыть</span>
+        <span className="block text-xs text-text-secondary">Google Диск · открыть</span>
       </a>
       <button type="button" onClick={choose} className="h-9 shrink-0 rounded-sm px-2.5 text-sm text-text-secondary">
         Сменить
@@ -266,7 +266,7 @@ function ItemRate({ item }: { item: GroupItem }) {
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
           <span className="flex-1 text-base text-text-secondary">Ставка в час</span>
-          <span className="tabular font-mono text-base text-text">{formatRate(Number(item.hourly_rate), currency)}</span>
+          <span className="tabular text-base text-text">{formatRate(Number(item.hourly_rate), currency)}</span>
         </button>
       ) : (
         <button
@@ -534,7 +534,7 @@ function ItemHistory({
           <div className="flex items-baseline justify-between pb-1.5" style={{ borderBottom: '1px solid var(--divider)' }}>
             <span className="text-base font-semibold text-text">{dayTitle(d.day)}</span>
             {d.hours !== 0 && (
-              <span className="tabular font-mono text-sm font-medium text-text-secondary">{formatHoursMinutes(d.hours)}</span>
+              <span className="tabular text-sm font-medium text-text-secondary">{formatHoursMinutes(d.hours)}</span>
             )}
           </div>
           {d.items.map((it, i) => {
@@ -548,10 +548,10 @@ function ItemHistory({
                   <span className="block text-base leading-[1.4] text-text-secondary" style={{ overflowWrap: 'anywhere' }}>
                     {it.tone === 'comment' ? `«${it.text}»` : it.text}
                   </span>
-                  {it.sub && <span className="block truncate font-mono text-xs text-text-secondary">{it.sub}</span>}
+                  {it.sub && <span className="block truncate text-xs text-text-secondary">{it.sub}</span>}
                 </span>
                 {it.hours !== undefined && (
-                  <span className="tabular shrink-0 font-mono text-sm text-text-secondary">
+                  <span className="tabular shrink-0 text-sm text-text-secondary">
                     {it.hours < 0 ? '−' : ''}
                     {formatHoursMinutes(Math.abs(it.hours))}
                   </span>

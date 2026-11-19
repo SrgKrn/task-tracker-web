@@ -112,7 +112,7 @@ function PlanCard({
       <div className="flex flex-col">
         <span className="flex items-baseline gap-1.5">
           <span
-            className={`text-2xl font-medium tracking-[-0.02em] text-text tabular-nums ${info.price ? 'font-mono' : ''}`}
+            className={`text-2xl font-medium tracking-[-0.02em] text-text tabular-nums ${info.price ? '' : ''}`}
           >
             {info.price ? formatPrice(price, currency) : 'Бесплатно'}
           </span>

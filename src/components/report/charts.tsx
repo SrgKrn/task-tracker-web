@@ -57,7 +57,7 @@ export function TipRow({ color, label, value }: { color?: string; label: string;
     <span className="flex items-center gap-2">
       {color && <span className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: color }} aria-hidden />}
       <span className="min-w-0 flex-1 truncate text-text-secondary">{label}</span>
-      <span className="tabular shrink-0 font-mono font-medium text-text">{value}</span>
+      <span className="tabular shrink-0 font-medium text-text">{value}</span>
     </span>
   )
 }
@@ -146,7 +146,7 @@ export function TimeBars({
           {ticks.map((t) => (
             <span
               key={t}
-              className="tabular absolute right-0 font-mono text-xs leading-4 text-text-tertiary"
+              className="tabular absolute right-0 text-xs leading-4 text-text-tertiary"
               style={{ bottom: `calc(${(t / max) * 100}% - 8px)` }}
             >
               {fh(t)}
@@ -240,7 +240,7 @@ export function TimeBars({
             return (
               <span
                 key={b.from}
-                className={`tabular min-w-0 flex-1 overflow-visible text-center font-mono text-xs whitespace-nowrap ${
+                className={`tabular min-w-0 flex-1 overflow-visible text-center text-xs whitespace-nowrap ${
                   current ? 'font-medium text-accent-text' : b.weekend ? 'text-text-tertiary' : 'text-text-secondary'
                 }`}
               >
@@ -306,13 +306,13 @@ export function HBars({
                 {r.note && <span className="shrink-0 text-xs text-text-tertiary">{r.note}</span>}
               </span>
               {showPrev && (r.prevHours ?? 0) > 0.004 && Math.abs(delta) >= 0.05 && (
-                <span className="tabular shrink-0 font-mono text-xs text-text-tertiary">
+                <span className="tabular shrink-0 text-xs text-text-tertiary">
                   {delta > 0 ? '+' : '−'}
                   {f1(Math.abs(delta))}
                 </span>
               )}
-              <span className="tabular w-14 shrink-0 text-right font-mono text-base font-medium text-text">{f1(r.hours)}</span>
-              <span className="tabular w-10 shrink-0 text-right font-mono text-xs text-text-secondary">
+              <span className="tabular w-14 shrink-0 text-right text-base font-medium text-text">{f1(r.hours)}</span>
+              <span className="tabular w-10 shrink-0 text-right text-xs text-text-secondary">
                 {r.share > 0 && r.share < 0.005 ? '<1' : Math.round(r.share * 100)}%
               </span>
             </span>
@@ -403,7 +403,7 @@ export function Heatmap({ heat }: { heat: number[][] }) {
       <div className="flex gap-0.5" aria-hidden>
         <span className="w-6 shrink-0" />
         {hours.map((h) => (
-          <span key={h} className="tabular min-w-0 flex-1 text-center font-mono text-xs text-text-tertiary">
+          <span key={h} className="tabular min-w-0 flex-1 text-center text-xs text-text-tertiary">
             {h % 2 === 0 ? h : ''}
           </span>
         ))}
@@ -441,8 +441,8 @@ export function SplitBar({ parts }: { parts: { key: string; label: string; hours
           <span key={p.key} className="flex items-center gap-1.5 text-sm">
             <span className="h-2.5 w-2.5 shrink-0 rounded-xs" style={{ background: p.color }} aria-hidden />
             <span className="min-w-0 flex-1 truncate text-text-secondary">{p.label}</span>
-            <span className="tabular shrink-0 font-mono text-text">{f1(p.hours)}</span>
-            <span className="tabular w-9 shrink-0 text-right font-mono text-xs text-text-tertiary">
+            <span className="tabular shrink-0 text-text">{f1(p.hours)}</span>
+            <span className="tabular w-9 shrink-0 text-right text-xs text-text-tertiary">
               {Math.round((p.hours / total) * 100)}%
             </span>
           </span>
@@ -479,7 +479,7 @@ export function Kpi({
       <span className="truncate text-xs font-medium text-text-secondary lg:text-sm">{label}</span>
       <span className="flex items-baseline gap-1">
         <span
-          className={`tabular font-mono font-medium ${compact ? 'text-sm leading-6 lg:text-md lg:leading-7' : 'text-md lg:text-xl'} ${tone === 'danger' ? 'text-danger-text' : 'text-text'}`}
+          className={`tabular font-medium ${compact ? 'text-sm leading-6 lg:text-md lg:leading-7' : 'text-md lg:text-xl'} ${tone === 'danger' ? 'text-danger-text' : 'text-text'}`}
         >
           {value}
         </span>

@@ -28,7 +28,7 @@ export function SprintComposition({ task, subtasks, statuses, onApplyStatus, onN
     <div className="flex flex-col gap-2.5">
       {/* заголовок «Подзадачи» — у раздела карточки; здесь только счёт закрытых (0.67) */}
       {subtasks.length > 0 && (
-        <span className="tabular -mt-1 font-mono text-xs text-text-secondary">
+        <span className="tabular -mt-1 text-xs text-text-secondary">
           закрыто {doneCount} из {subtasks.length}
         </span>
       )}
@@ -109,7 +109,7 @@ function PlanAllocation({
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-text-secondary">План разложен</span>
-        <span className="tabular font-mono text-sm text-text-secondary">
+        <span className="tabular text-sm text-text-secondary">
           {plan > 0
             ? `${formatHoursRu(allocated)} из ${formatHoursRu(plan)} ч`
             : `${formatHoursRu(allocated)} ч · у спринта без плана`}

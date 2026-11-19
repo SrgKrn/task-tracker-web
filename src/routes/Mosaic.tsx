@@ -112,7 +112,7 @@ export function Mosaic() {
                 {view === 'month' ? `${MONTHS[Number(month.slice(5)) - 1]} ${year}` : `${year} год`}
               </span>
               {view === 'year' && (
-                <span className="tabular font-mono text-sm text-text-secondary">
+                <span className="tabular text-sm text-text-secondary">
                   {worked.length} {worked.length % 10 === 1 && worked.length % 100 !== 11 ? 'плитка' : 'плиток'} · {formatHoursRu(yearHours)} ч
                 </span>
               )}
@@ -139,7 +139,7 @@ export function Mosaic() {
         <aside className="flex flex-col gap-4 rounded-md bg-surface p-4 lg:sticky lg:top-6" aria-live="polite">
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-medium text-text">{tileDayTitle(selected)}</span>
-            {selTile && selTile.total > 0 && <span className="tabular font-mono text-sm text-text-secondary">№ {tileNumber(tiles, selected)}</span>}
+            {selTile && selTile.total > 0 && <span className="tabular text-sm text-text-secondary">№ {tileNumber(tiles, selected)}</span>}
           </div>
           {selTile ? (
             <>
@@ -192,7 +192,7 @@ function MonthGrid({ month, today, tiles, records, selected, onSelect }: GridPro
             aria-pressed={active}
             aria-label={tileDayTitle(d)}
             onClick={() => onSelect(d)}
-            className={`flex flex-col items-center gap-1 rounded-sm font-mono text-xs disabled:opacity-40 ${active ? 'font-semibold text-accent-text' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 rounded-sm text-xs disabled:opacity-40 ${active ? 'font-semibold text-accent-text' : 'text-text-secondary'}`}
           >
             {cell > 0 && (
               <span className={`rounded-sm ${active ? 'outline-2 outline-offset-2 outline-accent' : ''}`}>
@@ -230,7 +230,7 @@ function YearGrid({ year, today, tiles, records, selected, onSelect }: GridProps
     const ctx = prepCanvas(canvas.current, W, H)
     const p = tilePalette()
     const cs = getComputedStyle(document.documentElement)
-    ctx.font = `11px ${cs.getPropertyValue('--font-mono')}`
+    ctx.font = `11px ${cs.getPropertyValue('--')}`
     ctx.fillStyle = cs.getPropertyValue('--text-tertiary')
     ctx.textBaseline = 'top'
     ;['пн', '', 'ср', '', 'пт', '', 'вс'].forEach((t, i) => t && ctx.fillText(t, 0, Y.top + i * (Y.cell + Y.gap) + 1))

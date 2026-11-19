@@ -248,7 +248,7 @@ export function TelegramCard() {
                 <select
                   value={linked.summaryHour}
                   onChange={(e) => actions.update.mutate({ summaryHour: Number(e.target.value) }, { onError })}
-                  className="h-9 rounded-sm px-2.5 font-mono text-base text-text"
+                  className="h-9 rounded-sm px-2.5 text-base text-text"
                   
                 >
                   {Array.from({ length: 24 }, (_, h) => (
@@ -277,7 +277,7 @@ export function TelegramCard() {
             style={{ background: 'var(--surface)', border: '1px solid var(--divider)' }}
           >
             В чате с ботом: <span className="font-mono text-text-secondary">/timer</span> — начать или остановить учёт,{' '}
-            <span className="font-mono text-text-secondary">/today</span> и <span className="font-mono text-text-secondary">/week</span>{' '}
+            <span className="text-text-secondary">/today</span> и <span className="text-text-secondary">/week</span>{' '}
             — итоги. Любой текст боту станет комментарием к задаче, по которой идёт учёт.
           </p>
           <div className="flex gap-[9px]">

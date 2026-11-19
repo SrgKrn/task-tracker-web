@@ -447,7 +447,7 @@ function GroupNode({
     >
       <span className="flex items-baseline justify-between gap-1.5">
         <span className="truncate text-sm font-semibold text-text">{group.name}</span>
-        <span className="tabular font-mono text-xs text-text-tertiary">{items.length}</span>
+        <span className="tabular text-xs text-text-tertiary">{items.length}</span>
       </span>
       <span className="truncate text-xs text-text-tertiary">поле «{group.item_name}»</span>
       {/* два ряда значений ровно по высоте: третий не режется посередине, он просто не показан */}

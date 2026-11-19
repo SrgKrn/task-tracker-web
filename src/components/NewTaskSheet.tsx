@@ -244,7 +244,7 @@ export function NewTaskSheet({
             <button
               type="button"
               onClick={() => setEditingPlan(true)}
-              className="tabular min-w-[92px] rounded-sm py-1 text-center font-mono text-lg font-semibold text-text underline decoration-dotted decoration-text-secondary underline-offset-4"
+              className="tabular min-w-[92px] rounded-sm py-1 text-center text-lg font-semibold text-text underline decoration-dotted decoration-text-secondary underline-offset-4"
             >
               {formatHoursMinutes(plan)}
             </button>

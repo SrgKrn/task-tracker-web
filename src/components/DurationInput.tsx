@@ -53,11 +53,11 @@ export function DurationInput({
             value={value.h}
             onChange={(e) => onChange({ ...value, h: e.target.value })}
             onFocus={(e) => e.currentTarget.select()}
-            className="tabular h-[52px] rounded-sm px-3.5 text-center font-mono text-xl text-text"
+            className="tabular h-[52px] rounded-sm px-3.5 text-center text-xl text-text"
             style={fieldStyle}
           />
         </label>
-        <span className="pb-4 font-mono text-lg text-text-secondary">:</span>
+        <span className="pb-4 text-lg text-text-secondary">:</span>
         <label className="flex min-w-0 flex-1 flex-col gap-1.5">
           <FieldLabel htmlFor={`${idBase}-m`}>Минуты</FieldLabel>
           <input
@@ -69,7 +69,7 @@ export function DurationInput({
             value={value.m}
             onChange={(e) => onChange({ ...value, m: e.target.value })}
             onFocus={(e) => e.currentTarget.select()}
-            className="tabular h-[52px] rounded-sm px-3.5 text-center font-mono text-xl text-text"
+            className="tabular h-[52px] rounded-sm px-3.5 text-center text-xl text-text"
             style={fieldStyle}
           />
         </label>

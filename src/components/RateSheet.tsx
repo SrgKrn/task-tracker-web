@@ -65,7 +65,7 @@ function RateFields({
           placeholder="Например, 40"
           aria-label="Ставка в час"
           aria-invalid={invalid}
-          className={`${fieldClass} tabular flex-1 font-mono`}
+          className={`${fieldClass} tabular flex-1`}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !invalid) onSubmit({ hourly_rate: parsed, rate_currency: parsed === null ? null : currency })
           }}

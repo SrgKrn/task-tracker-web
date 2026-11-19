@@ -69,7 +69,7 @@ export function AddTimeSheet({
     <Sheet anchored open={open} onClose={onCancel} title="Добавить время">
       <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
-      <span className="font-mono text-xs text-text-secondary">
+      <span className="text-xs text-text-secondary">
         {valid ? `запись +${formatHoursMinutes(minutes / 60)} за ${adjustDateLabel}` : 'укажите, сколько добавить'}
       </span>
       <SheetActions

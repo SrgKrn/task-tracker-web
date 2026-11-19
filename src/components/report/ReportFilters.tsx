@@ -136,7 +136,7 @@ export function FilterButton({
           <path d="M4 6h16M7 12h10M10 18h4" />
         </svg>
         {count > 0 && (
-          <span className="tabular absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 font-mono text-xs text-on-accent">
+          <span className="tabular absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-xs text-on-accent">
             {count}
           </span>
         )}

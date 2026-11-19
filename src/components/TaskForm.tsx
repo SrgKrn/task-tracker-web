@@ -71,6 +71,8 @@ export function TaskForm({
   const values = onFieldChange ? initial : draft
   const [editingPlan, setEditingPlan] = useState(false)
   const [editingRate, setEditingRate] = useState(false)
+  // редкие свойства карточки свёрнуты в «Ещё» (0.69)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const { showError } = useToast()
   const onError = (error: unknown) => showError(describeError(error))
@@ -135,6 +137,17 @@ export function TaskForm({
       : inherited
         ? `${formatRate(inherited.rate, inherited.currency)} · как у клиента`
         : 'не задана'
+    /*
+     * Видно сразу то, что правят каждый день: план и группы (клиент, проект). Начало
+     * ставится само, ставка и «ежедневная» нужны редко — они в «Ещё», если не заданы:
+     * иначе пять строк свойств отодвигали историю за второй экран (0.69).
+     */
+    const showMore = moreOpen
+    const hiddenRows = [
+      'начало',
+      ...(showRate && !ownRate ? ['ставка'] : []),
+      ...(!values.is_daily ? ['ежедневная'] : []),
+    ]
     return (
       <>
       <ListGroup clip={false}>
@@ -163,12 +176,12 @@ export function TaskForm({
           className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
         >
           <span className="text-text-secondary">План</span>
-          <span className={`tabular flex-1 text-right font-mono ${values.planned_hours > 0 ? 'text-text' : 'text-text-tertiary'}`}>
+          <span className={`tabular flex-1 text-right ${values.planned_hours > 0 ? 'text-text' : 'text-text-tertiary'}`}>
             {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
           </span>
           <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
         </button>
-        {showRate && (
+        {showRate && (showMore || ownRate) && (
           <button
             type="button"
             onClick={() => setEditingRate(true)}
@@ -176,17 +189,19 @@ export function TaskForm({
           >
             <span className="text-text-secondary">Ставка</span>
             <span
-              className={`tabular min-w-0 flex-1 truncate text-right font-mono ${ownRate ? 'text-text' : 'text-text-tertiary'}`}
+              className={`tabular min-w-0 flex-1 truncate text-right ${ownRate ? 'text-text' : 'text-text-tertiary'}`}
             >
               {rateText}
             </span>
             <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
           </button>
         )}
+        {showMore && (
         <div className="flex items-center gap-3 px-3">
           <span className="shrink-0 text-base text-text-secondary">Начало</span>
           <DatePicker row className="flex-1" value={values.start_date} onChange={(v) => set('start_date', v)} ariaLabel="Начало" />
         </div>
+        )}
         {!hideDue && (
         <div className="flex items-center gap-3 px-3">
           <span className="shrink-0 text-base text-text-secondary">Срок</span>
@@ -205,6 +220,7 @@ export function TaskForm({
         ) : (
           <GroupFields rows model={model} value={values.item_ids} onChange={(ids) => set('item_ids', ids)} />
         )}
+        {(showMore || values.is_daily) && (
         <div className="flex min-h-12 items-center gap-3 px-3">
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-base text-text">Ежедневная</span>
@@ -212,6 +228,19 @@ export function TaskForm({
           </span>
           <Switch on={values.is_daily} onChange={(v) => set('is_daily', v)} ariaLabel="Ежедневная — всегда в списке дня" />
         </div>
+        )}
+        {!showMore && hiddenRows.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-expanded={false}
+            className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-base active:bg-surface-sunken"
+          >
+            <span className="text-text-secondary">Ещё</span>
+            <span className="min-w-0 flex-1 truncate text-right text-sm text-text-tertiary">{hiddenRows.join(', ')}</span>
+            <ChevronDown size={14} className="shrink-0 text-text-tertiary" />
+          </button>
+        )}
       </ListGroup>
       {/* лист — вне списка: у списка разделители между детьми, и подложка получила бы рамку */}
         <DurationSheet
@@ -272,7 +301,7 @@ export function TaskForm({
           className="flex h-10 w-full items-center justify-between gap-2 rounded-sm px-3 text-left"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <span className="tabular font-mono text-base text-text">
+          <span className="tabular text-base text-text">
             {values.planned_hours > 0 ? formatHoursMinutes(values.planned_hours) : 'не задан'}
           </span>
           <ChevronDown size={14} className="text-text-secondary" />

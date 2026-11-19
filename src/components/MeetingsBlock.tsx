@@ -213,7 +213,7 @@ export function MeetingsBlock({
           return (
             <div key={ev.id} className="flex flex-col gap-2 px-3.5 py-3">
               <div className="flex items-baseline gap-2.5">
-                <span className={`tabular shrink-0 font-mono text-sm ${ongoing ? 'text-accent-text' : 'text-text-secondary'}`}>
+                <span className={`tabular shrink-0 text-sm ${ongoing ? 'text-accent-text' : 'text-text-secondary'}`}>
                   {clock(ev.starts_at)}–{clock(ev.ends_at)}
                 </span>
                 <span

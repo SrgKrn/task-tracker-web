@@ -93,7 +93,7 @@ export function SubtractSheet({
       <DurationInput autoFocus={focusOnOpen} value={draft} onChange={setDraft} />
       <AdjustmentNote value={note} onChange={setNote} />
       {(nothing || tooMuch) && (
-        <span className="font-mono text-xs text-danger-text">
+        <span className="text-xs text-danger-text">
           {nothing ? 'укажите, сколько отнять' : `больше, чем записано: всего ${formatHoursMinutes(maxMinutes / 60)}`}
         </span>
       )}

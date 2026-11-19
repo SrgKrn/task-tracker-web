@@ -218,7 +218,7 @@ function SubtaskRow({
           {task.name}
         </span>
         <span className="flex min-w-0 items-center gap-1.5 text-sm leading-[1.4] whitespace-nowrap text-text-secondary">
-          <span className="tabular shrink-0 font-mono text-xs">{hours}</span>
+          <span className="tabular shrink-0 text-xs">{hours}</span>
           {due && (
             <span className={`truncate ${overdue ? 'font-medium text-danger-text' : ''}`}>
               · {overdue ? `просрочено, ${due.toLowerCase()}` : `до ${due.toLowerCase()}`}

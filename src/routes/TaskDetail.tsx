@@ -469,29 +469,34 @@ export function TaskDetail() {
           </Link>
         )}
 
-        {/* два главных поля: факт (нажать — правка времени) и срок */}
-        <div className="grid grid-cols-2 gap-2.5 pt-1">
-          <button
-            type="button"
-            onClick={() => setFactOpen(true)}
-            aria-label={`Факт ${formatHoursMinutes(fact)}, изменить`}
-            className="flex min-h-18 items-center gap-3 rounded-md border border-border bg-surface px-3 py-2.5 text-left active:bg-surface-sunken"
-          >
-            <Ring size={40} pct={done ? 100 : pct} state={ringState} />
-            <span className="flex min-w-0 flex-col">
+        {/* факт и срок — одной плашкой во всю ширину (0.69). В половине ширины «10 ч 52 мин»
+            обрезалось до «10 ч …»: главная цифра карточки не читалась. Полоска вместо кольца:
+            план — заливка, перерасход — янтарный хвост за отметкой плана, красный — только у
+            просроченного срока */}
+        <div className="flex flex-col gap-2.5 rounded-md border border-border bg-surface px-3.5 pt-3 pb-3.5">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setFactOpen(true)}
+              aria-label={`Факт ${formatHoursMinutes(fact)}, изменить`}
+              className="-m-1 flex min-w-0 flex-1 flex-col rounded-sm p-1 text-left active:bg-surface-sunken"
+            >
               <span className="text-xs text-text-secondary">Факт</span>
-              <span className="tabular truncate font-mono text-md font-medium text-text">{formatHoursMinutes(fact)}</span>
-              <span className="truncate text-xs text-text-secondary">
-                {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)}` : 'без плана'}
+              <span className="tabular flex flex-wrap items-baseline gap-x-1.5 text-text">
+                <span className="text-xl font-semibold tracking-[-0.01em]">{formatHoursMinutes(fact)}</span>
+                <span className="text-sm text-text-secondary">
+                  {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)}` : 'без плана'}
+                </span>
               </span>
-            </span>
-          </button>
-          <div className="flex min-h-18 flex-col justify-center gap-1 rounded-md border border-border bg-surface px-3 py-2">
-            <span className={`text-xs ${overdue ? 'font-medium text-danger-text' : 'text-text-secondary'}`}>
-              {overdue ? 'Срок прошёл' : 'Срок'}
-            </span>
-            <DatePicker small value={task.end_date} onChange={(v) => saveField({ end_date: v })} ariaLabel="Срок" />
+            </button>
+            <div className="flex shrink-0 flex-col items-end gap-0.5">
+              <span className={`text-xs ${overdue ? 'font-medium text-danger-text' : 'text-text-secondary'}`}>
+                {overdue ? 'Срок прошёл' : 'Срок'}
+              </span>
+              <DatePicker small value={task.end_date} onChange={(v) => saveField({ end_date: v })} ariaLabel="Срок" />
+            </div>
           </div>
+          {task.planned_hours > 0 && <FactBar pct={done ? 100 : pct} state={ringState} />}
         </div>
         {subtasks.length > 0 && <span className="-mt-1 text-sm text-text-secondary">в самом спринте {formatHoursMinutes(task.fact_hours)}</span>}
       </div>
@@ -518,7 +523,7 @@ export function TaskDetail() {
           <section data-tip="subtasks" className="flex flex-col gap-2.5">
             <h2 className="flex items-baseline gap-2 text-md font-semibold text-text">
               Подзадачи
-              {subtasks.length > 0 && <span className="tabular font-mono text-xs font-normal text-text-secondary">{subtasks.length}</span>}
+              {subtasks.length > 0 && <span className="tabular text-xs font-normal text-text-secondary">{subtasks.length}</span>}
             </h2>
             <SprintComposition
               task={task}
@@ -529,6 +534,12 @@ export function TaskDetail() {
             />
           </section>
         )}
+
+        {/* история — сразу за описанием и подзадачами: её смотрят чаще файлов (0.69) */}
+        <section className="flex flex-col gap-2.5">
+          <h2 className="text-md font-semibold text-text">История</h2>
+          <TaskTimeline taskId={task.id} isRunning={isRunning} />
+        </section>
 
         <section id="task-files" className="flex scroll-mt-24 flex-col gap-2.5">
           <h2 className="text-md font-semibold text-text">Файлы</h2>
@@ -541,11 +552,6 @@ export function TaskDetail() {
             emptyText="Договор, ТЗ, скриншоты — откроются прямо отсюда"
             catchFiles
           />
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <h2 className="text-md font-semibold text-text">История</h2>
-          <TaskTimeline taskId={task.id} isRunning={isRunning} />
         </section>
       </div>
 
@@ -642,10 +648,10 @@ export function TaskDetail() {
       <Sheet anchored open={factOpen} onClose={() => setFactOpen(false)} title="Факт">
         <div className="flex items-center gap-4">
           <Ring size={72} pct={done ? 100 : pct} state={ringState} centerBg="var(--surface)">
-            <span className="tabular font-mono text-sm font-medium text-text">{task.planned_hours > 0 ? `${Math.round(pct)}%` : '—'}</span>
+            <span className="tabular text-sm font-medium text-text">{task.planned_hours > 0 ? `${Math.round(pct)}%` : '—'}</span>
           </Ring>
           <span className="flex flex-col">
-            <span className="tabular font-mono text-xl font-medium text-text">{formatHoursMinutes(fact)}</span>
+            <span className="tabular text-xl font-medium text-text">{formatHoursMinutes(fact)}</span>
             <span className="text-sm text-text-secondary">
               {task.planned_hours > 0 ? `из ${formatHoursMinutes(task.planned_hours)} по плану` : 'план не задан'}
             </span>
@@ -841,6 +847,25 @@ export function TaskDetail() {
           deleteTask.mutate(task.id, { onSuccess: () => navigate(backTo), onError })
         }}
       />
+    </div>
+  )
+}
+
+/**
+ * Полоска факта (0.69): заливка до плана; перерасход — янтарный хвост за отметкой плана.
+ * Перерасход — не ошибка, а сигнал «пересмотрите план»: красный остаётся за просрочкой.
+ */
+function FactBar({ pct, state }: { pct: number; state: RingState }) {
+  const over = state === 'over'
+  // в перерасходе полоса — это весь факт; план занимает её левую часть
+  const planShare = over ? (100 / pct) * 100 : Math.max(0, Math.min(100, pct))
+  const fill = state === 'done' ? 'bg-success' : 'bg-accent'
+  return (
+    <div className="flex h-1.5 w-full gap-0.5" aria-hidden>
+      <div className="relative h-full overflow-hidden rounded-full bg-surface-sunken" style={{ flexBasis: over ? `${planShare}%` : '100%' }}>
+        <div className={`h-full rounded-full ${fill}`} style={{ width: over ? '100%' : `${planShare}%` }} />
+      </div>
+      {over && <div className="h-full flex-1 rounded-full bg-warning" />}
     </div>
   )
 }

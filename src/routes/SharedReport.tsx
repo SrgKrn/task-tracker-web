@@ -132,7 +132,7 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
         <Card className="flex min-w-0 flex-col gap-2 p-4">
           <Overline>Часы за период</Overline>
           <span className="flex items-baseline gap-1.5">
-            <span className="tabular font-mono text-3xl font-medium text-text">{f1(snap.hours)}</span>
+            <span className="tabular text-3xl font-medium text-text">{f1(snap.hours)}</span>
             <span className="text-base text-text-secondary">{snap.plan ? `из ${f1(snap.plan)} ч по плану` : 'ч'}</span>
           </span>
           {!!snap.plan && (
@@ -144,7 +144,7 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
         {snap.billing.map((b) => (
           <div key={b.currency} className="flex min-w-0 flex-col gap-1 rounded-md bg-accent-soft p-4">
             <span className="text-sm text-accent-text">К оплате</span>
-            <span className="tabular font-mono text-2xl font-semibold text-text">{formatMoney(b.due, b.currency)}</span>
+            <span className="tabular text-2xl font-semibold text-text">{formatMoney(b.due, b.currency)}</span>
             {b.overAmount > 0 && !snap.includeOvertime && (
               <span className="text-sm text-accent-text">без переработки {f1(b.overHours)} ч</span>
             )}
@@ -173,7 +173,7 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
                 )
               })}
             </svg>
-            <div className="mt-1 flex justify-between font-mono text-xs text-text-tertiary">
+            <div className="mt-1 flex justify-between text-xs text-text-tertiary">
               <span>{days[0]?.day}</span>
               <span>{days[days.length - 1]?.day}</span>
             </div>
@@ -206,12 +206,12 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
                   </div>
                 )}
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-                  <span className="tabular font-mono text-text-secondary">
+                  <span className="tabular text-text-secondary">
                     {s.plan > 0 ? `${f1(inPlan)} из ${f1(s.plan)} ч` : `${f1(s.factPeriod)} ч`}
                     {meta ? <span className="font-sans"> · {meta}</span> : null}
                   </span>
                   {s.bill && (
-                    <span className="tabular font-mono text-text">
+                    <span className="tabular text-text">
                       {f2(s.bill.hours)} ч × {formatRate(s.bill.rate, s.bill.currency)} ={' '}
                       <b className="font-semibold">
                         {formatMoney(s.bill.amount + (snap.includeOvertime ? s.bill.overAmount : 0), s.bill.currency)}
@@ -233,13 +233,13 @@ function Ready({ snap, saving, onPdf }: { snap: ClientSnapshot; saving: boolean;
               <Card key={day.date} className="flex flex-col gap-2 p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-base font-medium text-text first-letter:uppercase">{day.label}</span>
-                  <span className="tabular shrink-0 font-mono text-sm text-text-secondary">{hm(day.total)}</span>
+                  <span className="tabular shrink-0 text-sm text-text-secondary">{hm(day.total)}</span>
                 </div>
                 {day.rows.map((row) => (
                   <div key={row.title} className="flex flex-col gap-0.5 border-t border-divider pt-2">
                     <div className="flex items-baseline justify-between gap-3 text-sm">
                       <span className="min-w-0 text-text">{row.title}</span>
-                      <span className="tabular shrink-0 font-mono text-text-secondary">{hm(row.hours)}</span>
+                      <span className="tabular shrink-0 text-text-secondary">{hm(row.hours)}</span>
                     </div>
                     {row.notes.map((n, i) => (
                       <span key={i} className="text-sm text-text-secondary">

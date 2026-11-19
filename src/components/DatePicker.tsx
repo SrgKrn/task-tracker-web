@@ -229,7 +229,7 @@ export function MonthGrid({ value, onPick }: { value: string | null; onPick: (is
               key={iso}
               type="button"
               onClick={() => onPick(iso)}
-              className="tabular flex h-9 items-center justify-center rounded-sm font-mono text-sm"
+              className="tabular flex h-9 items-center justify-center rounded-sm text-sm"
               style={{
                 background: selected ? 'var(--accent)' : 'transparent',
                 color: selected

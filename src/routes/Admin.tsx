@@ -375,7 +375,7 @@ function UserRow({ u, onOpen }: { u: AdminUser; onOpen: () => void }) {
         Был {ago(u.last_active)} · с {new Date(u.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' })}
         {u.last_seen_version ? ` · v${u.last_seen_version}` : ''}
       </span>
-      <span className="tabular font-mono text-xs text-text-secondary">
+      <span className="tabular text-xs text-text-secondary">
         {u.workspaces} простр · {u.tasks} задач · {hoursText(u.hours)} ч · обращений {u.feedback}
       </span>
     </button>
@@ -876,7 +876,7 @@ function Tile({ label, value, hint }: { label: string; value: string | number; h
   return (
     <div className="flex flex-col gap-0.5 rounded-md border border-border bg-surface p-3">
       <span className="text-xs text-text-secondary">{label}</span>
-      <span className="tabular font-mono text-xl font-semibold text-text">{value}</span>
+      <span className="tabular text-xl font-semibold text-text">{value}</span>
       {hint && <span className="text-xs text-text-tertiary">{hint}</span>}
     </div>
   )
@@ -891,7 +891,7 @@ function Rows({ title, rows, total }: { title: string; rows: [string, number][];
         {rows.map(([label, n]) => (
           <div key={label} className="flex items-center justify-between gap-3 py-2.5">
             <span className="text-sm text-text">{label}</span>
-            <span className="tabular font-mono text-sm text-text-secondary">
+            <span className="tabular text-sm text-text-secondary">
               {n}
               {total ? ` · ${Math.round((n / total) * 100)} %` : ''}
             </span>

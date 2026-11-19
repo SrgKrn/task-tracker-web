@@ -26,7 +26,7 @@ export function TileFacts({ tile, record = false }: { tile: DayTile; record?: bo
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="tabular font-mono text-xl font-medium text-text">{formatHoursMinutes(tile.total / 60)}</span>
+        <span className="tabular text-xl font-medium text-text">{formatHoursMinutes(tile.total / 60)}</span>
         {tile.norm > 0 && <span className="text-sm text-text-secondary">из {formatHoursMinutes(tile.norm / 60)}</span>}
         {record && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-text">рекорд месяца</span>}
       </div>
@@ -35,7 +35,7 @@ export function TileFacts({ tile, record = false }: { tile: DayTile; record?: bo
           <li key={client.key} className="flex items-center gap-2 text-base">
             <ClientDot color={(client.color ?? 'label-8') as LabelColor} />
             <span className="min-w-0 flex-1 truncate text-text">{client.name}</span>
-            <span className="tabular font-mono text-sm text-text-secondary">{formatHoursMinutes(minutes / 60)}</span>
+            <span className="tabular text-sm text-text-secondary">{formatHoursMinutes(minutes / 60)}</span>
           </li>
         ))}
       </ul>
@@ -56,7 +56,7 @@ function TileNumber({ day }: { day: string }) {
   const { tiles, loading } = useDayTiles(`${day.slice(0, 4)}-01-01`, day, day)
   if (loading) return null
   const n = tileNumber(tiles, day)
-  return n > 0 ? <span className="tabular font-mono text-sm text-text-secondary">№ {n}</span> : null
+  return n > 0 ? <span className="tabular text-sm text-text-secondary">№ {n}</span> : null
 }
 
 /**
@@ -75,9 +75,25 @@ export function TodayTile({ tile, day, size = 80, className = '' }: { tile: DayT
         aria-haspopup="dialog"
         aria-label={`Плитка дня: ${status}. Открыть`}
         title="Плитка дня"
-        className={`shrink-0 rounded-sm ${className}`}
+        className={`relative shrink-0 rounded-sm ${className}`}
       >
+        {/*
+         * Три состояния (0.69). Утром пустой пунктирный квадрат читался как сломанная
+         * картинка — теперь он подписан. Днём точка в углу «дышит»: плитка собирается;
+         * норма набрана — точка зелёная.
+         */}
         <TileCanvas tile={tile} size={size} />
+        {tile.total <= 0 ? (
+          <span className="absolute inset-0 flex flex-col items-center justify-center text-center text-xs leading-tight text-text-tertiary">
+            <span>с первой</span>
+            <span>записи</span>
+          </span>
+        ) : (
+          <span
+            className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border-2 border-bg ${status === 'норма набрана' ? 'bg-success' : 'live-dot'}`}
+            aria-hidden
+          />
+        )}
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Плитка дня" headerAction={open ? <TileNumber day={day} /> : undefined}>

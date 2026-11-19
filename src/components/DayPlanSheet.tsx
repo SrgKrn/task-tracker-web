@@ -183,7 +183,7 @@ function PlanRow({
         {meta && <span className="block truncate text-sm leading-[1.4] text-text-secondary">{meta}</span>}
       </span>
       {dueLabel && (
-        <span className={`shrink-0 font-mono text-xs ${overdue ? 'text-danger-text' : 'text-text-secondary'}`}>
+        <span className={`shrink-0 text-xs ${overdue ? 'text-danger-text' : 'text-text-secondary'}`}>
           {overdue ? `просрочено ${dueLabel}` : `до ${dueLabel}`}
         </span>
       )}

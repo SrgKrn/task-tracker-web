@@ -120,7 +120,7 @@ export function GroupsAdmin() {
                   <span className="block truncate text-base font-medium text-text">{g.name}</span>
                   <span className="block truncate text-xs text-text-secondary">{facts.join(' · ')}</span>
                 </span>
-                <span className="font-mono text-xs text-text-secondary">{index + 1}</span>
+                <span className="text-xs text-text-secondary">{index + 1}</span>
                 <ArrowRight size={15} className="shrink-0 text-text-secondary" />
               </Link>
             </li>

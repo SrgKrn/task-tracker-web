@@ -284,7 +284,7 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
             <Panel title="Темп">
               <p className="text-sm leading-[1.45] text-text lg:text-base">
                 {f1(r.forecast.pace)} ч в рабочий день — к концу месяца выйдет{' '}
-                <span className="tabular font-mono font-medium">≈{f1(r.forecast.hours)} ч</span>
+                <span className="tabular font-medium">≈{f1(r.forecast.hours)} ч</span>
                 {r.forecast.monthNorm ? (
                   <>
                     {' '}
@@ -332,11 +332,11 @@ function Overview({ report: r, model, tasks, entries, filter, setFilter, onDrill
                       style={{ width: `${Math.min(100, pctv)}%`, background: s.over > 0.01 ? 'var(--danger)' : 'var(--accent)' }}
                     />
                   </span>
-                  <span className="tabular text-right font-mono text-sm text-text">
+                  <span className="tabular text-right text-sm text-text">
                     {f1(s.factTotal)} / {fh(s.plan)} ч
                   </span>
                   <span
-                    className={`tabular hidden text-right font-mono text-sm lg:block ${s.over > 0.01 ? 'text-danger-text' : 'text-text-secondary'}`}
+                    className={`tabular hidden text-right text-sm lg:block ${s.over > 0.01 ? 'text-danger-text' : 'text-text-secondary'}`}
                   >
                     {pctv}%
                   </span>
@@ -440,31 +440,31 @@ function TasksTable({ report: r, model, statuses, tasks, entries, filter, today 
             )}
           </button>
         </span>
-        <span className="tabular text-right font-mono text-base font-medium text-text">{f1(x.hours)}</span>
+        <span className="tabular text-right text-base font-medium text-text">{f1(x.hours)}</span>
         <span className="hidden items-center gap-2 lg:flex">
           <span className="block h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-sunken">
             <span className="block h-full rounded-full bg-accent" style={{ width: `${total > 0 ? Math.max(0, (x.hours / total) * 100) : 0}%` }} />
           </span>
-          <span className="tabular w-8 text-right font-mono text-xs text-text-secondary">
+          <span className="tabular w-8 text-right text-xs text-text-secondary">
             {total > 0 ? Math.round((x.hours / total) * 100) : 0}%
           </span>
         </span>
-        <span className="tabular hidden text-right font-mono text-sm text-text-secondary lg:block">
+        <span className="tabular hidden text-right text-sm text-text-secondary lg:block">
           {x.plan > 0 ? `${f1(x.factTotal)} / ${fh(x.plan)}` : child ? '' : `${f1(x.factTotal)} / —`}
         </span>
         <span
-          className={`tabular hidden text-right font-mono text-sm lg:block ${pct !== null && pct > 100 ? 'text-danger-text' : 'text-text-secondary'}`}
+          className={`tabular hidden text-right text-sm lg:block ${pct !== null && pct > 100 ? 'text-danger-text' : 'text-text-secondary'}`}
         >
           {pct !== null ? `${pct}%` : ''}
         </span>
         <span className="hidden justify-end lg:flex">
           {!child && status && <StageChip tone={stageTone(status, statuses)} label={x.stage ?? ''} />}
         </span>
-        <span className="tabular hidden text-right font-mono text-sm text-text-secondary lg:block">
+        <span className="tabular hidden text-right text-sm text-text-secondary lg:block">
           {x.lastDate ? formatDayMonth(x.lastDate, today) : ''}
         </span>
         {withMoney && (
-          <span className="tabular hidden text-right font-mono text-sm text-text lg:block">
+          <span className="tabular hidden text-right text-sm text-text lg:block">
             {bill ? formatMoney(bill.amount + (r.options.includeOvertime ? bill.overAmount : 0), bill.currency) : ''}
           </span>
         )}
@@ -496,7 +496,7 @@ function TasksTable({ report: r, model, statuses, tasks, entries, filter, today 
           ))}
         </div>
         <span className="ml-auto hidden text-sm text-text-secondary lg:block">
-          {plural(rows.length, TASKS_F)} · <span className="tabular font-mono text-text">{f1(total)} ч</span>
+          {plural(rows.length, TASKS_F)} · <span className="tabular text-text">{f1(total)} ч</span>
         </span>
       </div>
 
@@ -524,7 +524,7 @@ function TasksTable({ report: r, model, statuses, tasks, entries, filter, today 
           ))}
           <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 bg-surface-sunken px-3 py-2.5 ${grid}`}>
             <span className="text-base font-semibold text-text">Итого за период</span>
-            <span className="tabular text-right font-mono text-base font-semibold text-text">{f1(total)}</span>
+            <span className="tabular text-right text-base font-semibold text-text">{f1(total)}</span>
           </div>
         </div>
       )}
@@ -574,7 +574,7 @@ function TimeView({ report: r }: { report: ReportData }) {
         <div className="flex h-36 items-end gap-2">
           {avg.map((v, i) => (
             <div key={i} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-              <span className="tabular font-mono text-xs text-text-secondary">{v > 0.04 ? f1(v) : ''}</span>
+              <span className="tabular text-xs text-text-secondary">{v > 0.04 ? f1(v) : ''}</span>
               <span
                 className="w-full rounded-t-xs"
                 style={{
@@ -616,7 +616,7 @@ function TimeView({ report: r }: { report: ReportData }) {
           ).map(([k, v]) => (
             <div key={k} className="flex items-baseline justify-between gap-2">
               <dt className="truncate text-text-secondary">{k}</dt>
-              <dd className="tabular shrink-0 font-mono text-text">{v}</dd>
+              <dd className="tabular shrink-0 text-text">{v}</dd>
             </div>
           ))}
         </dl>
@@ -681,14 +681,14 @@ function JournalView({ report: r }: { report: ReportData }) {
         <section key={day.date} className="overflow-hidden rounded-md border border-border bg-surface">
           <header className="flex items-baseline justify-between gap-3 bg-surface-sunken px-3.5 py-2">
             <h3 className="text-base font-semibold text-text first-letter:uppercase">{day.label}</h3>
-            <span className="tabular font-mono text-sm font-medium text-text">{hm(day.total)}</span>
+            <span className="tabular text-sm font-medium text-text">{hm(day.total)}</span>
           </header>
           <div className="flex flex-col divide-y divide-divider">
             {day.entries.map((e, i) => {
               const client = r.clients.find((c) => c.key === e.clientKey)
               return (
                 <div key={i} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-baseline gap-x-3 px-3.5 py-2">
-                  <span className="tabular font-mono text-xs text-text-secondary">{e.start ? `${e.start}–${e.end}` : 'правка'}</span>
+                  <span className="tabular text-xs text-text-secondary">{e.start ? `${e.start}–${e.end}` : 'правка'}</span>
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex min-w-0 items-center gap-1.5">
                       {client?.color && (
@@ -701,7 +701,7 @@ function JournalView({ report: r }: { report: ReportData }) {
                     </span>
                     {e.note && <span className="text-sm leading-[1.45] text-text-secondary">{e.note}</span>}
                   </span>
-                  <span className="tabular text-right font-mono text-sm text-text">{hm(e.hours)}</span>
+                  <span className="tabular text-right text-sm text-text">{hm(e.hours)}</span>
                 </div>
               )
             })}

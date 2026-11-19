@@ -218,7 +218,7 @@ export function AttachmentsBlock({
           </FieldLabel>
         ) : (
           // заголовок — у раздела карточки (0.67); здесь только сколько файлов
-          <span className="tabular font-mono text-xs text-text-secondary">{files.length > 0 ? files.length : ''}</span>
+          <span className="tabular text-xs text-text-secondary">{files.length > 0 ? files.length : ''}</span>
         )}
         <span className="flex items-center gap-3">
           {driveReady && (
@@ -263,7 +263,7 @@ export function AttachmentsBlock({
               style={i > 0 ? { borderTop: '1px solid var(--divider)' } : undefined}
             >
               <span
-                className="flex h-8 w-10 shrink-0 items-center justify-center rounded-sm font-mono text-xs font-medium tracking-[.04em]"
+                className="flex h-8 w-10 shrink-0 items-center justify-center rounded-sm text-xs font-medium tracking-[.04em]"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
               >
                 {f.drive_file_id ? <Drive size={14} /> : kindOf(f.name)}
@@ -282,7 +282,7 @@ export function AttachmentsBlock({
                 }}
               >
                 <span className="block truncate text-base text-text">{f.name}</span>
-                <span className="block truncate font-mono text-xs text-text-secondary">
+                <span className="block truncate text-xs text-text-secondary">
                   {f.drive_file_id ? 'Google Диск' : formatSize(f.size)} · {formatDate(f.created_at)}
                   {taskNames && f.task_id && taskNames.get(f.task_id) ? ` · ${taskNames.get(f.task_id)}` : ''}
                   {taskNames && !f.task_id ? ' · база знаний' : ''}

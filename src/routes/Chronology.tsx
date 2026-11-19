@@ -135,7 +135,7 @@ function Row({
 }) {
   const body = (
     <>
-      <span className="tabular w-10 shrink-0 pt-1 font-mono text-sm text-text-secondary">{time}</span>
+      <span className="tabular w-10 shrink-0 pt-1 text-sm text-text-secondary">{time}</span>
       {badge}
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="min-w-0">
@@ -144,7 +144,7 @@ function Row({
         </span>
         {children}
       </span>
-      {aside && <span className="shrink-0 pt-0.5 font-mono text-sm">{aside}</span>}
+      {aside && <span className="shrink-0 pt-0.5 text-sm">{aside}</span>}
     </>
   )
   const cls = 'flex items-start gap-3 px-3.5 py-3'
@@ -267,7 +267,7 @@ function ChronoRowView({ row, look, open, toggle }: { row: ChronoRow; look: Look
                 {i.note ? `«${i.note}»` : look.name(i.taskId)}
                 {i.note && !sameTask ? ` · ${look.name(i.taskId)}` : ''}
               </span>
-              <span className="shrink-0 font-mono text-accent-text">{signedDuration(i.seconds, formatDuration)}</span>
+              <span className="shrink-0 text-accent-text">{signedDuration(i.seconds, formatDuration)}</span>
             </Link>
           ))}
         </GroupRow>
@@ -376,13 +376,13 @@ function GroupRow({
   return (
     <div className="flex flex-col">
       <button type="button" onClick={toggle} aria-expanded={open} className="flex w-full items-start gap-3 px-3.5 py-3 text-left">
-        <span className="tabular w-10 shrink-0 pt-1 font-mono text-sm text-text-secondary">{time}</span>
+        <span className="tabular w-10 shrink-0 pt-1 text-sm text-text-secondary">{time}</span>
         {badge}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-md font-medium text-text">{title}</span>
           <span className="block truncate text-sm text-text-secondary">{meta}</span>
         </span>
-        <span className="flex shrink-0 items-center gap-1 pt-0.5 font-mono text-sm">
+        <span className="flex shrink-0 items-center gap-1 pt-0.5 text-sm">
           {aside}
           {open ? <ChevronUp size={14} className="text-text-tertiary" /> : <ChevronDown size={14} className="text-text-tertiary" />}
         </span>
@@ -425,7 +425,7 @@ function Ribbon({ day, look }: { day: ChronoDay; look: Lookup }) {
           <span key={h} className="absolute inset-y-0 w-px opacity-60" style={{ left: at(h), background: 'var(--bg)' }} />
         ))}
       </div>
-      <div className="relative h-4 font-mono text-xs text-text-tertiary">
+      <div className="relative h-4 text-xs text-text-tertiary">
         {hours.map((h, i) =>
           // последний час подписан всегда; если он не попал в шаг — без соседней подписи слева
           i === hours.length - 1 || ((h - from) % step === 0 && !(span % step !== 0 && i === hours.length - 2)) ? (
@@ -470,7 +470,7 @@ function DaySection({ day, filter, look }: { day: ChronoDay; filter: ChronoFilte
             {title.sub && <span className="text-sm font-normal text-text-secondary"> · {title.sub}</span>}
           </h2>
           {day.totalSeconds !== 0 && (
-            <span className="tabular font-mono text-md font-medium text-text">{formatDuration(day.totalSeconds)}</span>
+            <span className="tabular text-md font-medium text-text">{formatDuration(day.totalSeconds)}</span>
           )}
         </div>
         <span className="text-sm text-text-secondary">{dayStats(day)}</span>
@@ -497,7 +497,7 @@ function DaySection({ day, filter, look }: { day: ChronoDay; filter: ChronoFilte
               <span className="font-medium text-accent-text">{showShort ? 'Скрыть' : 'Показать'}</span>
             </button>
             {showShort && (
-              <span className="pr-3.5 pb-3 pl-24 font-mono text-sm text-text-secondary">{short.map(clock).join(', ')}</span>
+              <span className="pr-3.5 pb-3 pl-24 text-sm text-text-secondary">{short.map(clock).join(', ')}</span>
             )}
           </div>
         )}

@@ -119,7 +119,7 @@ function BudgetForm() {
             step="0.5"
             value={perDay}
             onChange={(e) => setPerDay(e.target.value)}
-            className={`${fieldClass} tabular font-mono`}
+            className={`${fieldClass} tabular`}
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -130,7 +130,7 @@ function BudgetForm() {
             step="1"
             value={perMonth}
             onChange={(e) => setPerMonth(e.target.value)}
-            className={`${fieldClass} tabular font-mono`}
+            className={`${fieldClass} tabular`}
           />
         </div>
       </div>
@@ -366,7 +366,7 @@ function ExportSection() {
           value={from}
           onChange={(v) => setFrom(v ?? todayStr())}
         />
-        <span className="font-mono text-sm text-text-secondary">—</span>
+        <span className="text-sm text-text-secondary">—</span>
         <DatePicker
           small
           className="flex-1"
@@ -630,7 +630,7 @@ export function Settings() {
           </button>
         </section>
 
-        <span className="mt-2 pb-1 text-center font-mono text-xs text-text-secondary lg:text-left">
+        <span className="mt-2 pb-1 text-center text-xs text-text-secondary lg:text-left">
           Версия {LATEST_RELEASE.version} · сборка от{' '}
           {new Date(BUILD_TIME).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
         </span>

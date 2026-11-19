@@ -302,7 +302,7 @@ export function Menu({
               {item.icon !== undefined && <span className="flex w-4 shrink-0 justify-center text-text-secondary">{item.icon}</span>}
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.checked && <Check size={14} className="text-accent" />}
-              {item.hint && <kbd className="font-mono text-xs text-text-tertiary">{item.hint}</kbd>}
+              {item.hint && <kbd className="text-xs text-text-tertiary">{item.hint}</kbd>}
             </button>
           </div>
         ))}

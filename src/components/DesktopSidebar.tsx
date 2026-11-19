@@ -97,7 +97,7 @@ export function DesktopSidebar({ onCreate }: { onCreate: () => void }) {
           {!collapsed && (
             <>
               <span className="flex-1 text-left">Новая задача</span>
-              <kbd className="font-mono text-xs font-normal opacity-70">C</kbd>
+              <kbd className="text-xs font-normal opacity-70">C</kbd>
             </>
           )}
         </button>

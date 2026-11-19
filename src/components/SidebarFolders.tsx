@@ -42,7 +42,7 @@ export function SidebarFolders() {
       selected ? 'bg-surface-selected font-medium text-accent-text' : 'text-text-secondary hover:bg-surface-sunken hover:text-text'
     }`
   const count = (n: number) =>
-    ready && <span className="tabular ml-auto shrink-0 font-mono text-xs opacity-70">{n}</span>
+    ready && <span className="tabular ml-auto shrink-0 text-xs opacity-70">{n}</span>
 
   return (
     <div className="flex flex-col gap-0.5 pt-4" aria-label="Папки задач" role="group">
